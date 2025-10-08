@@ -5,7 +5,8 @@ import {
   BarChart3, 
   ArrowUpDown, 
   Users, 
-  Tag, 
+  Tag,
+  ShoppingCart,
   Settings,
   ChevronLeft,
   ChevronRight
@@ -16,6 +17,7 @@ import { cn } from "@/lib/utils";
 
 const menuItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
+  { title: "Vendas", url: "/sales", icon: ShoppingCart },
   { title: "Produtos", url: "/products", icon: Package },
   { title: "Relatórios", url: "/reports", icon: BarChart3 },
   { title: "Movimentações", url: "/movements", icon: ArrowUpDown },

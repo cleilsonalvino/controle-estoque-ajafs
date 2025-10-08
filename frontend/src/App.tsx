@@ -11,6 +11,7 @@ import Movements from "./pages/Movements";
 import Suppliers from "./pages/Suppliers";
 import Categories from "./pages/Categories";
 import Settings from "./pages/Settings";
+import Sales from "./pages/Sales";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,6 +31,7 @@ const App = () => (
             <Route path="/suppliers" element={<Suppliers />} />
             <Route path="/categories" element={<Categories />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/sales" element={<Sales />} />
           </Route>
           {/* Catch-all route for 404 */}
           <Route path="*" element={<NotFound />} />
