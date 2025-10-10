@@ -13,6 +13,9 @@ import Categories from "./pages/Categories";
 import Settings from "./pages/Settings";
 import Sales from "./pages/Sales";
 import NotFound from "./pages/NotFound";
+import { LoginPage } from "./pages/LoginPage";
+import { AuthProvider } from "./hooks/useAuth";
+import { ProtectedRoute } from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
@@ -22,20 +25,25 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Layout />}>
-            <Route index element={<Dashboard />} />
-            <Route path="/products" element={<Products />} />
-            <Route path="/reports" element={<Reports />} />
-            <Route path="/movements" element={<Movements />} />
-            <Route path="/suppliers" element={<Suppliers />} />
-            <Route path="/categories" element={<Categories />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/sales" element={<Sales />} />
-          </Route>
-          {/* Catch-all route for 404 */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <AuthProvider>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route element={<ProtectedRoute />}>
+              <Route path="/" element={<Layout />}>
+                <Route index element={<Dashboard />} />
+                <Route path="/products" element={<Products />} />
+                <Route path="/reports" element={<Reports />} />
+                <Route path="/movements" element={<Movements />} />
+                <Route path="/suppliers" element={<Suppliers />} />
+                <Route path="/categories" element={<Categories />} />
+                <Route path="/settings" element={<Settings />} />
+                <Route path="/sales" element={<Sales />} />
+              </Route>
+            </Route>
+            {/* Catch-all route for 404 */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

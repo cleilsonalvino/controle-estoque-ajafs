@@ -9,11 +9,13 @@ import {
   ShoppingCart,
   Settings,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  LogOut
 } from "lucide-react";
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
 
 const menuItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
@@ -30,6 +32,13 @@ export const AppSidebar = () => {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const currentPath = location.pathname;
+  const { logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
 
   const isActive = (path: string) => {
     if (path === "/" && currentPath === "/") return true;
@@ -98,13 +107,12 @@ export const AppSidebar = () => {
       </nav>
 
       {/* Footer */}
-      {!collapsed && (
-        <div className="p-4 border-t">
-          <div className="text-xs text-muted-foreground text-center">
-            Sistema de Estoque v1.0
-          </div>
-        </div>
-      )}
+      <div className="p-4 border-t">
+        <Button onClick={handleLogout} variant="ghost" className="w-full justify-start">
+          <LogOut className="h-5 w-5 mr-3" />
+          {!collapsed && <span>Logout</span>}
+        </Button>
+      </div>
     </div>
   );
 };
