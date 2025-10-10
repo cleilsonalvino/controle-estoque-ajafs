@@ -1,3 +1,6 @@
+// ================================
+// Configuração principal
+// ================================
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
@@ -7,199 +10,109 @@ generator client {
   provider = "prisma-client-js"
 }
 
-/* =========================
-   USUÁRIOS & PERFIS
-========================= */
+// ================================
+// Usuários (opcional)
+// ================================
 model Usuario {
-  id            String   @id @default(uuid())
-  nome          String
-  email         String   @unique
-  senha         String
-  papel         Papel    @default(USUARIO)
-  ativo         Boolean  @default(true)
-  criadoEm      DateTime @default(now())
-  atualizadoEm  DateTime @updatedAt
+  id           String   @id @default(uuid())
+  nome         String
+  email        String   @unique
+  senha        String
+  papel        Papel    @default(USUARIO)
+  ativo        Boolean  @default(true)
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
 }
 
 enum Papel {
   ADMINISTRADOR
-  GERENTE
   USUARIO
-  VISUALIZADOR
 }
 
-/* =========================
-   FORNECEDORES
-========================= */
-model Fornecedor {
-  id             String               @id @default(uuid())
-  nome           String
-  documento      String?              @unique
-  email          String?
-  telefone       String?
-  produtos       ProdutoFornecedor[]
-  movimentacoes  Movimentacao[]       // back-relation
-  criadoEm       DateTime             @default(now())
-  atualizadoEm   DateTime             @updatedAt
-}
-
-/* =========================
-   PRODUTOS
-========================= */
+// ================================
+// Produtos e Estoque (com Categoria)
+// ================================
 model Produto {
-  id               String               @id @default(cuid())
-  sku              String               @unique
-  nome             String
-  unidadeMedida    String
-  rastrearPorLote  Boolean              @default(false)
-  estoqueMinimo    Decimal?             @db.Decimal(14, 3)
-  diasValidade     Int?
-  custoMedio       Decimal              @db.Decimal(14, 4) @default(0)
-  criadoEm         DateTime             @default(now())
-  atualizadoEm     DateTime             @updatedAt
+  id            String   @id @default(uuid())
+  nome          String   @unique
+  descricao     String?
+  preco         Decimal  @db.Decimal(14, 2)
+  estoqueAtual  Decimal  @default(0) @db.Decimal(14, 3)
+  estoqueMinimo Decimal? @db.Decimal(14, 3)
+  categoriaId   String? // opcional — produto pode não ter categoria
+  fornecedorId  String?
+  criadoEm      DateTime @default(now())
+  atualizadoEm  DateTime @updatedAt
 
-  posicoes         PosicaoEstoque[]
-  lotes            Lote[]
-  fornecedores     ProdutoFornecedor[]
-  movimentacoes    Movimentacao[]       // back-relation
-  itensVenda       ItemVenda[]          // back-relation
+  categoria     CategoriaProduto? @relation(fields: [categoriaId], references: [id])
+  fornecedor    Fornecedor?       @relation(fields: [fornecedorId], references: [id])
+  movimentacoes Movimentacao[]
+  itensVenda    ItemVenda[]
 }
 
-/* relação N:N com atributos */
-model ProdutoFornecedor {
-  produtoId     String
-  fornecedorId  String
-  ultimoCusto   Decimal? @db.Decimal(14, 4)
-  prazoDias     Int?
-  principal     Boolean  @default(false)
+model CategoriaProduto {
+  id        String  @id @default(uuid())
+  nome      String  @unique
+  descricao String?
 
-  produto       Produto    @relation(fields: [produtoId], references: [id])
-  fornecedor    Fornecedor @relation(fields: [fornecedorId], references: [id])
-
-  @@id([produtoId, fornecedorId])
+  produtos Produto[]
 }
 
-/* =========================
-   DEPÓSITOS
-========================= */
-model Deposito {
-  id            String           @id @default(cuid())
-  codigo        String           @unique
-  nome          String
-  criadoEm      DateTime         @default(now())
-  atualizadoEm  DateTime         @updatedAt
-
-  posicoes      PosicaoEstoque[]
-  movimentacoes Movimentacao[]   // back-relation
-}
-
-/* =========================
-   LOTES
-========================= */
-model Lote {
-  id          String     @id @default(cuid())
-  produtoId   String
-  codigo      String
-  validadeEm  DateTime?
-
-  produto     Produto    @relation(fields: [produtoId], references: [id])
-  posicoes    PosicaoEstoque[]
-  movimentacoes Movimentacao[]   // back-relation
-
-  @@unique([produtoId, codigo])
-}
-
-/* =========================
-   POSIÇÕES DE ESTOQUE
-========================= */
-model PosicaoEstoque {
-  id           String    @id @default(cuid())
-  produtoId    String
-  depositoId   String
-  loteId       String?
-  quantidade   Decimal   @db.Decimal(14, 3)
-  reservado    Decimal   @db.Decimal(14, 3) @default(0)
-  custoMedio   Decimal   @db.Decimal(14, 4) @default(0)
-
-  produto      Produto   @relation(fields: [produtoId], references: [id])
-  deposito     Deposito  @relation(fields: [depositoId], references: [id])
-  lote         Lote?     @relation(fields: [loteId], references: [id])
-
-  @@unique([produtoId, depositoId, loteId])
-}
-
-/* =========================
-   MOVIMENTAÇÕES
-========================= */
+// ================================
+// Movimentações de Estoque
+// ================================
 enum TipoMovimentacao {
   ENTRADA
   SAIDA
-  TRANSFERENCIA
   AJUSTE
-  RESERVA
-  LIBERACAO
-  CONSUMO
 }
 
 model Movimentacao {
-  id             String            @id @default(cuid())
-  produtoId      String
-  depositoId     String
-  loteId         String?
-  fornecedorId   String?
-  tipo           TipoMovimentacao
-  quantidade     Decimal           @db.Decimal(14, 3)
-  custoUnitario  Decimal?          @db.Decimal(14, 4)
-  referencia     String?
-  meta           Json?
-  criadoEm       DateTime          @default(now())
+  id         String           @id @default(uuid())
+  produtoId  String
+  tipo       TipoMovimentacao
+  quantidade Decimal          @db.Decimal(14, 3)
+  observacao String?
+  criadoEm   DateTime         @default(now())
 
-  produto        Produto           @relation(fields: [produtoId], references: [id])
-  deposito       Deposito          @relation(fields: [depositoId], references: [id])
-  lote           Lote?             @relation(fields: [loteId], references: [id])
-  fornecedor     Fornecedor?       @relation(fields: [fornecedorId], references: [id])
+  produto Produto @relation(fields: [produtoId], references: [id])
 }
 
-/* =========================
-   VENDAS
-========================= */
-model Venda {
-  id           String      @id @default(cuid())
-  numero       String      @unique
-  nomeCliente  String?
-  criadoEm     DateTime    @default(now())
-  total        Decimal     @db.Decimal(14, 2)
+// ================================
+// Fornecedores
+// ================================
+model Fornecedor {
+  id           String   @id @default(uuid())
+  nome         String
+  documento    String?  @unique
+  email        String?  @unique
+  telefone     String?
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
 
-  itens        ItemVenda[]
+  produtos Produto[]
+}
+
+// ================================
+// Vendas
+// ================================
+model Venda {
+  id       String   @id @default(uuid())
+  numero   String   @unique
+  cliente  String?
+  criadoEm DateTime @default(now())
+  total    Decimal  @db.Decimal(14, 2)
+
+  itens ItemVenda[]
 }
 
 model ItemVenda {
-  id            String    @id @default(cuid())
+  id            String  @id @default(uuid())
   vendaId       String
   produtoId     String
-  quantidade    Decimal   @db.Decimal(14, 3)
-  precoUnitario Decimal   @db.Decimal(14, 4)
-  custoNaVenda  Decimal   @db.Decimal(14, 4)
+  quantidade    Decimal @db.Decimal(14, 3)
+  precoUnitario Decimal @db.Decimal(14, 2)
 
-  venda         Venda     @relation(fields: [vendaId], references: [id])
-  produto       Produto   @relation(fields: [produtoId], references: [id])
-}
-
-/* =========================
-   FINANÇAS
-========================= */
-enum TipoFinanceiro {
-  RECEITA
-  DESPESA
-}
-
-model LancamentoFinanceiro {
-  id         String    @id @default(cuid())
-  tipo       TipoFinanceiro
-  data       DateTime
-  valor      Decimal   @db.Decimal(14, 2)
-  categoria  String?
-  referencia String?
-  meta       Json?
-  criadoEm   DateTime  @default(now())
+  venda   Venda   @relation(fields: [vendaId], references: [id])
+  produto Produto @relation(fields: [produtoId], references: [id])
 }

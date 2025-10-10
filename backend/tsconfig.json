@@ -41,7 +41,8 @@
     "moduleDetection": "force",
     "skipLibCheck": true,
     "allowImportingTsExtensions": true,
-    "noEmit": true
+    "noEmit": true,
+
   },
   "include": ["src/**/*.ts", "src/custom.d.ts"]
 }

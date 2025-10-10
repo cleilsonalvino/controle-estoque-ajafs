@@ -7,6 +7,8 @@ import {
   deleteSupplierService,
 } from "./suppliers.service.ts";
 
+import { createSupplierSchema, updateSupplierSchema } from "./suppliers.dto.ts";
+
 export const createSupplierController = async (req: Request, res: Response) => {
   const supplier = await createSupplierService(req.body);
   res.status(201).json(supplier);

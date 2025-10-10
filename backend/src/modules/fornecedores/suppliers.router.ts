@@ -9,10 +9,11 @@ import {
 
 const suppliersRouter = Router();
 
-suppliersRouter.post("/", createSupplierController);
+suppliersRouter.post("/create", createSupplierController);
 suppliersRouter.get("/", getSuppliersController);
 suppliersRouter.get("/:id", getSupplierByIdController);
 suppliersRouter.put("/:id", updateSupplierController);
 suppliersRouter.delete("/:id", deleteSupplierController);
+
 
 export default suppliersRouter;
