@@ -10,10 +10,10 @@ import {
 const salesRouter = Router();
 
 // Venda Routes
-salesRouter.post("/vendas", createVendaController);
-salesRouter.get("/vendas", getVendasController);
-salesRouter.get("/vendas/:id", getVendaByIdController);
-salesRouter.put("/vendas/:id", updateVendaController);
-salesRouter.delete("/vendas/:id", deleteVendaController);
+salesRouter.post("/create", createVendaController);
+salesRouter.get("/", getVendasController);
+salesRouter.get("/:id", getVendaByIdController);
+salesRouter.put("/:id", updateVendaController);
+salesRouter.delete("/:id", deleteVendaController);
 
 export default salesRouter;

@@ -21,7 +21,12 @@ export const createProductService = async (data: any) => {
 };
 
 export const getProductsService = async () => {
-  const products = await prisma.produto.findMany();
+  const products = await prisma.produto.findMany({
+    include: {
+      categoria: true,
+      fornecedor: true,
+    }
+  });
   return products;
 };
 

@@ -1,0 +1,738 @@
+
+# API Documentation
+
+This document provides a detailed overview of all the available routes in the API, including the expected JSON payloads for requests and responses.
+
+## Auth Module
+
+### POST /login
+
+*   **Description:** Authenticates a user and returns a JWT token.
+*   **Request Body (JSON):**
+    ```json
+    {
+      "email": "user@example.com",
+      "senha": "password123"
+    }
+    ```
+*   **Response Body (JSON):**
+    ```json
+    {
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+    }
+    ```
+
+---
+
+## Categories Module
+
+### POST /categorias/create
+
+*   **Description:** Creates a new category.
+*   **Request Body (JSON):**
+    ```json
+    {
+      "nome": "Eletrônicos",
+      "descricao": "Produtos eletrônicos em geral"
+    }
+    ```
+*   **Response Body (JSON):**
+    ```json
+    {
+      "id": "c1b2a3e4-f5d6-7890-1234-567890abcdef",
+      "nome": "Eletrônicos",
+      "descricao": "Produtos eletrônicos em geral"
+    }
+    ```
+
+### GET /categorias
+
+*   **Description:** Returns a list of all categories.
+*   **Response Body (JSON):**
+    ```json
+    [
+      {
+        "id": "c1b2a3e4-f5d6-7890-1234-567890abcdef",
+        "nome": "Eletrônicos",
+        "descricao": "Produtos eletrônicos em geral"
+      },
+      {
+        "id": "d2c3b4f5-g6h7-8901-2345-678901bcdefg",
+        "nome": "Roupas",
+        "descricao": "Vestuário e acessórios"
+      }
+    ]
+    ```
+
+### GET /categorias/:id
+
+*   **Description:** Returns a single category by its ID.
+*   **Response Body (JSON):**
+    ```json
+    {
+      "id": "c1b2a3e4-f5d6-7890-1234-567890abcdef",
+      "nome": "Eletrônicos",
+      "descricao": "Produtos eletrônicos em geral"
+    }
+    ```
+
+### PUT /categorias/:id
+
+*   **Description:** Updates a category.
+*   **Request Body (JSON):**
+    ```json
+    {
+      "nome": "Eletrônicos e Gadgets",
+      "descricao": "Produtos eletrônicos e gadgets modernos"
+    }
+    ```
+*   **Response Body (JSON):**
+    ```json
+    {
+      "id": "c1b2a3e4-f5d6-7890-1234-567890abcdef",
+      "nome": "Eletrônicos e Gadgets",
+      "descricao": "Produtos eletrônicos e gadgets modernos"
+    }
+    ```
+
+### DELETE /categorias/:id
+
+*   **Description:** Deletes a category.
+*   **Response Body (JSON):**
+    ```json
+    {
+      "message": "Category deleted successfully"
+    }
+    ```
+
+---
+
+## Stock Module
+
+### POST /estoque/movimentacao
+
+*   **Description:** Creates a new stock movement.
+*   **Request Body (JSON):**
+    ```json
+    {
+      "produtoId": "a1b2c3d4-e5f6-7890-1234-567890abcdef",
+      "tipo": "ENTRADA",
+      "quantidade": 100,
+      "observacao": "Recebimento de novo lote"
+    }
+    ```
+*   **Response Body (JSON):**
+    ```json
+    {
+      "id": "m1n2o3p4-q5r6-7890-1234-567890abcdef",
+      "produtoId": "a1b2c3d4-e5f6-7890-1234-567890abcdef",
+      "tipo": "ENTRADA",
+      "quantidade": 100,
+      "observacao": "Recebimento de novo lote",
+      "data": "2025-10-13T10:00:00.000Z"
+    }
+    ```
+
+### GET /estoque/movimentacao/:produtoId
+
+*   **Description:** Returns a list of all stock movements for a given product.
+*   **Response Body (JSON):**
+    ```json
+    [
+      {
+        "id": "m1n2o3p4-q5r6-7890-1234-567890abcdef",
+        "produtoId": "a1b2c3d4-e5f6-7890-1234-567890abcdef",
+        "tipo": "ENTRADA",
+        "quantidade": 100,
+        "observacao": "Recebimento de novo lote",
+        "data": "2025-10-13T10:00:00.000Z"
+      },
+      {
+        "id": "x1y2z3a4-b5c6-7890-1234-567890abcdef",
+        "produtoId": "a1b2c3d4-e5f6-7890-1234-567890abcdef",
+        "tipo": "SAIDA",
+        "quantidade": 20,
+        "observacao": "Venda para cliente",
+        "data": "2025-10-13T11:30:00.000Z"
+      }
+    ]
+    ```
+
+### GET /estoque/total
+
+*   **Description:** Returns the total stock quantity and value.
+*   **Response Body (JSON):**
+    ```json
+    {
+      "quantidadeTotal": 1500,
+      "valorTotal": 75000.00
+    }
+    ```
+
+### GET /estoque/giro/:produtoId
+
+*   **Description:** Returns the stock turnover for a given product.
+*   **Response Body (JSON):**
+    ```json
+    {
+      "produtoId": "a1b2c3d4-e5f6-7890-1234-567890abcdef",
+      "giroEstoque": 4.5
+    }
+    ```
+
+### GET /estoque/baixo
+
+*   **Description:** Returns a list of products with low stock.
+*   **Response Body (JSON):**
+    ```json
+    [
+      {
+        "id": "p1q2r3s4-t5u6-7890-1234-567890abcdef",
+        "nome": "Produto A",
+        "estoqueAtual": 5,
+        "estoqueMinimo": 10
+      },
+      {
+        "id": "u1v2w3x4-y5z6-7890-1234-567890abcdef",
+        "nome": "Produto B",
+        "estoqueAtual": 8,
+        "estoqueMinimo": 15
+      }
+    ]
+    ```
+
+### GET /estoque/historico
+
+*   **Description:** Returns a monthly summary of stock movements.
+*   **Response Body (JSON):**
+    ```json
+    [
+      {
+        "mes": "2025-09",
+        "entradas": 500,
+        "saidas": 350
+      },
+      {
+        "mes": "2025-10",
+        "entradas": 800,
+        "saidas": 600
+      }
+    ]
+    ```
+
+### GET /estoque/valor-total
+
+*   **Description:** Returns the total value of the stock in reais.
+*   **Response Body (JSON):**
+    ```json
+    {
+      "valorTotal": 75000.00
+    }
+    ```
+
+### GET /estoque/dashboard
+
+*   **Description:** Returns a general summary for the dashboard.
+*   **Response Body (JSON):**
+    ```json
+    {
+      "totalProdutos": 50,
+      "totalEstoque": 1500,
+      "valorTotalEstoque": 75000.00,
+      "produtosAbaixoMinimo": 5
+    }
+    ```
+
+---
+
+## Suppliers Module
+
+### POST /fornecedores/create
+
+*   **Description:** Creates a new supplier.
+*   **Request Body (JSON):**
+    ```json
+    {
+      "nome": "Fornecedor X",
+      "email": "contato@fornecedorx.com",
+      "telefone": "11987654321",
+      "descricao": "Fornecedor de componentes eletrônicos"
+    }
+    ```
+*   **Response Body (JSON):**
+    ```json
+    {
+      "id": "f1g2h3i4-j5k6-7890-1234-567890abcdef",
+      "nome": "Fornecedor X",
+      "email": "contato@fornecedorx.com",
+      "telefone": "11987654321",
+      "descricao": "Fornecedor de componentes eletrônicos"
+    }
+    ```
+
+### GET /fornecedores
+
+*   **Description:** Returns a list of all suppliers.
+*   **Response Body (JSON):**
+    ```json
+    [
+      {
+        "id": "f1g2h3i4-j5k6-7890-1234-567890abcdef",
+        "nome": "Fornecedor X",
+        "email": "contato@fornecedorx.com",
+        "telefone": "11987654321",
+        "descricao": "Fornecedor de componentes eletrônicos"
+      },
+      {
+        "id": "k2l3m4n5-o6p7-8901-2345-678901bcdefg",
+        "nome": "Fornecedor Y",
+        "email": "vendas@fornecedory.com",
+        "telefone": "21987654321",
+        "descricao": "Fornecedor de matéria-prima"
+      }
+    ]
+    ```
+
+### GET /fornecedores/:id
+
+*   **Description:** Returns a single supplier by its ID.
+*   **Response Body (JSON):**
+    ```json
+    {
+      "id": "f1g2h3i4-j5k6-7890-1234-567890abcdef",
+      "nome": "Fornecedor X",
+      "email": "contato@fornecedorx.com",
+      "telefone": "11987654321",
+      "descricao": "Fornecedor de componentes eletrônicos"
+    }
+    ```
+
+### PUT /fornecedores/:id
+
+*   **Description:** Updates a supplier.
+*   **Request Body (JSON):**
+    ```json
+    {
+      "nome": "Fornecedor X Ltda.",
+      "email": "contato@fornecedorx.com.br",
+      "telefone": "11987654321",
+      "descricao": "Fornecedor de componentes eletrônicos e peças"
+    }
+    ```
+*   **Response Body (JSON):**
+    ```json
+    {
+      "id": "f1g2h3i4-j5k6-7890-1234-567890abcdef",
+      "nome": "Fornecedor X Ltda.",
+      "email": "contato@fornecedorx.com.br",
+      "telefone": "11987654321",
+      "descricao": "Fornecedor de componentes eletrônicos e peças"
+    }
+    ```
+
+### DELETE /fornecedores/:id
+
+*   **Description:** Deletes a supplier.
+*   **Response Body (JSON):**
+    ```json
+    {
+      "message": "Supplier deleted successfully"
+    }
+    ```
+
+---
+
+## Products Module
+
+### POST /produtos/create
+
+*   **Description:** Creates a new product.
+*   **Request Body (JSON):**
+    ```json
+    {
+      "nome": "Smartphone Z",
+      "descricao": "Smartphone de última geração",
+      "preco": 2999.99,
+      "estoqueAtual": 50,
+      "estoqueMinimo": 10,
+      "fornecedorId": "f1g2h3i4-j5k6-7890-1234-567890abcdef",
+      "categoriaId": "c1b2a3e4-f5d6-7890-1234-567890abcdef"
+    }
+    ```
+*   **Response Body (JSON):**
+    ```json
+    {
+      "id": "p1q2r3s4-t5u6-7890-1234-567890abcdef",
+      "nome": "Smartphone Z",
+      "descricao": "Smartphone de última geração",
+      "preco": 2999.99,
+      "estoqueAtual": 50,
+      "estoqueMinimo": 10,
+      "fornecedorId": "f1g2h3i4-j5k6-7890-1234-567890abcdef",
+      "categoriaId": "c1b2a3e4-f5d6-7890-1234-567890abcdef"
+    }
+    ```
+
+### GET /produtos
+
+*   **Description:** Returns a list of all products.
+*   **Response Body (JSON):**
+    ```json
+    [
+      {
+        "id": "p1q2r3s4-t5u6-7890-1234-567890abcdef",
+        "nome": "Smartphone Z",
+        "descricao": "Smartphone de última geração",
+        "preco": 2999.99,
+        "estoqueAtual": 50,
+        "estoqueMinimo": 10,
+        "fornecedorId": "f1g2h3i4-j5k6-7890-1234-567890abcdef",
+        "categoriaId": "c1b2a3e4-f5d6-7890-1234-567890abcdef"
+      },
+      {
+        "id": "u1v2w3x4-y5z6-7890-1234-567890abcdef",
+        "nome": "Notebook Pro",
+        "descricao": "Notebook de alta performance",
+        "preco": 7999.99,
+        "estoqueAtual": 20,
+        "estoqueMinimo": 5,
+        "fornecedorId": "f1g2h3i4-j5k6-7890-1234-567890abcdef",
+        "categoriaId": "c1b2a3e4-f5d6-7890-1234-567890abcdef"
+      }
+    ]
+    ```
+
+### GET /produtos/:id
+
+*   **Description:** Returns a single product by its ID.
+*   **Response Body (JSON):**
+    ```json
+    {
+      "id": "p1q2r3s4-t5u6-7890-1234-567890abcdef",
+      "nome": "Smartphone Z",
+      "descricao": "Smartphone de última geração",
+      "preco": 2999.99,
+      "estoqueAtual": 50,
+      "estoqueMinimo": 10,
+      "fornecedorId": "f1g2h3i4-j5k6-7890-1234-567890abcdef",
+      "categoriaId": "c1b2a3e4-f5d6-7890-1234-567890abcdef"
+    }
+    ```
+
+### PUT /produtos/:id
+
+*   **Description:** Updates a product.
+*   **Request Body (JSON):**
+    ```json
+    {
+      "nome": "Smartphone Z+",
+      "descricao": "Smartphone de última geração com mais recursos",
+      "preco": 3299.99,
+      "estoqueAtual": 45,
+      "estoqueMinimo": 10,
+      "fornecedorId": "f1g2h3i4-j5k6-7890-1234-567890abcdef",
+      "categoriaId": "c1b2a3e4-f5d6-7890-1234-567890abcdef"
+    }
+    ```
+*   **Response Body (JSON):**
+    ```json
+    {
+      "id": "p1q2r3s4-t5u6-7890-1234-567890abcdef",
+      "nome": "Smartphone Z+",
+      "descricao": "Smartphone de última geração com mais recursos",
+      "preco": 3299.99,
+      "estoqueAtual": 45,
+      "estoqueMinimo": 10,
+      "fornecedorId": "f1g2h3i4-j5k6-7890-1234-567890abcdef",
+      "categoriaId": "c1b2a3e4-f5d6-7890-1234-567890abcdef"
+    }
+    ```
+
+### DELETE /produtos/delete/:id
+
+*   **Description:** Deletes a product.
+*   **Response Body (JSON):**
+    ```json
+    {
+      "message": "Product deleted successfully"
+    }
+    ```
+
+### PATCH /produtos/add-category/:id
+
+*   **Description:** Adds a category to a product.
+*   **Request Body (JSON):**
+    ```json
+    {
+      "categoriaId": "d2c3b4f5-g6h7-8901-2345-678901bcdefg"
+    }
+    ```
+*   **Response Body (JSON):**
+    ```json
+    {
+      "id": "p1q2r3s4-t5u6-7890-1234-567890abcdef",
+      "nome": "Smartphone Z",
+      "descricao": "Smartphone de última geração",
+      "preco": 2999.99,
+      "estoqueAtual": 50,
+      "estoqueMinimo": 10,
+      "fornecedorId": "f1g2h3i4-j5k6-7890-1234-567890abcdef",
+      "categoriaId": "d2c3b4f5-g6h7-8901-2345-678901bcdefg"
+    }
+    ```
+
+### PATCH /produtos/add-supplier/:id
+
+*   **Description:** Adds a supplier to a product.
+*   **Request Body (JSON):**
+    ```json
+    {
+      "fornecedorId": "k2l3m4n5-o6p7-8901-2345-678901bcdefg"
+    }
+    ```
+*   **Response Body (JSON):**
+    ```json
+    {
+      "id": "p1q2r3s4-t5u6-7890-1234-567890abcdef",
+      "nome": "Smartphone Z",
+      "descricao": "Smartphone de última geração",
+      "preco": 2999.99,
+      "estoqueAtual": 50,
+      "estoqueMinimo": 10,
+      "fornecedorId": "k2l3m4n5-o6p7-8901-2345-678901bcdefg",
+      "categoriaId": "c1b2a3e4-f5d6-7890-1234-567890abcdef"
+    }
+    ```
+
+---
+
+## Users Module
+
+### POST /usuarios
+
+*   **Description:** Creates a new user.
+*   **Request Body (JSON):**
+    ```json
+    {
+      "nome": "John Doe",
+      "email": "john.doe@example.com",
+      "senha": "password123",
+      "papel": "USUARIO"
+    }
+    ```
+*   **Response Body (JSON):**
+    ```json
+    {
+      "id": "u1v2w3x4-y5z6-7890-1234-567890abcdef",
+      "nome": "John Doe",
+      "email": "john.doe@example.com",
+      "papel": "USUARIO",
+      "ativo": true
+    }
+    ```
+
+### GET /usuarios
+
+*   **Description:** Returns a list of all users. (Requires authentication)
+*   **Response Body (JSON):**
+    ```json
+    [
+      {
+        "id": "u1v2w3x4-y5z6-7890-1234-567890abcdef",
+        "nome": "John Doe",
+        "email": "john.doe@example.com",
+        "papel": "USUARIO",
+        "ativo": true
+      },
+      {
+        "id": "a1b2c3d4-e5f6-7890-1234-567890abcdef",
+        "nome": "Jane Smith",
+        "email": "jane.smith@example.com",
+        "papel": "ADMINISTRADOR",
+        "ativo": true
+      }
+    ]
+    ```
+
+### GET /usuarios/:id
+
+*   **Description:** Returns a single user by their ID. (Requires authentication)
+*   **Response Body (JSON):**
+    ```json
+    {
+      "id": "u1v2w3x4-y5z6-7890-1234-567890abcdef",
+      "nome": "John Doe",
+      "email": "john.doe@example.com",
+      "papel": "USUARIO",
+      "ativo": true
+    }
+    ```
+
+### PUT /usuarios/:id
+
+*   **Description:** Updates a user. (Requires authentication)
+*   **Request Body (JSON):**
+    ```json
+    {
+      "nome": "John Doe Jr.",
+      "email": "john.doe.jr@example.com",
+      "papel": "GERENTE",
+      "ativo": false
+    }
+    ```
+*   **Response Body (JSON):**
+    ```json
+    {
+      "id": "u1v2w3x4-y5z6-7890-1234-567890abcdef",
+      "nome": "John Doe Jr.",
+      "email": "john.doe.jr@example.com",
+      "papel": "GERENTE",
+      "ativo": false
+    }
+    ```
+
+### DELETE /usuarios/:id
+
+*   **Description:** Deletes a user. (Requires authentication)
+*   **Response Body (JSON):**
+    ```json
+    {
+      "message": "User deleted successfully"
+    }
+    ```
+
+---
+
+## Sales Module
+
+### POST /vendas/create
+
+*   **Description:** Creates a new sale.
+*   **Request Body (JSON):**
+    ```json
+    {
+      "numero": "VENDA-001",
+      "nomeCliente": "Cliente Final",
+      "total": 4599.98,
+      "itens": [
+        {
+          "produtoId": "p1q2r3s4-t5u6-7890-1234-567890abcdef",
+          "quantidade": 1,
+          "precoUnitario": 2999.99,
+          "custoNaVenda": 2500.00
+        },
+        {
+          "produtoId": "u1v2w3x4-y5z6-7890-1234-567890abcdef",
+          "quantidade": 1,
+          "precoUnitario": 1599.99,
+          "custoNaVenda": 1200.00
+        }
+      ]
+    }
+    ```
+*   **Response Body (JSON):**
+    ```json
+    {
+      "id": "s1a2l3e4-s5a6-7890-1234-567890abcdef",
+      "numero": "VENDA-001",
+      "nomeCliente": "Cliente Final",
+      "total": 4599.98,
+      "data": "2025-10-13T12:00:00.000Z",
+      "itens": [
+        {
+          "id": "i1t2e3m4-i5t6-7890-1234-567890abcdef",
+          "vendaId": "s1a2l3e4-s5a6-7890-1234-567890abcdef",
+          "produtoId": "p1q2r3s4-t5u6-7890-1234-567890abcdef",
+          "quantidade": 1,
+          "precoUnitario": 2999.99,
+          "custoNaVenda": 2500.00
+        },
+        {
+          "id": "j1k2l3m4-j5k6-7890-1234-567890abcdef",
+          "vendaId": "s1a2l3e4-s5a6-7890-1234-567890abcdef",
+          "produtoId": "u1v2w3x4-y5z6-7890-1234-567890abcdef",
+          "quantidade": 1,
+          "precoUnitario": 1599.99,
+          "custoNaVenda": 1200.00
+        }
+      ]
+    }
+    ```
+
+### GET /vendas
+
+*   **Description:** Returns a list of all sales.
+*   **Response Body (JSON):**
+    ```json
+    [
+      {
+        "id": "s1a2l3e4-s5a6-7890-1234-567890abcdef",
+        "numero": "VENDA-001",
+        "nomeCliente": "Cliente Final",
+        "total": 4599.98,
+        "data": "2025-10-13T12:00:00.000Z"
+      }
+    ]
+    ```
+
+### GET /vendas/:id
+
+*   **Description:** Returns a single sale by its ID.
+*   **Response Body (JSON):**
+    ```json
+    {
+      "id": "s1a2l3e4-s5a6-7890-1234-567890abcdef",
+      "numero": "VENDA-001",
+      "nomeCliente": "Cliente Final",
+      "total": 4599.98,
+      "data": "2025-10-13T12:00:00.000Z",
+      "itens": [
+        {
+          "id": "i1t2e3m4-i5t6-7890-1234-567890abcdef",
+          "vendaId": "s1a2l3e4-s5a6-7890-1234-567890abcdef",
+          "produtoId": "p1q2r3s4-t5u6-7890-1234-567890abcdef",
+          "quantidade": 1,
+          "precoUnitario": 2999.99,
+          "custoNaVenda": 2500.00
+        },
+        {
+          "id": "j1k2l3m4-j5k6-7890-1234-567890abcdef",
+          "vendaId": "s1a2l3e4-s5a6-7890-1234-567890abcdef",
+          "produtoId": "u1v2w3x4-y5z6-7890-1234-567890abcdef",
+          "quantidade": 1,
+          "precoUnitario": 1599.99,
+          "custoNaVenda": 1200.00
+        }
+      ]
+    }
+    ```
+
+### PUT /vendas/:id
+
+*   **Description:** Updates a sale.
+*   **Request Body (JSON):**
+    ```json
+    {
+      "nomeCliente": "Cliente Final LTDA"
+    }
+    ```
+*   **Response Body (JSON):**
+    ```json
+    {
+      "id": "s1a2l3e4-s5a6-7890-1234-567890abcdef",
+      "numero": "VENDA-001",
+      "nomeCliente": "Cliente Final LTDA",
+      "total": 4599.98,
+      "data": "2025-10-13T12:00:00.000Z"
+    }
+    ```
+
+### DELETE /vendas/:id
+
+*   **Description:** Deletes a sale.
+*   **Response Body (JSON):**
+    ```json
+    {
+      "message": "Sale deleted successfully"
+    }
+    ```
