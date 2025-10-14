@@ -17,6 +17,7 @@ import { LoginPage } from "./pages/LoginPage";
 import { AuthProvider } from "./contexts/useAuth";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { ProdutoProvider } from "@/contexts/ProdutoContext";
+import { SalesProvider } from "./contexts/SalesContext";
 
 const queryClient = new QueryClient();
 
@@ -27,26 +28,27 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          <ProdutoProvider>
-
-          <Routes>
-            <Route path="/login" element={<LoginPage />} />
-            <Route element={<ProtectedRoute />}>
-              <Route path="/" element={<Layout />}>
-                <Route index element={<Dashboard />} />
-                <Route path="/products" element={<Products />} />
-                <Route path="/reports" element={<Reports />} />
-                <Route path="/movements" element={<Movements />} />
-                <Route path="/suppliers" element={<Suppliers />} />
-                <Route path="/categories" element={<Categories />} />
-                <Route path="/settings" element={<Settings />} />
-                <Route path="/sales" element={<Sales />} />
-              </Route>
-            </Route>
-            {/* Catch-all route for 404 */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-          </ProdutoProvider>
+          <SalesProvider>
+            <ProdutoProvider>
+              <Routes>
+                <Route path="/login" element={<LoginPage />} />
+                <Route element={<ProtectedRoute />}>
+                  <Route path="/" element={<Layout />}>
+                    <Route index element={<Dashboard />} />
+                    <Route path="/products" element={<Products />} />
+                    <Route path="/reports" element={<Reports />} />
+                    <Route path="/movements" element={<Movements />} />
+                    <Route path="/suppliers" element={<Suppliers />} />
+                    <Route path="/categories" element={<Categories />} />
+                    <Route path="/settings" element={<Settings />} />
+                    <Route path="/sales" element={<Sales />} />
+                  </Route>
+                </Route>
+                {/* Catch-all route for 404 */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </ProdutoProvider>
+          </SalesProvider>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>

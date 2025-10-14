@@ -1,89 +1,233 @@
-import { useState } from "react";
-import { ShoppingCart, DollarSign } from "lucide-react";
+// pages/Sales.tsx
+import { useState, useEffect } from "react";
+import { ShoppingCart, DollarSign, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { SalesForm } from "@/components/SalesForm";
-import { SalesTable } from "@/components/SalesTable";
-import type { Product } from "@/pages/Dashboard";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from "@/components/ui/table";
+import { useSales } from "@/contexts/SalesContext";
+
+// === Tipagem ===
+export interface Product {
+  id: string;
+  nome: string;
+  preco: string;
+}
 
 export interface SaleItem extends Product {
   quantity: number;
 }
 
+// === SalesForm ===
+interface SalesFormProps {
+  products: Product[];
+  onAddProductToSale: (product: Product, quantity: number) => void;
+}
+
+const SalesForm = ({ onAddProductToSale }: SalesFormProps) => {
+  const [selectedProductId, setSelectedProductId] = useState<string | undefined>(undefined); // Keep as string
+  const [quantity, setQuantity] = useState(1);
+
+    const { products, sales, createSale } = useSales();
+
+  const selectedProduct = products.find((p) => p.id === selectedProductId);
+
+
+
+  const handleAddClick = () => {
+    if (selectedProduct && quantity > 0) { // selectedProduct is of type Product from SalesContext
+      onAddProductToSale({ ...selectedProduct, preco: String(selectedProduct.preco) }, quantity);
+      setSelectedProductId(undefined);
+      setQuantity(1);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Adicionar Produto</CardTitle>
+        <CardDescription>Selecione um produto e a quantidade</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="product">Produto</Label>
+          <Select value={selectedProductId} onValueChange={setSelectedProductId}>
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione um produto" />
+            </SelectTrigger>
+            <SelectContent>
+              {products.map((product) => (
+                <SelectItem key={product.id} value={product.id}>
+                  {product.nome}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {selectedProduct && (
+          <div className="space-y-2">
+            <Label>Preço</Label>
+            <p className="text-lg font-semibold">{selectedProduct.preco}</p>
+          </div>
+        )}
+
+        <div className="space-y-2">
+          <Label htmlFor="quantity">Quantidade</Label>
+          <Input
+            id="quantity"
+            type="number"
+            min={1}
+            value={quantity}
+            onChange={(e) => setQuantity(Number(e.target.value))}
+          />
+        </div>
+
+        <Button
+          onClick={handleAddClick}
+          disabled={!selectedProduct || quantity <= 0}
+          className="w-full bg-gradient-primary hover:opacity-90 shadow-md"
+        >
+          Adicionar à Venda
+        </Button>
+      </CardContent>
+    </Card>
+  );
+};
+
+// === SalesTable ===
+interface SalesTableProps {
+  items: SaleItem[];
+  onRemoveItem: (productId: string) => void;
+  onUpdateQuantity: (productId: string, quantity: number) => void;
+}
+
+const SalesTable = ({ items, onRemoveItem, onUpdateQuantity }: SalesTableProps) => {
+  const subtotal = items.reduce((acc, item) => acc + Number(item.preco) * item.quantity, 0);
+
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Produto</TableHead>
+          <TableHead className="w-[100px]">Qtd.</TableHead>
+          <TableHead className="text-right">Preço Unit.</TableHead>
+          <TableHead className="text-right">Total</TableHead>
+          <TableHead className="w-[50px]"></TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {items.length > 0 ? (
+          items.map((item) => (
+            <TableRow key={item.id}>
+              <TableCell className="font-medium">{item.nome}</TableCell>
+              <TableCell>
+                <Input
+                  type="number"
+                  min={1}
+                  value={item.quantity}
+                  onChange={(e) => onUpdateQuantity(item.id, Number(e.target.value))}
+                  className="w-16"
+                />
+              </TableCell>
+              <TableCell className="text-right">{item.preco}</TableCell>
+              <TableCell className="text-right">{(Number(item.preco) * item.quantity).toFixed(2)}</TableCell>
+              <TableCell className="text-right">
+                <Button variant="ghost" size="icon" onClick={() => onRemoveItem(item.id)}>
+                  <Trash2 className="h-4 w-4 text-red-500" />
+                </Button>
+              </TableCell>
+            </TableRow>
+          ))
+        ) : (
+          <TableRow>
+            <TableCell colSpan={5} className="text-center">
+              Nenhum produto na venda.
+            </TableCell>
+          </TableRow>
+        )}
+      </TableBody>
+      <TableFooter>
+        <TableRow>
+          <TableCell colSpan={3} className="text-right font-bold">Total</TableCell>
+          <TableCell className="text-right font-bold">
+            {subtotal.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+          </TableCell>
+          <TableCell></TableCell>
+        </TableRow>
+      </TableFooter>
+    </Table>
+  );
+};
+
+// === Página de Vendas ===
 const Sales = () => {
+  const { createSale } = useSales();
+  const [products, setProducts] = useState<Product[]>([]);
   const [saleItems, setSaleItems] = useState<SaleItem[]>([]);
 
-  const handleAddProductToSale = (product: Product, quantity: number) => {
-    const existingItem = saleItems.find((item) => item.id === product.id);
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const res = await fetch("/produtos");
+        const data = await res.json();
+        setProducts(data.map((p: any) => ({ id: p.id, nome: p.nome, preco: p.preco })));
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchProducts();
+  }, []);
 
-    if (existingItem) {
-      setSaleItems(
-        saleItems.map((item) =>
-          item.id === product.id
-            ? { ...item, quantity: item.quantity + quantity }
-            : item
-        )
-      );
+  const handleAddProductToSale = (product: Product, quantity: number) => {
+    const existing = saleItems.find((i) => i.id === product.id);
+    if (existing) {
+      setSaleItems(saleItems.map((i) => i.id === product.id ? { ...i, quantity: i.quantity + quantity } : i));
     } else {
       setSaleItems([...saleItems, { ...product, quantity }]);
     }
   };
 
-  const handleRemoveItemFromSale = (productId: string) => {
-    setSaleItems(saleItems.filter((item) => item.id !== productId));
+  const handleRemoveItem = (id: string) => setSaleItems(saleItems.filter(i => i.id !== id));
+  const handleUpdateQuantity = (id: string, quantity: number) => {
+    if (quantity <= 0) return handleRemoveItem(id);
+    setSaleItems(saleItems.map(i => i.id === id ? { ...i, quantity } : i));
   };
 
-  const handleUpdateItemQuantity = (productId: string, quantity: number) => {
-    if (quantity <= 0) {
-      handleRemoveItemFromSale(productId);
-    } else {
-      setSaleItems(
-        saleItems.map((item) =>
-          item.id === productId ? { ...item, quantity } : item
-        )
-      );
+  const handleFinalizeSale = async () => {
+    try {
+      await createSale("Cliente", saleItems);
+      setSaleItems([]);
+      alert("Venda criada com sucesso!");
+    } catch (err) {
+      console.error(err);
+      alert("Erro ao criar venda");
     }
   };
 
-  const handleFinalizeSale = () => {
-    // Here you would typically send the sale data to a server
-    console.log("Sale finalized:", saleItems);
-    setSaleItems([]);
-    // You might want to show a success message here
-  };
-
-  const products: Product[] = [
-    {
-      id: "1",
-      nome: "Smartphone Samsung Galaxy",
-      categoria:{
-        id: "1",
-        nome: "Eletrônicos",
-      },
-      estoqueAtual: 25,
-      estoqueMinimo: 10,
-      preco: "1299.99",
-      fornecedor: {
-        id: "1",
-        nome: "Samsung Electronics",
-      },
-      descricao: "fd",
-      image: "https://example.com/smartphone.jpg",
-    },
-  ];
-
   return (
     <div className="p-6">
-      <div className="mb-8">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-gradient-primary rounded-lg">
-              <ShoppingCart className="h-6 w-6 text-primary-foreground" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">Registrar Venda</h1>
-              <p className="text-muted-foreground">Adicione produtos e finalize a venda</p>
-            </div>
-          </div>
+      <div className="mb-8 flex items-center gap-3">
+        <div className="p-2 bg-gradient-primary rounded-lg">
+          <ShoppingCart className="h-6 w-6 text-primary-foreground" />
+        </div>
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Registrar Venda</h1>
+          <p className="text-muted-foreground">Adicione produtos e finalize a venda</p>
         </div>
       </div>
 
@@ -92,19 +236,10 @@ const Sales = () => {
           <SalesForm products={products} onAddProductToSale={handleAddProductToSale} />
         </div>
         <div className="lg:col-span-2">
-          <SalesTable
-            items={saleItems}
-            onRemoveItem={handleRemoveItemFromSale}
-            onUpdateQuantity={handleUpdateItemQuantity}
-          />
+          <SalesTable items={saleItems} onRemoveItem={handleRemoveItem} onUpdateQuantity={handleUpdateQuantity} />
           <div className="flex justify-end mt-4">
-            <Button
-              onClick={handleFinalizeSale}
-              disabled={saleItems.length === 0}
-              className="bg-gradient-primary hover:opacity-90 shadow-md"
-            >
-              <DollarSign className="h-4 w-4 mr-2" />
-              Finalizar Venda
+            <Button onClick={handleFinalizeSale} disabled={saleItems.length === 0} className="bg-gradient-primary hover:opacity-90 shadow-md">
+              <DollarSign className="h-4 w-4 mr-2" /> Finalizar Venda
             </Button>
           </div>
         </div>
