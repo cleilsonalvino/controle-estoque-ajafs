@@ -24,12 +24,21 @@ export interface Sale {
   criadoEm?: string;
 }
 
+interface SaleData {
+  cliente: string;
+  itens: {
+    produtoId: string;
+    quantidade: number;
+    precoUnitario: number;
+  }[];
+}
+
 interface SalesContextProps {
   sales: Sale[];
   products: Product[];
   loading: boolean;
   fetchSales: () => Promise<void>;
-  createSale: (cliente: string, itens: SaleItem[]) => Promise<Sale>;
+  createSale: (saleData: SaleData) => Promise<Sale>;
   updateSale: (id: string, cliente: string, itens: SaleItem[]) => Promise<Sale>;
   deleteSale: (id: string) => Promise<void>;
 }
@@ -72,8 +81,8 @@ export const SalesProvider = ({ children }: SalesProviderProps) => {
     }
   };
 
-  const createSale = async (cliente: string, itens: SaleItem[]) => {
-    const response = await axios.post("/vendas/create", { cliente, itens });
+  const createSale = async (saleData: SaleData) => {
+    const response = await axios.post("/vendas/create", saleData);
     setSales((prev) => [response.data, ...prev]);
     return response.data;
   };

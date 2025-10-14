@@ -179,6 +179,7 @@ const Sales = () => {
   const { createSale } = useSales();
   const [products, setProducts] = useState<Product[]>([]);
   const [saleItems, setSaleItems] = useState<SaleItem[]>([]);
+  const [clientName, setClientName] = useState("");
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -209,9 +210,24 @@ const Sales = () => {
   };
 
   const handleFinalizeSale = async () => {
+    if (!clientName.trim()) {
+      alert("Por favor, insira o nome do cliente.");
+      return;
+    }
+
+    const saleData = {
+      cliente: clientName,
+      itens: saleItems.map(item => ({
+        produtoId: item.id,
+        quantidade: item.quantity,
+        precoUnitario: Number(item.preco),
+      })),
+    };
+
     try {
-      await createSale("Cliente", saleItems);
+      await createSale(saleData);
       setSaleItems([]);
+      setClientName("");
       alert("Venda criada com sucesso!");
     } catch (err) {
       console.error(err);
@@ -236,6 +252,16 @@ const Sales = () => {
           <SalesForm products={products} onAddProductToSale={handleAddProductToSale} />
         </div>
         <div className="lg:col-span-2">
+          <div className="space-y-2 mb-4">
+            <Label htmlFor="client-name">Nome do Cliente</Label>
+            <Input
+              id="client-name"
+              type="text"
+              value={clientName}
+              onChange={(e) => setClientName(e.target.value)}
+              placeholder="Digite o nome do cliente"
+            />
+          </div>
           <SalesTable items={saleItems} onRemoveItem={handleRemoveItem} onUpdateQuantity={handleUpdateQuantity} />
           <div className="flex justify-end mt-4">
             <Button onClick={handleFinalizeSale} disabled={saleItems.length === 0} className="bg-gradient-primary hover:opacity-90 shadow-md">
