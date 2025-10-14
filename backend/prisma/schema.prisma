@@ -75,7 +75,7 @@ model Movimentacao {
   observacao String?
   criadoEm   DateTime         @default(now())
 
-  produto Produto @relation(fields: [produtoId], references: [id])
+  produto Produto @relation(fields: [produtoId], references: [id], onDelete: Cascade)
 }
 
 // ================================

@@ -249,10 +249,6 @@ const Dashboard = () => {
             <h1 className="text-3xl font-bold text-foreground mb-2">Dashboard</h1>
             <p className="text-muted-foreground">Visão geral do seu estoque</p>
           </div>
-          <Button onClick={() => setShowAddDialog(true)} className="bg-gradient-primary hover:opacity-90 shadow-md">
-            <Plus className="h-4 w-4 mr-2" />
-            Adicionar Produto
-          </Button>
         </div>
       </div>
 
