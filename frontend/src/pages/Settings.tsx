@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Settings as SettingsIcon, Save, Bell, Shield, Database, Palette, User } from "lucide-react";
+import { Settings as SettingsIcon, Save, Bell, Shield, Database, Palette, User, Building, Search as SearchIcon } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,14 +10,41 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 
+// DADOS AUXILIARES: Array com os estados brasileiros para o select
+const estadosBrasileiros = [
+  { sigla: "AC", nome: "Acre" }, { sigla: "AL", nome: "Alagoas" }, { sigla: "AP", nome: "Amapá" },
+  { sigla: "AM", nome: "Amazonas" }, { sigla: "BA", nome: "Bahia" }, { sigla: "CE", nome: "Ceará" },
+  { sigla: "DF", nome: "Distrito Federal" }, { sigla: "ES", nome: "Espírito Santo" }, { sigla: "GO", nome: "Goiás" },
+  { sigla: "MA", nome: "Maranhão" }, { sigla: "MT", nome: "Mato Grosso" }, { sigla: "MS", nome: "Mato Grosso do Sul" },
+  { sigla: "MG", nome: "Minas Gerais" }, { sigla: "PA", nome: "Pará" }, { sigla: "PB", nome: "Paraíba" },
+  { sigla: "PR", nome: "Paraná" }, { sigla: "PE", nome: "Pernambuco" }, { sigla: "PI", nome: "Piauí" },
+  { sigla: "RJ", nome: "Rio de Janeiro" }, { sigla: "RN", nome: "Rio Grande do Norte" }, { sigla: "RS", nome: "Rio Grande do Sul" },
+  { sigla: "RO", nome: "Rondônia" }, { sigla: "RR", nome: "Roraima" }, { sigla: "SC", nome: "Santa Catarina" },
+  { sigla: "SP", nome: "São Paulo" }, { sigla: "SE", nome: "Sergipe" }, { sigla: "TO", nome: "Tocantins" }
+];
+
+
 const Settings = () => {
   const { toast } = useToast();
   
+  // 1. ESTADO: Adicionados novos campos para dados da empresa
   const [settings, setSettings] = useState({
     // Empresa
-    companyName: "Minha Empresa",
-    companyEmail: "contato@minhaempresa.com",
-    companyPhone: "(11) 99999-9999",
+    cnpj: "",
+    razaoSocial: "",
+    nomeFantasia: "",
+    inscEstadual: "",
+    inscMunicipal: "",
+    cnae: "",
+    telefone: "(11) 99999-9999",
+    email: "contato@minhaempresa.com",
+    cep: "",
+    estado: "",
+    cidade: "",
+    endereco: "",
+    numero: "",
+    complemento: "",
+    bairro: "",
     
     // Notificações
     emailNotifications: true,
@@ -41,8 +68,25 @@ const Settings = () => {
     setSettings(prev => ({ ...prev, [key]: value }));
   };
 
+  // 3. FUNCIONALIDADE: Adicionadas funções placeholder para interatividade
+  const handleAutofill = () => {
+    toast({
+      title: "Buscando dados do CNPJ...",
+      description: "Em uma aplicação real, aqui seria feita a chamada à API para preencher os dados.",
+    });
+    // Lógica da API para buscar dados do CNPJ aqui
+  };
+
+  const handleCepLookup = () => {
+    toast({
+      title: "Buscando endereço...",
+      description: "Aqui seria feita a chamada à API dos Correios ou ViaCEP.",
+    });
+     // Lógica da API para buscar dados do CEP aqui
+  }
+
   const handleSave = () => {
-    // Aqui você salvaria as configurações
+    console.log("Salvando configurações:", settings);
     toast({
       title: "Configurações salvas!",
       description: "Suas configurações foram atualizadas com sucesso.",
@@ -50,23 +94,20 @@ const Settings = () => {
   };
 
   return (
-    <div className="p-6">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto">
       {/* Header */}
       <div className="mb-8">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-gradient-primary rounded-lg">
-              <SettingsIcon className="h-6 w-6 text-primary-foreground" />
+        <div className="flex flex-wrap gap-4 justify-between items-center">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-primary rounded-lg text-primary-foreground">
+              <SettingsIcon className="h-7 w-7" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-foreground">Configurações</h1>
+              <h1 className="text-3xl font-bold tracking-tight">Configurações</h1>
               <p className="text-muted-foreground">Personalize o sistema conforme suas necessidades</p>
             </div>
           </div>
-          <Button 
-            onClick={handleSave}
-            className="bg-gradient-primary hover:opacity-90 shadow-md"
-          >
+          <Button onClick={handleSave} size="lg">
             <Save className="h-4 w-4 mr-2" />
             Salvar Alterações
           </Button>
@@ -74,51 +115,179 @@ const Settings = () => {
       </div>
 
       <div className="space-y-8">
-        {/* Informações da Empresa */}
-        <Card className="bg-gradient-card border-0 shadow-md">
+        {/* 2. JSX: Card "Informações da Empresa" completamente reestruturado */}
+        <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 text-xl">
+              <Building className="h-5 w-5" />
               Informações da Empresa
             </CardTitle>
             <CardDescription>
-              Dados básicos da sua empresa
+              Dados cadastrais, fiscais e de contato da sua empresa.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="lg:col-span-2 space-y-2">
+                <Label htmlFor="cnpj">CNPJ / CPF</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="cnpj"
+                    value={settings.cnpj}
+                    onChange={(e) => handleSettingChange("cnpj", e.target.value)}
+                    placeholder="00.000.000/0001-00"
+                  />
+                  <Button variant="outline" onClick={handleAutofill}>Autopreencher</Button>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="companyName">Nome da Empresa</Label>
+                <Label htmlFor="razaoSocial">Razão Social / Nome</Label>
                 <Input
-                  id="companyName"
-                  value={settings.companyName}
-                  onChange={(e) => handleSettingChange("companyName", e.target.value)}
+                  id="razaoSocial"
+                  value={settings.razaoSocial}
+                  onChange={(e) => handleSettingChange("razaoSocial", e.target.value)}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="companyEmail">Email da Empresa</Label>
+                <Label htmlFor="nomeFantasia">Nome Fantasia</Label>
                 <Input
-                  id="companyEmail"
-                  type="email"
-                  value={settings.companyEmail}
-                  onChange={(e) => handleSettingChange("companyEmail", e.target.value)}
+                  id="nomeFantasia"
+                  value={settings.nomeFantasia}
+                  onChange={(e) => handleSettingChange("nomeFantasia", e.target.value)}
                 />
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="companyPhone">Telefone</Label>
-              <Input
-                id="companyPhone"
-                value={settings.companyPhone}
-                onChange={(e) => handleSettingChange("companyPhone", e.target.value)}
-                className="md:w-1/2"
-              />
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+               <div className="space-y-2">
+                <Label htmlFor="inscEstadual">Inscrição Estadual</Label>
+                <Input
+                  id="inscEstadual"
+                  value={settings.inscEstadual}
+                  onChange={(e) => handleSettingChange("inscEstadual", e.target.value)}
+                />
+              </div>
+               <div className="space-y-2">
+                <Label htmlFor="inscMunicipal">Inscrição Municipal</Label>
+                <Input
+                  id="inscMunicipal"
+                  value={settings.inscMunicipal}
+                  onChange={(e) => handleSettingChange("inscMunicipal", e.target.value)}
+                />
+              </div>
+               <div className="space-y-2">
+                <Label htmlFor="cnae">CNAE Principal</Label>
+                <Input
+                  id="cnae"
+                  value={settings.cnae}
+                  onChange={(e) => handleSettingChange("cnae", e.target.value)}
+                />
+              </div>
+            </div>
+            
+            <Separator />
+
+            <h3 className="text-md font-semibold text-foreground">Contato e Endereço</h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+               <div className="space-y-2">
+                <Label htmlFor="telefone">Telefone</Label>
+                <Input
+                  id="telefone"
+                  value={settings.telefone}
+                  onChange={(e) => handleSettingChange("telefone", e.target.value)}
+                />
+              </div>
+               <div className="space-y-2">
+                <Label htmlFor="email">E-mail</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={settings.email}
+                  onChange={(e) => handleSettingChange("email", e.target.value)}
+                />
+              </div>
+            </div>
+
+             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="cep">CEP</Label>
+                 <div className="flex gap-2">
+                  <Input
+                    id="cep"
+                    value={settings.cep}
+                    onChange={(e) => handleSettingChange("cep", e.target.value)}
+                  />
+                  <Button variant="outline" size="icon" onClick={handleCepLookup}><SearchIcon className="h-4 w-4"/></Button>
+                 </div>
+              </div>
+              <div className="space-y-2">
+                 <Label>Estado</Label>
+                 <Select value={settings.estado} onValueChange={(value) => handleSettingChange("estado", value)}>
+                   <SelectTrigger><SelectValue placeholder="Selecione o estado" /></SelectTrigger>
+                   <SelectContent>
+                     {estadosBrasileiros.map(uf => (
+                       <SelectItem key={uf.sigla} value={uf.sigla}>{uf.nome}</SelectItem>
+                     ))}
+                   </SelectContent>
+                 </Select>
+              </div>
+              <div className="space-y-2">
+                 <Label>Cidade</Label>
+                 <Input
+                    id="cidade"
+                    value={settings.cidade}
+                    onChange={(e) => handleSettingChange("cidade", e.target.value)}
+                    // Em uma app real, este campo poderia ser um Select dinâmico
+                 />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+              <div className="md:col-span-3 space-y-2">
+                <Label htmlFor="endereco">Endereço (Rua, Av.)</Label>
+                <Input
+                  id="endereco"
+                  value={settings.endereco}
+                  onChange={(e) => handleSettingChange("endereco", e.target.value)}
+                />
+              </div>
+               <div className="md:col-span-2 space-y-2">
+                <Label htmlFor="numero">Número</Label>
+                <Input
+                  id="numero"
+                  value={settings.numero}
+                  onChange={(e) => handleSettingChange("numero", e.target.value)}
+                />
+              </div>
+            </div>
+
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="complemento">Complemento</Label>
+                <Input
+                  id="complemento"
+                  value={settings.complemento}
+                  onChange={(e) => handleSettingChange("complemento", e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="bairro">Bairro</Label>
+                <Input
+                  id="bairro"
+                  value={settings.bairro}
+                  onChange={(e) => handleSettingChange("bairro", e.target.value)}
+                />
+              </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Notificações */}
-        <Card className="bg-gradient-card border-0 shadow-md">
+        <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Bell className="h-5 w-5" />
@@ -158,8 +327,8 @@ const Settings = () => {
             </div>
 
             {settings.stockAlerts && (
-              <div className="space-y-2 ml-6">
-                <Label htmlFor="lowStockThreshold">Limite de Estoque Baixo</Label>
+              <div className="space-y-2 pl-4 border-l-2 ml-2">
+                <Label htmlFor="lowStockThreshold">Limite para Alerta de Estoque Baixo</Label>
                 <Input
                   id="lowStockThreshold"
                   type="number"
@@ -169,7 +338,7 @@ const Settings = () => {
                   className="w-32"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Alertar quando quantidade for menor ou igual a este valor
+                  Alertar quando a quantidade for menor ou igual a este valor.
                 </p>
               </div>
             )}
@@ -191,7 +360,7 @@ const Settings = () => {
           </CardContent>
         </Card>
 
-        {/* Sistema */}
+                {/* Sistema */}
         <Card className="bg-gradient-card border-0 shadow-md">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -335,6 +504,7 @@ const Settings = () => {
             </div>
           </CardContent>
         </Card>
+        
       </div>
     </div>
   );

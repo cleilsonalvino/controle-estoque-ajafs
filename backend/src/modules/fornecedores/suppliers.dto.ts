@@ -3,6 +3,7 @@ import { z } from "zod";
 export const createSupplierSchema = z.object({
   nome: z.string(),
   email: z.string().email().optional(),
+  contato: z.string().optional(),
   telefone: z.string().optional(),
   descricao: z.string().optional(),
 });
