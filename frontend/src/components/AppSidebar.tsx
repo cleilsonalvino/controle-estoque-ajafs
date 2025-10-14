@@ -1,21 +1,21 @@
 import { useState } from "react";
-import { 
-  LayoutDashboard, 
-  Package, 
-  BarChart3, 
-  ArrowUpDown, 
-  Users, 
+import {
+  LayoutDashboard,
+  Package,
+  BarChart3,
+  ArrowUpDown,
+  Users,
   Tag,
   ShoppingCart,
   Settings,
   ChevronLeft,
   ChevronRight,
-  LogOut
+  LogOut,
 } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/useAuth";
 
 const menuItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
@@ -47,10 +47,12 @@ export const AppSidebar = () => {
   };
 
   return (
-    <div className={cn(
-      "bg-card border-r shadow-sm transition-all duration-300 flex flex-col",
-      collapsed ? "w-16" : "w-64"
-    )}>
+    <div
+      className={cn(
+        "bg-card border-r shadow-sm transition-all duration-300 flex flex-col",
+        collapsed ? "w-16" : "w-64"
+      )}
+    >
       {/* Header */}
       <div className="p-4 border-b">
         <div className="flex items-center justify-between">
@@ -71,7 +73,11 @@ export const AppSidebar = () => {
             onClick={() => setCollapsed(!collapsed)}
             className="h-8 w-8 p-0"
           >
-            {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+            {collapsed ? (
+              <ChevronRight className="h-4 w-4" />
+            ) : (
+              <ChevronLeft className="h-4 w-4" />
+            )}
           </Button>
         </div>
       </div>
@@ -87,15 +93,19 @@ export const AppSidebar = () => {
                   to={item.url}
                   className={cn(
                     "flex items-center space-x-3 px-3 py-2 rounded-lg transition-all duration-200 group",
-                    active 
+                    active
                       ? "bg-primary text-primary-foreground shadow-sm"
                       : "text-muted-foreground hover:text-foreground hover:bg-muted"
                   )}
                 >
-                  <item.icon className={cn(
-                    "h-5 w-5 shrink-0",
-                    active ? "text-primary-foreground" : "text-muted-foreground group-hover:text-foreground"
-                  )} />
+                  <item.icon
+                    className={cn(
+                      "h-5 w-5 shrink-0",
+                      active
+                        ? "text-primary-foreground"
+                        : "text-muted-foreground group-hover:text-foreground"
+                    )}
+                  />
                   {!collapsed && (
                     <span className="font-medium">{item.title}</span>
                   )}
@@ -108,7 +118,11 @@ export const AppSidebar = () => {
 
       {/* Footer */}
       <div className="p-4 border-t">
-        <Button onClick={handleLogout} variant="ghost" className="w-full justify-start">
+        <Button
+          onClick={handleLogout}
+          variant="ghost"
+          className="w-full justify-start"
+        >
           <LogOut className="h-5 w-5 mr-3" />
           {!collapsed && <span>Logout</span>}
         </Button>

@@ -14,8 +14,9 @@ import Settings from "./pages/Settings";
 import Sales from "./pages/Sales";
 import NotFound from "./pages/NotFound";
 import { LoginPage } from "./pages/LoginPage";
-import { AuthProvider } from "./hooks/useAuth";
+import { AuthProvider } from "./contexts/useAuth";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { ProdutoProvider } from "@/contexts/ProdutoContext";
 
 const queryClient = new QueryClient();
 
@@ -26,6 +27,8 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
+          <ProdutoProvider>
+
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route element={<ProtectedRoute />}>
@@ -43,6 +46,7 @@ const App = () => (
             {/* Catch-all route for 404 */}
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </ProdutoProvider>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>

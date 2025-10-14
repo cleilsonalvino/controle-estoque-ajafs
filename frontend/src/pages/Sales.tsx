@@ -54,27 +54,20 @@ const Sales = () => {
   const products: Product[] = [
     {
       id: "1",
-      name: "Smartphone Samsung Galaxy",
-      category: "Eletrônicos",
-      quantity: 25,
-      minStock: 10,
-      price: 1299.99,
-    },
-    {
-      id: "2",
-      name: "Notebook Dell Inspiron",
-      category: "Eletrônicos",
-      quantity: 8,
-      minStock: 5,
-      price: 2499.99,
-    },
-    {
-      id: "3",
-      name: "Mesa de Escritório",
-      category: "Móveis",
-      quantity: 3,
-      minStock: 8,
-      price: 599.99,
+      nome: "Smartphone Samsung Galaxy",
+      categoria:{
+        id: "1",
+        nome: "Eletrônicos",
+      },
+      estoqueAtual: 25,
+      estoqueMinimo: 10,
+      preco: "1299.99",
+      fornecedor: {
+        id: "1",
+        nome: "Samsung Electronics",
+      },
+      descricao: "fd",
+      image: "https://example.com/smartphone.jpg",
     },
   ];
 

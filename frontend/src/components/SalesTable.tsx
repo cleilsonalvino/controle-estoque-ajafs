@@ -24,7 +24,7 @@ export const SalesTable = ({
   onUpdateQuantity,
 }: SalesTableProps) => {
   const subtotal = items.reduce(
-    (acc, item) => acc + item.price * item.quantity,
+    (acc, item) => acc + Number(item.preco)  * item.quantity,
     0
   );
 
@@ -43,7 +43,7 @@ export const SalesTable = ({
         {items.length > 0 ? (
           items.map((item) => (
             <TableRow key={item.id}>
-              <TableCell className="font-medium">{item.name}</TableCell>
+              <TableCell className="font-medium">{item.nome}</TableCell>
               <TableCell>
                 <Input
                   type="number"
@@ -56,16 +56,10 @@ export const SalesTable = ({
                 />
               </TableCell>
               <TableCell className="text-right">
-                {item.price.toLocaleString("pt-BR", {
-                  style: "currency",
-                  currency: "BRL",
-                })}
+                {item.preco}
               </TableCell>
               <TableCell className="text-right">
-                {(item.price * item.quantity).toLocaleString("pt-BR", {
-                  style: "currency",
-                  currency: "BRL",
-                })}
+                {(Number(item.preco) * item.quantity)}
               </TableCell>
               <TableCell className="text-right">
                 <Button

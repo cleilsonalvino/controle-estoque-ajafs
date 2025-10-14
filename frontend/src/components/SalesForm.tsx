@@ -58,7 +58,7 @@ export const SalesForm = ({ products, onAddProductToSale }: SalesFormProps) => {
             <SelectContent>
               {products.map((product) => (
                 <SelectItem key={product.id} value={product.id}>
-                  {product.name}
+                  {product.nome}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -69,10 +69,7 @@ export const SalesForm = ({ products, onAddProductToSale }: SalesFormProps) => {
           <div className="space-y-2">
             <Label>Preço</Label>
             <p className="text-lg font-semibold">
-              {selectedProduct.price.toLocaleString("pt-BR", {
-                style: "currency",
-                currency: "BRL",
-              })}
+              {selectedProduct.preco}
             </p>
           </div>
         )}
