@@ -22,7 +22,7 @@ export class StockService {
 
         switch (tipo) {
           case 'ENTRADA':
-            novoEstoque += quantidade;
+            novoEstoque += quantidade;  
             break;
           case 'SAIDA':
             novoEstoque -= quantidade;
@@ -60,6 +60,20 @@ export class StockService {
     return prisma.movimentacao.findMany({
       where: { produtoId },
       orderBy: { criadoEm: 'desc' },
+    });
+  }
+
+  public async getMovimentacoes() {
+    return prisma.movimentacao.findMany({
+      orderBy: { criadoEm: 'desc' },
+      include: {
+        produto: {
+          select: {
+            id: true,
+            nome: true,
+          },
+        },
+      },
     });
   }
 

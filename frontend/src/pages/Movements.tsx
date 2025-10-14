@@ -1,16 +1,44 @@
-import { useState } from "react";
-import { ArrowUpDown, ArrowUp, ArrowDown, Plus, Filter, Calendar, Search } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useEffect, useState } from "react";
+import api from "@/lib/api";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
+import { toast } from "sonner";
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  Plus,
+  Search,
+} from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+
+import { Badge } from "@/components/ui/badge";
 
 interface Movement {
   id: string;
-  type: "entrada" | "saida";
+  type: "ENTRADA" | "SAIDA";
   product: string;
   quantity: number;
   reason: string;
@@ -20,117 +48,156 @@ interface Movement {
 }
 
 const Movements = () => {
-  const [movements, setMovements] = useState<Movement[]>([
-    {
-      id: "1",
-      type: "entrada",
-      product: "Smartphone Samsung Galaxy",
-      quantity: 10,
-      reason: "Compra",
-      date: "2024-01-15T10:30:00",
-      user: "João Silva",
-      notes: "Lote 001 - Fornecedor TechStore"
-    },
-    {
-      id: "2",
-      type: "saida",
-      product: "Notebook Dell Inspiron",
-      quantity: 2,
-      reason: "Venda",
-      date: "2024-01-15T14:22:00",
-      user: "Maria Santos",
-    },
-    {
-      id: "3",
-      type: "saida",
-      product: "Mesa de Escritório",
-      quantity: 1,
-      reason: "Devolução",
-      date: "2024-01-14T16:45:00",
-      user: "Carlos Oliveira",
-      notes: "Produto com defeito"
-    },
-    {
-      id: "4",
-      type: "entrada",
-      product: "Cadeira Ergonômica",
-      quantity: 5,
-      reason: "Compra",
-      date: "2024-01-14T09:15:00",
-      user: "Ana Costa",
-    },
-    {
-      id: "5",
-      type: "saida",
-      product: "Teclado Mecânico",
-      quantity: 3,
-      reason: "Venda",
-      date: "2024-01-13T11:30:00",
-      user: "Pedro Lima",
-    },
-  ]);
-
+  const [movements, setMovements] = useState<Movement[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [filterType, setFilterType] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
 
   const [newMovement, setNewMovement] = useState({
-    type: "entrada" as "entrada" | "saida",
+    type: "ENTRADA" as "ENTRADA" | "SAIDA",
     product: "",
     quantity: "",
     reason: "",
     notes: "",
   });
 
-  const filteredMovements = movements.filter(movement => {
-    const matchesSearch = movement.product.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         movement.reason.toLowerCase().includes(searchTerm.toLowerCase());
+  // =============================
+  // 🔹 Buscar movimentações reais
+  // =============================
+  useEffect(() => {
+    const fetchMovements = async () => {
+      try {
+        setLoading(true);
+        const response = await api.get("/estoque/movimentacoes");
+
+        const data = response.data;
+
+        // adapta os campos do back para o formato do front
+        const formatted: Movement[] = data.map((item: any) => ({
+          id: item.id,
+          type: item.tipo,
+          product: item.produto?.nome || "Produto não encontrado", // Assuming item.produto.nome exists
+          quantity: Number(item.quantidade),
+          reason: item.tipo || "Sem motivo",
+          date: item.criadoEm,
+          user: "Usuário do sistema", // se o backend enviar, substitua por item.usuario.nome
+          notes: item.observacao || "",
+        }));
+
+        // ordena por data (mais recente primeiro)
+        formatted.sort(
+          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+        );
+
+        setMovements(formatted);
+      } catch (error) {
+        console.error("Erro ao buscar movimentações:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMovements();
+  }, []);
+
+  // =============================
+  // 🔹 Filtragem e busca
+  // =============================
+  const filteredMovements = movements.filter((movement) => {
+    const matchesSearch =
+      movement.product.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      movement.reason.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = filterType === "all" || movement.type === filterType;
     return matchesSearch && matchesType;
   });
 
-  const handleAddMovement = () => {
-    if (!newMovement.product || !newMovement.quantity) return;
+  // =============================
+  // 🔹 Adicionar movimentação (apenas local)
+  // =============================
+  const [products, setProducts] = useState([]);
 
-    const movement: Movement = {
-      id: Date.now().toString(),
-      type: newMovement.type,
-      product: newMovement.product,
-      quantity: parseInt(newMovement.quantity),
-      reason: newMovement.reason || (newMovement.type === "entrada" ? "Compra" : "Venda"),
-      date: new Date().toISOString(),
-      user: "Usuário Atual",
-      notes: newMovement.notes || undefined,
+  // Carrega produtos ao abrir o modal
+  useEffect(() => {
+    if (!showAddDialog) return;
+    const fetchProducts = async () => {
+      try {
+        const response = await api.get("/produtos");
+        setProducts(response.data);
+      } catch (error) {
+        console.error("Erro ao carregar produtos:", error);
+        toast.error("Erro ao carregar lista de produtos");
+      }
     };
+    fetchProducts();
+  }, [showAddDialog]);
 
-    setMovements([movement, ...movements]);
-    setNewMovement({
-      type: "entrada",
-      product: "",
-      quantity: "",
-      reason: "",
-      notes: "",
-    });
-    setShowAddDialog(false);
+  const handleAddMovement = async () => {
+    if (!newMovement.product || !newMovement.quantity) {
+      toast.warning("Preencha todos os campos obrigatórios!");
+      return;
+    }
+
+    try {
+      await api.post("/estoque/movimentacao", {
+        produtoId: newMovement.product,
+        tipo: newMovement.type.toUpperCase(), // "ENTRADA" | "SAIDA"
+        quantidade: Number(newMovement.quantity),
+        observacao: newMovement.notes || "Movimentação manual",
+      });
+
+      toast.success("Movimentação registrada com sucesso!");
+      setShowAddDialog(false);
+      setNewMovement({
+        type: "ENTRADA",
+        product: "",
+        quantity: "",
+        notes: "",
+        reason: "",
+      });
+
+      // Atualiza a lista de movimentações na tela principal
+      onMovementAdded();
+    } catch (error) {
+      console.error(error);
+      toast.error("Erro ao registrar movimentação");
+    }
   };
 
-  const getMovementIcon = (type: "entrada" | "saida") => {
-    return type === "entrada" ? 
-      <ArrowUp className="h-4 w-4 text-success" /> : 
-      <ArrowDown className="h-4 w-4 text-destructive" />;
+  // =============================
+  // 🔹 Utilitários visuais
+  // =============================
+  const getMovementIcon = (type: "ENTRADA" | "SAIDA") => {
+    return type === "ENTRADA" ? (
+      <ArrowUp className="h-4 w-4 text-green-600" />
+    ) : (
+      <ArrowDown className="h-4 w-4 text-red-600" />
+    );
   };
 
-  const getMovementBadge = (type: "entrada" | "saida") => {
-    return type === "entrada" ? 
-      <Badge variant="success" className="text-xs">Entrada</Badge> :
-      <Badge variant="destructive" className="text-xs">Saída</Badge>;
-  };
+const getMovementBadge = (type: "ENTRADA" | "SAIDA" | "AJUSTE") => {
+  if (type === "ENTRADA") {
+    return <Badge className="text-xs bg-green-600 text-white">Entrada</Badge>;
+  } else if (type === "SAIDA") {
+    return <Badge className="text-xs bg-red-600 text-white">Saída</Badge>;
+  } else if (type === "AJUSTE") {
+    return <Badge className="text-xs bg-yellow-600 text-white">Ajuste</Badge>;
+  }
+
+  // fallback opcional, caso venha um tipo inesperado
+  return <Badge className="text-xs bg-gray-600 text-white">Desconhecido</Badge>;
+};
+
+
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleString('pt-BR');
+    return date.toLocaleString("pt-BR");
   };
 
+  // =============================
+  // 🔹 Renderização
+  // =============================
   return (
     <div className="p-6">
       {/* Header */}
@@ -141,11 +208,15 @@ const Movements = () => {
               <ArrowUpDown className="h-6 w-6 text-primary-foreground" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-foreground">Movimentações</h1>
-              <p className="text-muted-foreground">Histórico de entradas e saídas de produtos</p>
+              <h1 className="text-3xl font-bold text-foreground">
+                Movimentações
+              </h1>
+              <p className="text-muted-foreground">
+                Histórico de entradas e saídas de produtos
+              </p>
             </div>
           </div>
-          <Button 
+          <Button
             onClick={() => setShowAddDialog(true)}
             className="bg-gradient-primary hover:opacity-90 shadow-md"
           >
@@ -155,7 +226,7 @@ const Movements = () => {
         </div>
       </div>
 
-      {/* Filters */}
+      {/* Filtros */}
       <Card className="mb-6 bg-gradient-card border-0 shadow-md">
         <CardContent className="pt-6">
           <div className="flex flex-col sm:flex-row gap-4">
@@ -176,15 +247,15 @@ const Movements = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos os tipos</SelectItem>
-                <SelectItem value="entrada">Apenas entradas</SelectItem>
-                <SelectItem value="saida">Apenas saídas</SelectItem>
+                <SelectItem value="ENTRADA">Apenas entradas</SelectItem>
+                <SelectItem value="SAIDA">Apenas saídas</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </CardContent>
       </Card>
 
-      {/* Movimentações List */}
+      {/* Lista de movimentações */}
       <Card className="bg-gradient-card border-0 shadow-md">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -196,96 +267,125 @@ const Movements = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {filteredMovements.map((movement) => (
-              <div key={movement.id} className="flex items-center justify-between p-4 bg-card rounded-lg border hover:shadow-sm transition-shadow">
-                <div className="flex items-center space-x-4">
-                  <div className="flex items-center justify-center w-10 h-10 rounded-full bg-muted">
-                    {getMovementIcon(movement.type)}
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h4 className="font-semibold text-foreground">{movement.product}</h4>
-                      {getMovementBadge(movement.type)}
+          {loading ? (
+            <p className="text-center text-muted-foreground py-10">
+              Carregando movimentações...
+            </p>
+          ) : filteredMovements.length > 0 ? (
+            <div className="space-y-4">
+              {filteredMovements.map((movement) => (
+                <div
+                  key={movement.id}
+                  className="flex items-center justify-between p-4 bg-card rounded-lg border hover:shadow-sm transition-shadow"
+                >
+                  <div className="flex items-center space-x-4">
+                    <div className="flex items-center justify-center w-10 h-10 rounded-full bg-muted">
+                      {getMovementIcon(movement.type)}
                     </div>
-                    <div className="text-sm text-muted-foreground">
-                      <span className="font-medium">Motivo:</span> {movement.reason}
-                      {movement.notes && (
-                        <>
-                          <br />
-                          <span className="font-medium">Observações:</span> {movement.notes}
-                        </>
-                      )}
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h4 className="font-semibold text-foreground">
+                          {movement.product}
+                        </h4>
+                        {getMovementBadge(movement.type)}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        <span className="font-medium">Motivo:</span>{" "}
+                        {movement.reason}
+                        {movement.notes && (
+                          <>
+                            <br />
+                            <span className="font-medium">Obs:</span>{" "}
+                            {movement.notes}
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-lg font-bold text-foreground">
+                      {movement.type === "ENTRADA" ? "+" : "-"}
+                      {movement.quantity}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {formatDate(movement.date)}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      por {movement.user}
                     </div>
                   </div>
                 </div>
-                <div className="text-right">
-                  <div className="text-lg font-bold text-foreground">
-                    {movement.type === "entrada" ? "+" : "-"}{movement.quantity}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {formatDate(movement.date)}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    por {movement.user}
-                  </div>
-                </div>
-              </div>
-            ))}
-
-            {filteredMovements.length === 0 && (
-              <div className="text-center py-12">
-                <ArrowUpDown className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">Nenhuma movimentação encontrada</h3>
-                <p className="text-muted-foreground">
-                  {searchTerm || filterType !== "all" 
-                    ? "Tente ajustar os filtros de pesquisa."
-                    : "Registre sua primeira movimentação para começar."}
-                </p>
-              </div>
-            )}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <ArrowUpDown className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold mb-2">
+                Nenhuma movimentação encontrada
+              </h3>
+              <p className="text-muted-foreground">
+                {searchTerm || filterType !== "all"
+                  ? "Tente ajustar os filtros de pesquisa."
+                  : "Registre sua primeira movimentação para começar."}
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Add Movement Dialog */}
+      {/* Modal de nova movimentação */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Nova Movimentação</DialogTitle>
             <DialogDescription>
-              Registre uma nova entrada ou saída de produto do estoque.
+              Registre uma nova entrada ou saída manual de produto.
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4">
+            {/* Tipo */}
             <div className="space-y-2">
               <Label>Tipo de Movimentação</Label>
-              <Select 
-                value={newMovement.type} 
-                onValueChange={(value: "entrada" | "saida") => 
-                  setNewMovement(prev => ({ ...prev, type: value }))
+              <Select // Changed from "entrada" | "saida" to "ENTRADA" | "SAIDA"
+                value={newMovement.type} // Changed from "entrada" | "saida" to "ENTRADA" | "SAIDA"
+                onValueChange={(value: "ENTRADA" | "SAIDA") =>
+                  setNewMovement((prev) => ({ ...prev, type: value }))
                 }
               >
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder="Selecione o tipo" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="entrada">Entrada</SelectItem>
-                  <SelectItem value="saida">Saída</SelectItem>
+                  <SelectItem value="ENTRADA">Entrada</SelectItem>
+                  <SelectItem value="SAIDA">Saída</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
+            {/* Produto */}
             <div className="space-y-2">
               <Label>Produto</Label>
-              <Input
-                placeholder="Nome do produto"
+              <Select
                 value={newMovement.product}
-                onChange={(e) => setNewMovement(prev => ({ ...prev, product: e.target.value }))}
-              />
+                onValueChange={(value) =>
+                  setNewMovement((prev) => ({ ...prev, product: value }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o produto" />
+                </SelectTrigger>
+                <SelectContent>
+                  {products.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
+            {/* Quantidade */}
             <div className="space-y-2">
               <Label>Quantidade</Label>
               <Input
@@ -293,34 +393,61 @@ const Movements = () => {
                 min="1"
                 placeholder="Quantidade"
                 value={newMovement.quantity}
-                onChange={(e) => setNewMovement(prev => ({ ...prev, quantity: e.target.value }))}
+                onChange={(e) =>
+                  setNewMovement((prev) => ({
+                    ...prev,
+                    quantity: e.target.value,
+                  }))
+                }
               />
             </div>
 
             <div className="space-y-2">
-              <Label>Motivo</Label>
-              <Input
-                placeholder="Ex: Compra, Venda, Devolução..."
-                value={newMovement.reason}
-                onChange={(e) => setNewMovement(prev => ({ ...prev, reason: e.target.value }))}
-              />
+              <Label>Tipo de Movimentação</Label>
+              <Select
+                value={newMovement.type} // Changed from "entrada" | "saida" to "ENTRADA" | "SAIDA"
+                onValueChange={(value: "ENTRADA" | "SAIDA") =>
+                  setNewMovement((prev) => ({ ...prev, type: value }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ENTRADA">Entrada</SelectItem>
+                  <SelectItem value="SAIDA">Saída</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
+            {/* Observação */}
             <div className="space-y-2">
-              <Label>Observações (opcional)</Label>
+              <Label>Observação (opcional)</Label>
               <Input
-                placeholder="Informações adicionais..."
+                placeholder="Ex: ajuste, devolução..."
                 value={newMovement.notes}
-                onChange={(e) => setNewMovement(prev => ({ ...prev, notes: e.target.value }))}
+                onChange={(e) =>
+                  setNewMovement((prev) => ({
+                    ...prev,
+                    notes: e.target.value,
+                  }))
+                }
               />
             </div>
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setShowAddDialog(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowAddDialog(false)}
+            >
               Cancelar
             </Button>
-            <Button onClick={handleAddMovement} className="bg-gradient-primary hover:opacity-90">
+            <Button
+              onClick={handleAddMovement}
+              className="bg-gradient-primary hover:opacity-90"
+            >
               Registrar Movimentação
             </Button>
           </DialogFooter>
@@ -331,3 +458,6 @@ const Movements = () => {
 };
 
 export default Movements;
+function onMovementAdded() {
+  throw new Error("Function not implemented.");
+}

@@ -21,6 +21,11 @@ export class StockController {
     res.status(200).json(movimentacoes);
   }
 
+  public async getMovimentacoes(req: Request, res: Response) {
+    const movimentacoes = await stockService.getMovimentacoes();
+    res.status(200).json(movimentacoes);
+  }
+
   // Total de estoque (quantidade total e valor total)
   public async getTotalEstoque(req: Request, res: Response) {
     const total = await stockService.getTotalEstoque();

@@ -4,15 +4,13 @@ import { AppError } from "../../shared/errors.ts";
 const prisma = new PrismaClient();
 
 export const createProductService = async (data: any) => {
-
   const product = await prisma.produto.findUnique({
-    where: {nome: data.nome},
+    where: { nome: data.nome },
   });
 
   if (product) {
     throw new AppError("Produto já existe", 400);
   }
-
 
   const createProduct = await prisma.produto.create({
     data,
@@ -25,7 +23,7 @@ export const getProductsService = async () => {
     include: {
       categoria: true,
       fornecedor: true,
-    }
+    },
   });
   return products;
 };
@@ -41,15 +39,46 @@ export const getProductByIdService = async (id: string) => {
 };
 
 export const updateProductService = async (id: string, data: any) => {
+  // Busca o produto atual
+  const productData = await prisma.produto.findUnique({
+    where: { id },
+  });
+
+  if (!productData) {
+    throw new AppError("Produto não encontrado", 404);
+  }
+
+  const estoqueNovo = Number(data.estoqueAtual);
+  const estoqueAntigo = Number(productData.estoqueAtual);
+  const diferenca = estoqueNovo - estoqueAntigo;
+
+  // Verifica se o estoque foi alterado
+  if (diferenca !== 0) {
+    const tipoMovimentacao = diferenca > 0 ? "ENTRADA" : "SAIDA";
+    const quantidade = Math.abs(diferenca);
+
+    await prisma.movimentacao.create({
+      data: {
+        tipo: tipoMovimentacao,
+        quantidade,
+        produtoId: id,
+        observacao: "Ajuste manual de estoque",
+      },
+    });
+  }
+
+  // Atualiza o produto
   const product = await prisma.produto.update({
     where: { id },
     data,
   });
+
   return product;
 };
 
-export const deleteProductService = async (id: string) => {
 
+
+export const deleteProductService = async (id: string) => {
   if (!id) {
     throw new AppError("ID do produto é obrigatório", 400);
   }
@@ -62,16 +91,17 @@ export const deleteProductService = async (id: string) => {
     throw new AppError("Produto não encontrado", 404);
   }
 
-
   const deletedProduct = await prisma.produto.delete({
     where: { id },
   });
 
-
   return deletedProduct;
 };
 
-export const addCategoryToProductService = async (productId: string, categoryId: string) => {
+export const addCategoryToProductService = async (
+  productId: string,
+  categoryId: string
+) => {
   const product = await prisma.produto.findUnique({
     where: { id: productId },
   });
@@ -98,9 +128,12 @@ export const addCategoryToProductService = async (productId: string, categoryId:
   });
 
   return updatedProduct;
-}
+};
 
-export const addSupplierToProductService = async (productId: string, supplierId: string) => {
+export const addSupplierToProductService = async (
+  productId: string,
+  supplierId: string
+) => {
   const product = await prisma.produto.findUnique({
     where: { id: productId },
   });
@@ -127,4 +160,4 @@ export const addSupplierToProductService = async (productId: string, supplierId:
   });
 
   return updatedProduct;
-}
+};

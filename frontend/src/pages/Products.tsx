@@ -98,10 +98,7 @@ const EditProdutoDialog: React.FC<{
     setForm({ ...form, [key]: value });
   };
 
-  const handleSelectChange = (
-    path: "categoria" | "fornecedor",
-    id: string
-  ) => {
+  const handleSelectChange = (path: "categoria" | "fornecedor", id: string) => {
     if (!form) return;
     const list = path === "categoria" ? categorias : fornecedores;
     const selected = list.find((item) => item.id === id);
@@ -111,9 +108,16 @@ const EditProdutoDialog: React.FC<{
   };
 
   const formatPriceBRL = (v: string | number) => {
-    const n = Number(String(v).replace(/[^0-9.,]/g, "").replace(/,/g, "."));
+    const n = Number(
+      String(v)
+        .replace(/[^0-9.,]/g, "")
+        .replace(/,/g, ".")
+    );
     if (Number.isNaN(n)) return "";
-    return n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return n.toLocaleString("pt-BR", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
   };
 
   const parseBRLToNumber = (v: string) => {
@@ -135,7 +139,10 @@ const EditProdutoDialog: React.FC<{
     if (!form || !canSave) return;
     try {
       setSaving(true);
-      const precoNumber = typeof form.preco === "string" ? parseBRLToNumber(form.preco) : Number(form.preco);
+      const precoNumber =
+        typeof form.preco === "string"
+          ? parseBRLToNumber(form.preco)
+          : Number(form.preco);
       onSave({ ...form, preco: String(precoNumber.toFixed(2)) });
       onOpenChange(false);
     } finally {
@@ -156,30 +163,53 @@ const EditProdutoDialog: React.FC<{
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="md:col-span-2 space-y-2">
               <Label htmlFor="nome">Nome</Label>
-              <Input id="nome" value={form.nome} onChange={(e) => handleChange("nome", e.target.value)} />
+              <Input
+                id="nome"
+                value={form.nome}
+                onChange={(e) => handleChange("nome", e.target.value)}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="preco">Preço (R$)</Label>
-              <Input id="preco" value={formatPriceBRL(form.preco)} onChange={(e) => handleChange("preco", e.target.value)} />
+              <Input
+                id="preco"
+                value={formatPriceBRL(form.preco)}
+                onChange={(e) => handleChange("preco", e.target.value)}
+              />
             </div>
           </div>
           <div className="space-y-2">
             <Label htmlFor="image">URL da imagem</Label>
-            <Input id="image" value={form.image ?? ""} onChange={(e) => handleChange("image", e.target.value)} />
+            <Input
+              id="image"
+              value={form.image ?? ""}
+              onChange={(e) => handleChange("image", e.target.value)}
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="descricao">Descrição</Label>
-            <Textarea id="descricao" value={form.descricao} onChange={(e) => handleChange("descricao", e.target.value)} className="min-h-28" />
+            <Textarea
+              id="descricao"
+              value={form.descricao}
+              onChange={(e) => handleChange("descricao", e.target.value)}
+              className="min-h-28"
+            />
           </div>
           <Separator />
-          
+
           {/* Categoria e Fornecedor com SELECT */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="categoriaNome" className="flex items-center gap-2">
+              <Label
+                htmlFor="categoriaNome"
+                className="flex items-center gap-2"
+              >
                 <TagIcon className="w-4 h-4" /> Categoria
               </Label>
-              <Select value={form.categoria?.id} onValueChange={(id) => handleSelectChange("categoria", id)}>
+              <Select
+                value={form.categoria?.id}
+                onValueChange={(id) => handleSelectChange("categoria", id)}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione uma categoria" />
                 </SelectTrigger>
@@ -193,10 +223,16 @@ const EditProdutoDialog: React.FC<{
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="fornecedorNome" className="flex items-center gap-2">
+              <Label
+                htmlFor="fornecedorNome"
+                className="flex items-center gap-2"
+              >
                 <Package className="w-4 h-4" /> Fornecedor
               </Label>
-              <Select value={form.fornecedor?.id} onValueChange={(id) => handleSelectChange("fornecedor", id)}>
+              <Select
+                value={form.fornecedor?.id}
+                onValueChange={(id) => handleSelectChange("fornecedor", id)}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione um fornecedor" />
                 </SelectTrigger>
@@ -220,7 +256,12 @@ const EditProdutoDialog: React.FC<{
               <Input
                 id="estoqueAtual"
                 value={String(form.estoqueAtual ?? "")}
-                onChange={(e) => handleChange("estoqueAtual", e.target.value.replace(/[^0-9-]/g, ""))}
+                onChange={(e) =>
+                  handleChange(
+                    "estoqueAtual",
+                    e.target.value.replace(/[^0-9-]/g, "")
+                  )
+                }
               />
             </div>
             <div className="space-y-2">
@@ -228,14 +269,25 @@ const EditProdutoDialog: React.FC<{
               <Input
                 id="estoqueMinimo"
                 value={String(form.estoqueMinimo ?? "")}
-                onChange={(e) => handleChange("estoqueMinimo", e.target.value.replace(/[^0-9-]/g, ""))}
+                onChange={(e) =>
+                  handleChange(
+                    "estoqueMinimo",
+                    e.target.value.replace(/[^0-9-]/g, "")
+                  )
+                }
               />
             </div>
           </div>
         </div>
 
         <DialogFooter className="gap-2 sm:gap-4">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancelar</Button>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={saving}
+          >
+            Cancelar
+          </Button>
           <Button onClick={onSubmit} disabled={!canSave || saving}>
             {saving ? "Salvando..." : "Salvar alterações"}
           </Button>
@@ -248,20 +300,25 @@ const EditProdutoDialog: React.FC<{
 /**
  * Modal de Criação de Produto
  */
-const CreateProdutoDialog: React.FC<{ 
+const CreateProdutoDialog: React.FC<{
   open: boolean;
   onOpenChange: (v: boolean) => void;
   onCreate: (p: Omit<Produto, "id">) => void;
 }> = ({ open, onOpenChange, onCreate }) => {
-  const [form, setForm] = useState<Omit<Produto, "id">>({    nome: "", descricao: "", preco: "", image: "",
+  const [form, setForm] = useState<Omit<Produto, "id">>({
+    nome: "",
+    descricao: "",
+    preco: "",
+    image: "",
     categoria: { id: "", nome: "" },
     fornecedor: { id: "", nome: "" },
-    estoqueAtual: "0", estoqueMinimo: "0",
+    estoqueAtual: "0",
+    estoqueMinimo: "0",
   });
   const [saving, setSaving] = useState(false);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
-  
+
   // Busca os dados para os selects quando o modal abre
   useEffect(() => {
     if (open) {
@@ -270,12 +327,10 @@ const CreateProdutoDialog: React.FC<{
     }
   }, [open]);
 
-  const handleChange = (key: keyof Produto, value: any) => setForm({ ...form, [key]: value });
+  const handleChange = (key: keyof Produto, value: any) =>
+    setForm({ ...form, [key]: value });
 
-  const handleSelectChange = (
-    path: "categoria" | "fornecedor",
-    id: string
-  ) => {
+  const handleSelectChange = (path: "categoria" | "fornecedor", id: string) => {
     const list = path === "categoria" ? categorias : fornecedores;
     const selected = list.find((item) => item.id === id);
     if (selected) {
@@ -284,12 +339,16 @@ const CreateProdutoDialog: React.FC<{
   };
 
   const formatPriceBRL = (v: string | number) => {
-    const n = String(v).replace(/[^0-9.,]/g, "").replace(/,/g, ".");
+    const n = String(v)
+      .replace(/[^0-9.,]/g, "")
+      .replace(/,/g, ".");
     const num = parseFloat(n);
     if (Number.isNaN(num)) return "";
-    return num.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return num.toLocaleString("pt-BR", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
   };
-
 
   const parseBRLToNumber = (v: string) => {
     const cleaned = v.replace(/\./g, "").replace(",", ".");
@@ -298,20 +357,32 @@ const CreateProdutoDialog: React.FC<{
   };
 
   const canSave = useMemo(() => {
-    return ((form.nome?.trim()?.length ?? 0) > 0 && (form.descricao?.trim()?.length ?? 0) > 0 && String(form.preco ?? "").length > 0);
+    return (
+      (form.nome?.trim()?.length ?? 0) > 0 &&
+      (form.descricao?.trim()?.length ?? 0) > 0 &&
+      String(form.preco ?? "").length > 0
+    );
   }, [form]);
 
   const onSubmit = async () => {
     if (!canSave) return;
     setSaving(true);
     try {
-      const precoNumber = typeof form.preco === "string" ? parseBRLToNumber(form.preco) : Number(form.preco);
+      const precoNumber =
+        typeof form.preco === "string"
+          ? parseBRLToNumber(form.preco)
+          : Number(form.preco);
       onCreate({ ...form, preco: String(precoNumber.toFixed(2)) });
       onOpenChange(false);
       setForm({
-        nome: "", descricao: "", preco: "", image: "",
-        categoria: { id: "", nome: "" }, fornecedor: { id: "", nome: "" },
-        estoqueAtual: "0", estoqueMinimo: "0",
+        nome: "",
+        descricao: "",
+        preco: "",
+        image: "",
+        categoria: { id: "", nome: "" },
+        fornecedor: { id: "", nome: "" },
+        estoqueAtual: "0",
+        estoqueMinimo: "0",
       });
     } finally {
       setSaving(false);
@@ -329,51 +400,84 @@ const CreateProdutoDialog: React.FC<{
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="md:col-span-2 space-y-2">
               <Label htmlFor="nome-create">Nome</Label>
-              <Input id="nome-create" value={form.nome} onChange={(e) => handleChange("nome", e.target.value)} />
+              <Input
+                id="nome-create"
+                value={form.nome}
+                onChange={(e) => handleChange("nome", e.target.value)}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="preco-create">Preço (R$)</Label>
-              <Input id="preco-create" value={formatPriceBRL(form.preco)} onChange={(e) => handleChange("preco", e.target.value)} />
+              <Input
+                id="preco-create"
+                value={formatPriceBRL(form.preco)}
+                onChange={(e) => handleChange("preco", e.target.value)}
+              />
             </div>
           </div>
           <div className="space-y-2">
             <Label htmlFor="image-create">URL da imagem</Label>
-            <Input id="image-create" value={form.image ?? ""} onChange={(e) => handleChange("image", e.target.value)} />
+            <Input
+              id="image-create"
+              value={form.image ?? ""}
+              onChange={(e) => handleChange("image", e.target.value)}
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="descricao-create">Descrição</Label>
-            <Textarea id="descricao-create" value={form.descricao} onChange={(e) => handleChange("descricao", e.target.value)} className="min-h-28" />
+            <Textarea
+              id="descricao-create"
+              value={form.descricao}
+              onChange={(e) => handleChange("descricao", e.target.value)}
+              className="min-h-28"
+            />
           </div>
           <Separator />
 
           {/* Categoria e Fornecedor com SELECT */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="categoriaNome-create" className="flex items-center gap-2">
+              <Label
+                htmlFor="categoriaNome-create"
+                className="flex items-center gap-2"
+              >
                 <TagIcon className="w-4 h-4" /> Categoria
               </Label>
-              <Select value={form.categoria.id} onValueChange={(id) => handleSelectChange("categoria", id)}>
+              <Select
+                value={form.categoria.id}
+                onValueChange={(id) => handleSelectChange("categoria", id)}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione uma categoria" />
                 </SelectTrigger>
                 <SelectContent>
                   {categorias.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.id}>{cat.nome}</SelectItem>
+                    <SelectItem key={cat.id} value={cat.id}>
+                      {cat.nome}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="fornecedorNome-create" className="flex items-center gap-2">
+              <Label
+                htmlFor="fornecedorNome-create"
+                className="flex items-center gap-2"
+              >
                 <Package className="w-4 h-4" /> Fornecedor
               </Label>
-              <Select value={form.fornecedor.id} onValueChange={(id) => handleSelectChange("fornecedor", id)}>
+              <Select
+                value={form.fornecedor.id}
+                onValueChange={(id) => handleSelectChange("fornecedor", id)}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione um fornecedor" />
                 </SelectTrigger>
                 <SelectContent>
                   {fornecedores.map((forn) => (
-                    <SelectItem key={forn.id} value={forn.id}>{forn.nome}</SelectItem>
+                    <SelectItem key={forn.id} value={forn.id}>
+                      {forn.nome}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -383,34 +487,63 @@ const CreateProdutoDialog: React.FC<{
           {/* ... restante do formulário (Estoque) ... */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="estoqueAtual-create" className="flex items-center gap-2">
+              <Label
+                htmlFor="estoqueAtual-create"
+                className="flex items-center gap-2"
+              >
                 <Boxes className="w-4 h-4" /> Estoque Atual
               </Label>
-              <Input id="estoqueAtual-create" value={String(form.estoqueAtual)} onChange={(e) => handleChange("estoqueAtual", e.target.value.replace(/[^0-9-]/g, ""))} />
+              <Input
+                id="estoqueAtual-create"
+                value={String(form.estoqueAtual)}
+                onChange={(e) =>
+                  handleChange(
+                    "estoqueAtual",
+                    e.target.value.replace(/[^0-9-]/g, "")
+                  )
+                }
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="estoqueMinimo-create">Estoque Mínimo</Label>
-              <Input id="estoqueMinimo-create" value={String(form.estoqueMinimo)} onChange={(e) => handleChange("estoqueMinimo", e.target.value.replace(/[^0-9-]/g, ""))} />
+              <Input
+                id="estoqueMinimo-create"
+                value={String(form.estoqueMinimo)}
+                onChange={(e) =>
+                  handleChange(
+                    "estoqueMinimo",
+                    e.target.value.replace(/[^0-9-]/g, "")
+                  )
+                }
+              />
             </div>
           </div>
         </div>
 
         <DialogFooter className="gap-2 sm:gap-4">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancelar</Button>
-          <Button onClick={onSubmit} disabled={!canSave || saving}>{saving ? "Criando..." : "Criar produto"}</Button>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={saving}
+          >
+            Cancelar
+          </Button>
+          <Button onClick={onSubmit} disabled={!canSave || saving}>
+            {saving ? "Criando..." : "Criar produto"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 };
 
-
 /**
  * Tela principal de produtos (sem alterações nesta parte)
  */
 const Products: React.FC = () => {
   // CORREÇÃO 1: Usar as funções e estados corretos do contexto e remover "as any"
-  const { produtos, loading, createProduto, updateProduto, deleteProduto } = useProdutos();
+  const { produtos, loading, createProduto, updateProduto, deleteProduto } =
+    useProdutos();
 
   const [selectedProduct, setSelectedProduct] = useState<Produto | null>(null);
   const [openEdit, setOpenEdit] = useState(false);
@@ -442,27 +575,55 @@ const Products: React.FC = () => {
     const a = Number(atual ?? 0);
     const m = Number(minimo ?? 0);
     if (Number.isNaN(a) || Number.isNaN(m)) return null;
-    if (a <= 0) return <Badge variant="destructive" className="font-semibold">Esgotado</Badge>;
-    if (a <= m) return <Badge className="bg-amber-500 hover:bg-amber-600 text-white font-semibold">Estoque Baixo</Badge>;
-    return <Badge variant="secondary" className="border-green-500/50 border text-green-700">Em Estoque</Badge>;
+    if (a <= 0)
+      return (
+        <Badge variant="destructive" className="font-semibold">
+          Esgotado
+        </Badge>
+      );
+    if (a <= m)
+      return (
+        <Badge className="bg-amber-500 hover:bg-amber-600 text-white font-semibold">
+          Estoque Baixo
+        </Badge>
+      );
+    return (
+      <Badge
+        variant="secondary"
+        className="border-green-500/50 border text-green-700"
+      >
+        Em Estoque
+      </Badge>
+    );
   };
 
   const produtosFiltrados = useMemo(() => {
     if (!produtos) return [];
     const termoBusca = filtro.toLowerCase().trim();
     if (!termoBusca) return produtos;
-    return produtos.filter((p: Produto) => p.nome.toLowerCase().includes(termoBusca) || p.descricao.toLowerCase().includes(termoBusca) || p.categoria?.nome?.toLowerCase().includes(termoBusca) || p.fornecedor?.nome?.toLowerCase().includes(termoBusca));
+    return produtos.filter(
+      (p: Produto) =>
+        p.nome.toLowerCase().includes(termoBusca) ||
+        p.descricao.toLowerCase().includes(termoBusca) ||
+        p.categoria?.nome?.toLowerCase().includes(termoBusca) ||
+        p.fornecedor?.nome?.toLowerCase().includes(termoBusca)
+    );
   }, [produtos, filtro]);
 
   const produtosOrdenados = useMemo(() => {
     const copia = [...produtosFiltrados];
-    const [criterio, direcao] = ordenacao.split('-');
+    const [criterio, direcao] = ordenacao.split("-");
     copia.sort((a, b) => {
       let valA: any, valB: any;
-      if (criterio === 'nome') { valA = a.nome.toLowerCase(); valB = b.nome.toLowerCase(); }
-      else if (criterio === 'preco') { valA = Number(a.preco); valB = Number(b.preco); }
-      if (valA < valB) return direcao === 'asc' ? -1 : 1;
-      if (valA > valB) return direcao === 'asc' ? 1 : -1;
+      if (criterio === "nome") {
+        valA = a.nome.toLowerCase();
+        valB = b.nome.toLowerCase();
+      } else if (criterio === "preco") {
+        valA = Number(a.preco);
+        valB = Number(b.preco);
+      }
+      if (valA < valB) return direcao === "asc" ? -1 : 1;
+      if (valA > valB) return direcao === "asc" ? 1 : -1;
       return 0;
     });
     return copia;
@@ -475,19 +636,33 @@ const Products: React.FC = () => {
 
   const cardVariants: Variants = {
     hidden: { opacity: 0, y: 20 },
-    visible: (i: number) => ({ opacity: 1, y: 0, transition: { delay: i * 0.05, duration: 0.3, ease: "easeOut" } }),
+    visible: (i: number) => ({
+      opacity: 1,
+      y: 0,
+      transition: { delay: i * 0.05, duration: 0.3, ease: "easeOut" },
+    }),
   };
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6">
       <div className="space-y-1">
-        <h1 className="text-3xl md:text-4xl font-bold tracking-tighter">Gerenciamento de Produtos</h1>
-        <p className="text-muted-foreground text-lg">Visualize, adicione, edite e organize seus produtos com facilidade.</p>
+        <h1 className="text-3xl md:text-4xl font-bold tracking-tighter">
+          Gerenciamento de Produtos
+        </h1>
+        <p className="text-muted-foreground text-lg">
+          Visualize, adicione, edite e organize seus produtos com facilidade.
+        </p>
       </div>
       <div className="flex flex-col md:flex-row items-center justify-between gap-4 p-4 bg-muted/50 rounded-lg border">
         <div className="relative w-full md:flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-          <Input type="search" placeholder="Buscar por nome, categoria..." className="pl-10 h-10 w-full" value={filtro} onChange={(e) => setFiltro(e.target.value)} />
+          <Input
+            type="search"
+            placeholder="Buscar por nome, categoria..."
+            className="pl-10 h-10 w-full"
+            value={filtro}
+            onChange={(e) => setFiltro(e.target.value)}
+          />
         </div>
         <div className="flex items-center gap-2 w-full md:w-auto">
           <Select value={ordenacao} onValueChange={setOrdenacao}>
@@ -509,48 +684,113 @@ const Products: React.FC = () => {
       </div>
       <AnimatePresence>
         {!loading && produtos.length === 0 ? (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-20">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-center py-20"
+          >
             <LayoutGrid className="mx-auto h-16 w-16 text-muted-foreground/50" />
-            <h3 className="mt-4 text-xl font-semibold">Nenhum produto cadastrado</h3>
-            <p className="mt-1 text-muted-foreground">Clique em "Adicionar Produto" para começar.</p>
+            <h3 className="mt-4 text-xl font-semibold">
+              Nenhum produto cadastrado
+            </h3>
+            <p className="mt-1 text-muted-foreground">
+              Clique em "Adicionar Produto" para começar.
+            </p>
           </motion.div>
         ) : produtosOrdenados.length === 0 ? (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-20">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-center py-20"
+          >
             <XCircle className="mx-auto h-16 w-16 text-muted-foreground/50" />
-            <h3 className="mt-4 text-xl font-semibold">Nenhum resultado encontrado</h3>
-            <p className="mt-1 text-muted-foreground">Tente uma busca diferente ou limpe o filtro.</p>
-            <Button variant="link" onClick={() => setFiltro('')}>Limpar busca</Button>
+            <h3 className="mt-4 text-xl font-semibold">
+              Nenhum resultado encontrado
+            </h3>
+            <p className="mt-1 text-muted-foreground">
+              Tente uma busca diferente ou limpe o filtro.
+            </p>
+            <Button variant="link" onClick={() => setFiltro("")}>
+              Limpar busca
+            </Button>
           </motion.div>
         ) : (
-          <motion.div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" initial="hidden" animate="visible">
+          <motion.div
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+            initial="hidden"
+            animate="visible"
+          >
             {produtosOrdenados.map((produto: Produto, i: number) => (
               <motion.div key={produto.id} variants={cardVariants} custom={i}>
                 <Card className="shadow-sm border-border/60 hover:shadow-lg transition-all duration-300 group overflow-hidden flex flex-col h-full">
                   <div className="relative">
-                    <div className="absolute top-3 right-3 z-10">{estoqueBadge(produto.estoqueAtual, produto.estoqueMinimo)}</div>
+                    <div className="absolute top-3 right-3 z-10">
+                      {estoqueBadge(
+                        produto.estoqueAtual,
+                        produto.estoqueMinimo
+                      )}
+                    </div>
                     <div className="overflow-hidden h-48">
-                      <img src={produto.image || 'https://via.placeholder.com/400x300.png?text=Sem+Imagem'} alt={produto.nome} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                      <img
+                        src={
+                          produto.image ||
+                          "https://via.placeholder.com/400x300.png?text=Sem+Imagem"
+                        }
+                        alt={produto.nome}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
                     </div>
                   </div>
                   <CardHeader>
-                    <CardTitle className="text-xl font-bold tracking-tight line-clamp-1">{produto.nome}</CardTitle>
-                    <p className="text-sm text-muted-foreground line-clamp-2 pt-1 min-h-[40px]">{produto.descricao}</p>
+                    <CardTitle className="text-xl font-bold tracking-tight line-clamp-1">
+                      {produto.nome}
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground line-clamp-2 pt-1 min-h-[40px]">
+                      {produto.descricao}
+                    </p>
+                    <p className="text-sm bg-background bg-green-200 rounded-md p-2">
+                      Estoque atual: {produto.estoqueAtual}
+                    </p>
+                    <span className="text-sm bg-background bg-yellow-200 rounded-md p-2">
+                      Estoque mínimo: {produto.estoqueMinimo}
+                    </span>
+                    <span></span>
                   </CardHeader>
                   <CardContent className="space-y-4 flex-1 flex flex-col justify-between">
                     <div className="flex items-end justify-between">
-                       <div className="text-sm">
-                          <span className="text-muted-foreground flex items-center gap-2"><TagIcon size={14} /> {produto.categoria?.nome || "Sem categoria"}</span>
-                          <span className="text-muted-foreground flex items-center gap-2 mt-1"><Package size={14} /> {produto.fornecedor?.nome || "Sem fornecedor"}</span>
-                       </div>
-                       <div className="text-right">
-                         <p className="text-2xl font-extrabold text-primary">R$ {Number(produto.preco).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</p>
-                       </div>
+                      <div className="text-sm">
+                        <span className="text-muted-foreground flex items-center gap-2">
+                          <TagIcon size={14} />{" "}
+                          {produto.categoria?.nome || "Sem categoria"}
+                        </span>
+                        <span className="text-muted-foreground flex items-center gap-2 mt-1">
+                          <Package size={14} />{" "}
+                          {produto.fornecedor?.nome || "Sem fornecedor"}
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-2xl font-extrabold text-primary">
+                          un. R${" "}
+                          {Number(produto.preco).toLocaleString("pt-BR", {
+                            minimumFractionDigits: 2,
+                          })}
+                        </p>
+                      </div>
                     </div>
-                    <div className="pt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex gap-2">
-                      <Button size="sm" className="flex-1" onClick={() => handleOpenEdit(produto)}>
+                    <div className="pt-2 flex gap-2">
+                      <Button
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => handleOpenEdit(produto)}
+                      >
                         <Edit3 className="w-4 h-4 mr-2" /> Editar
                       </Button>
-                      <Button size="sm" variant="destructive" onClick={() => deleteProduto(produto.id)} className="flex-1">
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => deleteProduto(produto.id)}
+                        className="flex-1"
+                      >
                         <Trash2 className="w-4 h-4 mr-2" /> Deletar
                       </Button>
                     </div>
@@ -561,13 +801,21 @@ const Products: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
-      {selectedProduct && (<EditProdutoDialog open={openEdit} onOpenChange={setOpenEdit} produto={selectedProduct} onSave={handleSave} />)}
-      <CreateProdutoDialog open={openCreate} onOpenChange={setOpenCreate} onCreate={handleCreate} />
+      {selectedProduct && (
+        <EditProdutoDialog
+          open={openEdit}
+          onOpenChange={setOpenEdit}
+          produto={selectedProduct}
+          onSave={handleSave}
+        />
+      )}
+      <CreateProdutoDialog
+        open={openCreate}
+        onOpenChange={setOpenCreate}
+        onCreate={handleCreate}
+      />
     </div>
   );
 };
-
-
-
 
 export default Products;

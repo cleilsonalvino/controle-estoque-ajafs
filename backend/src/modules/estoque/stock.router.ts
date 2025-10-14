@@ -20,6 +20,11 @@ router.get(
   stockController.getMovimentacoesByProdutoId
 );
 
+router.get(
+  '/movimentacoes',
+  stockController.getMovimentacoes
+);
+
 // =======================
 // Dashboards e análises
 // =======================

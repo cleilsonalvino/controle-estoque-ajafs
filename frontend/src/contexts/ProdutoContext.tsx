@@ -107,7 +107,7 @@ export const ProdutoProvider = ({ children }: ProdutoProviderProps) => {
         fornecedorId: produtoAtualizado.fornecedor.id,
       };
 
-      const { data } = await api.put<Produto>(`/produtos/${id}`, produtoParaEnviar);
+      const { data } = await api.patch<Produto>(`/produtos/${id}`, produtoParaEnviar);
       setProdutos((prev) => prev.map((p) => (p.id === id ? data : p)));
       toast.success("Produto atualizado com sucesso!");
       return data;
