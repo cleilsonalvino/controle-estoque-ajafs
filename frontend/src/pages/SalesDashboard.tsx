@@ -138,7 +138,7 @@ const SalesDashboard = () => {
     if (existingMethod) {
       existingMethod.value += 1;
     } else {
-      acc.push({ name: sale.paymentMethod, value: 1 });
+      acc.push({ name: sale.formaPagamento, value: 1 });
     }
     return acc;
   }, []);

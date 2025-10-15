@@ -28,7 +28,8 @@ export interface Sale {
 }
 
 interface SaleData {
-  cliente: string;
+  clienteId: string;
+  vendedorId: string;
   itens: {
     produtoId: string;
     quantidade: number;

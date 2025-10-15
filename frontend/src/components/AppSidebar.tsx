@@ -20,12 +20,14 @@ import { useAuth } from "@/contexts/useAuth";
 const menuItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
   { title: "Dashboard de Vendas", url: "/sales-dashboard", icon: BarChart3 },
-  { title: "Vendas", url: "/sales", icon: ShoppingCart },
+  { title: "Registrar Venda", url: "/sales", icon: ShoppingCart },
   { title: "Produtos", url: "/products", icon: Package },
   { title: "Relatórios", url: "/reports", icon: BarChart3 },
   { title: "Movimentações", url: "/movements", icon: ArrowUpDown },
   { title: "Fornecedores", url: "/suppliers", icon: Users },
   { title: "Categorias", url: "/categories", icon: Tag },
+  { title: "Clientes", url: "/clientes", icon: Users },
+  { title: "Vendedores", url: "/vendedores", icon: Users },
   { title: "Configurações", url: "/settings", icon: Settings },
 ];
 

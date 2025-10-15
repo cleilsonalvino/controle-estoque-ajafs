@@ -6,6 +6,8 @@ import salesRouter from "../modules/vendas/sales.router.ts";
 import authRouter from "../modules/auth/auth.router.ts";
 import categorysRouter from "../modules/categorias/category.routes.ts";
 import stockRouter from "../modules/estoque/stock.router.ts";
+import { vendedoresRouter } from "../modules/vendedores/vendedores.router.ts";
+import { clientesRouter } from "../modules/clientes/cliente.routes.ts";
 
 const router = Router();
 
@@ -16,5 +18,7 @@ router.use("/vendas", salesRouter);
 router.use("/categorias", categorysRouter);
 router.use("/auth", authRouter);
 router.use("/estoque", stockRouter);
+router.use("/vendedores", vendedoresRouter);
+router.use("/clientes", clientesRouter);
 
 export default router;

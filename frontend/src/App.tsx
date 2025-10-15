@@ -21,6 +21,10 @@ import { ProdutoProvider } from "@/contexts/ProdutoContext";
 import { CategoryProvider } from "@/contexts/CategoryContext";
 import { SupplierProvider } from "@/contexts/SupplierContext";
 import { SalesProvider } from "./contexts/SalesContext";
+import { ClienteProvider } from "./contexts/ClienteContext";
+import { VendedorProvider } from "./contexts/VendedorContext";
+import Clientes from "./pages/Clientes";
+import Vendedores from "./pages/Vendedores";
 
 const queryClient = new QueryClient();
 
@@ -35,24 +39,29 @@ const App = () => (
             <SupplierProvider>
               <CategoryProvider>
                 <ProdutoProvider>
-                  <Routes>
-                    <Route path="/login" element={<LoginPage />} />
-                    <Route element={<ProtectedRoute />}>
-                      <Route path="/" element={<Layout />}>
-                        <Route index element={<Dashboard />} />
-                        <Route path="/products" element={<Products />} />
-                        <Route path="/reports" element={<Reports />} />
-                        <Route path="/movements" element={<Movements />} />
-                        <Route path="/suppliers" element={<Suppliers />} />
-                        <Route path="/categories" element={<Categories />} />
-                        <Route path="/settings" element={<Settings />} />
-                        <Route path="/sales" element={<Sales />} />
-                        <Route path="/sales-dashboard" element={<SalesDashboard />} />
-                      </Route>
-                    </Route>
-                    {/* Catch-all route for 404 */}
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
+                  <ClienteProvider>
+                    <VendedorProvider>
+                      <Routes>
+                        <Route path="/login" element={<LoginPage />} />
+                        <Route element={<ProtectedRoute />}>
+                          <Route path="/" element={<Layout />}>
+                            <Route index element={<Dashboard />} />
+                            <Route path="/products" element={<Products />} />
+                            <Route path="/reports" element={<Reports />} />
+                            <Route path="/movements" element={<Movements />} />
+                            <Route path="/suppliers" element={<Suppliers />} />
+                            <Route path="/categories" element={<Categories />} />
+                            <Route path="/sales" element={<Sales />} />
+                            <Route path="/sales-dashboard" element={<SalesDashboard />} />
+                            <Route path="/clientes" element={<Clientes />} />
+                            <Route path="/vendedores" element={<Vendedores />} />
+                          </Route>
+                        </Route>
+                        {/* Catch-all route for 404 */}
+                        <Route path="*" element={<NotFound />} />
+                      </Routes>
+                    </VendedorProvider>
+                  </ClienteProvider>
                 </ProdutoProvider>
               </CategoryProvider>
             </SupplierProvider>

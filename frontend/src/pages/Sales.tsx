@@ -1,6 +1,6 @@
 // pages/Sales.tsx
 import { useState, useEffect } from "react";
-import { ShoppingCart, DollarSign, Trash2 } from "lucide-react";
+import { ShoppingCart, DollarSign, Trash2, Table } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -18,9 +18,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { useSales } from "@/contexts/SalesContext";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { useClientes } from "@/contexts/ClienteContext";
+import { useVendedores } from "@/contexts/VendedorContext";
+import { TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+
 
 // === Tipagem ===
 export interface Product {
@@ -178,9 +187,12 @@ const SalesTable = ({ items, onRemoveItem, onUpdateQuantity }: SalesTableProps) 
 
 // === Página de Vendas ===
 const Sales = () => {
-  const { createSale, sales, products } = useSales();
+  const { createSale, products } = useSales();
+  const { clientes, createCliente } = useClientes();
+  const { vendedores, createVendedor } = useVendedores();
   const [saleItems, setSaleItems] = useState<SaleItem[]>([]);
-  const [clientName, setClientName] = useState("");
+  const [selectedCliente, setSelectedCliente] = useState<string | undefined>(undefined);
+  const [selectedVendedor, setSelectedVendedor] = useState<string | undefined>(undefined);
 
   const handleAddProductToSale = (product: Product, quantity: number) => {
     const existing = saleItems.find((i) => i.id === product.id);
@@ -198,24 +210,31 @@ const Sales = () => {
   };
 
   const handleFinalizeSale = async () => {
-    if (!clientName.trim()) {
-      alert("Por favor, insira o nome do cliente.");
+    if (!selectedCliente) {
+      alert("Por favor, selecione um cliente.");
+      return;
+    }
+
+    if (!selectedVendedor) {
+      alert("Por favor, selecione um vendedor.");
       return;
     }
 
     const saleData = {
-      cliente: clientName,
+      clienteId: selectedCliente,
+      vendedorId: selectedVendedor,
       itens: saleItems.map(item => ({
         produtoId: item.id,
         quantidade: item.quantity,
-        precoUnitario: item.preco, // preco is already a number
+        precoUnitario: item.preco,
       })),
     };
 
     try {
       await createSale(saleData);
       setSaleItems([]);
-      setClientName("");
+      setSelectedCliente(undefined);
+      setSelectedVendedor(undefined);
       alert("Venda criada com sucesso!");
     } catch (err) {
       console.error(err);
@@ -241,14 +260,73 @@ const Sales = () => {
         </div>
         <div className="lg:col-span-2">
           <div className="space-y-2 mb-4">
-            <Label htmlFor="client-name">Nome do Cliente</Label>
-            <Input
-              id="client-name"
-              type="text"
-              value={clientName}
-              onChange={(e) => setClientName(e.target.value)}
-              placeholder="Digite o nome do cliente"
-            />
+            <Label htmlFor="client-name">Cliente</Label>
+            <div className="flex gap-2">
+              <Select value={selectedCliente} onValueChange={setSelectedCliente}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um cliente" />
+                </SelectTrigger>
+                <SelectContent>
+                  {clientes.map((cliente) => (
+                    <SelectItem key={cliente.id} value={cliente.id}>
+                      {cliente.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="outline">Novo Cliente</Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Novo Cliente</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="new-client-name">Nome</Label>
+                      <Input id="new-client-name" />
+                    </div>
+                    <Button onClick={() => { createCliente({ nome: (document.getElementById('new-client-name') as HTMLInputElement).value, email: '', telefone: '' }) }}>Salvar</Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+          </div>
+
+          <div className="space-y-2 mb-4">
+            <Label htmlFor="vendedor">Vendedor</Label>
+            <div className="flex gap-2">
+              <Select value={selectedVendedor} onValueChange={setSelectedVendedor}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um vendedor" />
+                </SelectTrigger>
+                <SelectContent>
+                  {vendedores.map((vendedor) => (
+                    <SelectItem key={vendedor.id} value={vendedor.id}>
+                      {vendedor.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="outline">Novo Vendedor</Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Novo Vendedor</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="new-vendedor-name">Nome</Label>
+                      <Input id="new-vendedor-name" />
+                    </div> 
+                    <Button onClick={() => { createVendedor({ nome: (document.getElementById('new-vendedor-name') as HTMLInputElement).value, email: '', meta: 0 }) }}>Salvar</Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
           </div>
           <SalesTable items={saleItems} onRemoveItem={handleRemoveItem} onUpdateQuantity={handleUpdateQuantity} />
           <div className="flex justify-end mt-4">
@@ -259,52 +337,7 @@ const Sales = () => {
         </div>
       </div>
 
-      {/* Sales Details Section */}
-      <Card className="mt-8">
-        <CardHeader>
-          <CardTitle>Detalhamento de Vendas</CardTitle>
-          <CardDescription>Análise detalhada de todas as vendas registradas</CardDescription>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div>
-            <h3 className="text-lg font-semibold mb-4">Vendas por Cliente</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={sales.map(sale => ({ name: sale.cliente, total: parseFloat(sale.total) }))}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                
-                <Legend />
-                <Bar dataKey="total" fill="#8884d8" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-          <div>
-            <h3 className="text-lg font-semibold mb-4">Todas as Vendas</h3>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Número</TableHead>
-                  <TableHead>Cliente</TableHead>
-                  <TableHead>Data</TableHead>
-                  <TableHead className="text-right">Total</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sales.map((sale) => (
-                  <TableRow key={sale.id}>
-                    <TableCell>{sale.numero}</TableCell>
-                    <TableCell>{sale.cliente}</TableCell>
-                    <TableCell>{new Date(sale.criadoEm).toLocaleDateString()}</TableCell>
-                    <TableCell className="text-right">{`R$ ${sale.total}`}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+
     </div>
   );
 };
