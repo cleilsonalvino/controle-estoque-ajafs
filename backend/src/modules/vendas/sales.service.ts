@@ -25,6 +25,7 @@
           numero: `VND-${Date.now()}`, // gera número automático único
           cliente,
           total,
+          status: "Concluída",
         },
       });
 

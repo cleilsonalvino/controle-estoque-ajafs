@@ -47,7 +47,8 @@ export const VendedorProvider = ({ children }: VendedorProviderProps) => {
   };
 
   const createVendedor = async (vendedorData: Omit<Vendedor, 'id'>) => {
-    const response = await api.post("/vendedores", vendedorData);
+    console.log(vendedorData);
+    const response = await api.post("/vendedores/create", vendedorData);
     setVendedores((prev) => [response.data, ...prev]);
     return response.data;
   };

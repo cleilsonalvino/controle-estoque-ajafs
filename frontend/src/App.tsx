@@ -55,6 +55,7 @@ const App = () => (
                             <Route path="/sales-dashboard" element={<SalesDashboard />} />
                             <Route path="/clientes" element={<Clientes />} />
                             <Route path="/vendedores" element={<Vendedores />} />
+                            <Route path="/settings" element={<Settings />} />
                           </Route>
                         </Route>
                         {/* Catch-all route for 404 */}

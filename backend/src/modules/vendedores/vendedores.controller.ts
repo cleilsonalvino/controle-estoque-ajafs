@@ -7,6 +7,7 @@ const vendedorService = new VendedorService();
 export const createVendedorController = async (req: Request, res: Response) => {
   try {
     const data = CreateVendedorSchema.parse(req.body);
+    
     const vendedor = await vendedorService.create(data);
     res.status(201).json(vendedor);
   } catch (error) {
