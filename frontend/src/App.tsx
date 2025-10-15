@@ -12,6 +12,7 @@ import Suppliers from "./pages/Suppliers";
 import Categories from "./pages/Categories";
 import Settings from "./pages/Settings";
 import Sales from "./pages/Sales";
+import SalesDashboard from "./pages/SalesDashboard";
 import NotFound from "./pages/NotFound";
 import { LoginPage } from "./pages/LoginPage";
 import { AuthProvider } from "./contexts/useAuth";
@@ -28,7 +29,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <AuthProvider>
           <SalesProvider>
             <SupplierProvider>
@@ -46,6 +47,7 @@ const App = () => (
                         <Route path="/categories" element={<Categories />} />
                         <Route path="/settings" element={<Settings />} />
                         <Route path="/sales" element={<Sales />} />
+                        <Route path="/sales-dashboard" element={<SalesDashboard />} />
                       </Route>
                     </Route>
                     {/* Catch-all route for 404 */}

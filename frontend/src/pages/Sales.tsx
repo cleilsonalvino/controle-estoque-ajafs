@@ -20,16 +20,20 @@ import {
 } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from "@/components/ui/table";
 import { useSales } from "@/contexts/SalesContext";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 // === Tipagem ===
 export interface Product {
-  id: string;
+ id: string;
   nome: string;
-  preco: string;
+  preco: number; // Changed from string to number
 }
 
 export interface SaleItem extends Product {
   quantity: number;
+  produtoId?: string;
+  quantidade?: string
+  precoUnitario?: string;
 }
 
 // === SalesForm ===
@@ -38,19 +42,17 @@ interface SalesFormProps {
   onAddProductToSale: (product: Product, quantity: number) => void;
 }
 
-const SalesForm = ({ onAddProductToSale }: SalesFormProps) => {
+const SalesForm = ({ products, onAddProductToSale }: SalesFormProps) => {
   const [selectedProductId, setSelectedProductId] = useState<string | undefined>(undefined); // Keep as string
   const [quantity, setQuantity] = useState(1);
 
-    const { products, sales, createSale } = useSales();
-
   const selectedProduct = products.find((p) => p.id === selectedProductId);
 
-
+ 
 
   const handleAddClick = () => {
     if (selectedProduct && quantity > 0) { // selectedProduct is of type Product from SalesContext
-      onAddProductToSale({ ...selectedProduct, preco: String(selectedProduct.preco) }, quantity);
+      onAddProductToSale(selectedProduct, quantity);
       setSelectedProductId(undefined);
       setQuantity(1);
     }
@@ -176,23 +178,9 @@ const SalesTable = ({ items, onRemoveItem, onUpdateQuantity }: SalesTableProps) 
 
 // === Página de Vendas ===
 const Sales = () => {
-  const { createSale } = useSales();
-  const [products, setProducts] = useState<Product[]>([]);
+  const { createSale, sales, products } = useSales();
   const [saleItems, setSaleItems] = useState<SaleItem[]>([]);
   const [clientName, setClientName] = useState("");
-
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const res = await fetch("/produtos");
-        const data = await res.json();
-        setProducts(data.map((p: any) => ({ id: p.id, nome: p.nome, preco: p.preco })));
-      } catch (err) {
-        console.error(err);
-      }
-    };
-    fetchProducts();
-  }, []);
 
   const handleAddProductToSale = (product: Product, quantity: number) => {
     const existing = saleItems.find((i) => i.id === product.id);
@@ -220,7 +208,7 @@ const Sales = () => {
       itens: saleItems.map(item => ({
         produtoId: item.id,
         quantidade: item.quantity,
-        precoUnitario: Number(item.preco),
+        precoUnitario: item.preco, // preco is already a number
       })),
     };
 
@@ -270,6 +258,53 @@ const Sales = () => {
           </div>
         </div>
       </div>
+
+      {/* Sales Details Section */}
+      <Card className="mt-8">
+        <CardHeader>
+          <CardTitle>Detalhamento de Vendas</CardTitle>
+          <CardDescription>Análise detalhada de todas as vendas registradas</CardDescription>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div>
+            <h3 className="text-lg font-semibold mb-4">Vendas por Cliente</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={sales.map(sale => ({ name: sale.cliente, total: parseFloat(sale.total) }))}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                
+                <Legend />
+                <Bar dataKey="total" fill="#8884d8" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold mb-4">Todas as Vendas</h3>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Número</TableHead>
+                  <TableHead>Cliente</TableHead>
+                  <TableHead>Data</TableHead>
+                  <TableHead className="text-right">Total</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {sales.map((sale) => (
+                  <TableRow key={sale.id}>
+                    <TableCell>{sale.numero}</TableCell>
+                    <TableCell>{sale.cliente}</TableCell>
+                    <TableCell>{new Date(sale.criadoEm).toLocaleDateString()}</TableCell>
+                    <TableCell className="text-right">{`R$ ${sale.total}`}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

@@ -19,7 +19,10 @@ export interface Sale {
   id: string;
   numero: string;
   cliente: string;
-  total: number;
+  total: string;
+  status: string;
+  paymentMethod: string;
+  salesperson: string;
   itens: SaleItem[];
   criadoEm?: string;
 }

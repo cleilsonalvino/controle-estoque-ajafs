@@ -19,6 +19,7 @@ import { useAuth } from "@/contexts/useAuth";
 
 const menuItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
+  { title: "Dashboard de Vendas", url: "/sales-dashboard", icon: BarChart3 },
   { title: "Vendas", url: "/sales", icon: ShoppingCart },
   { title: "Produtos", url: "/products", icon: Package },
   { title: "Relatórios", url: "/reports", icon: BarChart3 },
