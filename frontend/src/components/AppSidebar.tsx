@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/useAuth";
 
 const menuItems = [
-  { title: "Dashboard", url: "/", icon: LayoutDashboard },
+  { title: "Inicio", url: "/", icon: LayoutDashboard },
   { title: "Dashboard de Vendas", url: "/dashboard-sales", icon: BarChart3 },
   { title: "Registrar Venda", url: "/sales", icon: ShoppingCart },
   { title: "Produtos", url: "/products", icon: Package },

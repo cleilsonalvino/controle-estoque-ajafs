@@ -1,11 +1,16 @@
-// src/hooks/usePageFocus.jsx
-import { useEffect } from "react";
-import { useLocation } from "react-router-dom";
+// src/hooks/usePageFocus.tsx
+import { useEffect, useCallback } from "react";
 
-export function usePageFocus(callback) {
-  const location = useLocation();
+export function usePageFocus(refetch: () => void) {
+  const handleFocus = useCallback(() => {
+    refetch();
+  }, [refetch]);
 
   useEffect(() => {
-    callback();
-  }, [location.pathname]);
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, [handleFocus]);
 }

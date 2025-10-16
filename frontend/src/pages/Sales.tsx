@@ -30,10 +30,9 @@ import { useClientes } from "@/contexts/ClienteContext";
 import { useVendedores } from "@/contexts/VendedorContext";
 import { SalesTable } from "@/components/SalesTable";
 
-
 // === Tipagem ===
 export interface Product {
- id: string;
+  id: string;
   nome: string;
   preco: number; // Changed from string to number
 }
@@ -41,7 +40,7 @@ export interface Product {
 export interface SaleItem extends Product {
   quantity: number;
   produtoId?: string;
-  quantidade?: string
+  quantidade?: string;
   precoUnitario?: string;
 }
 
@@ -52,15 +51,16 @@ interface SalesFormProps {
 }
 
 const SalesForm = ({ products, onAddProductToSale }: SalesFormProps) => {
-  const [selectedProductId, setSelectedProductId] = useState<string | undefined>(undefined); // Keep as string
+  const [selectedProductId, setSelectedProductId] = useState<
+    string | undefined
+  >(undefined); // Keep as string
   const [quantity, setQuantity] = useState(1);
 
   const selectedProduct = products.find((p) => p.id === selectedProductId);
 
- 
-
   const handleAddClick = () => {
-    if (selectedProduct && quantity > 0) { // selectedProduct is of type Product from SalesContext
+    if (selectedProduct && quantity > 0) {
+      // selectedProduct is of type Product from SalesContext
       onAddProductToSale(selectedProduct, quantity);
       setSelectedProductId(undefined);
       setQuantity(1);
@@ -76,9 +76,18 @@ const SalesForm = ({ products, onAddProductToSale }: SalesFormProps) => {
       <CardContent className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="product">Produto</Label>
-          <Select value={selectedProductId} onValueChange={setSelectedProductId}>
+          <Select
+            value={selectedProductId}
+            onValueChange={setSelectedProductId}
+          >
             <SelectTrigger>
-              <SelectValue placeholder={products.length === 0 ? "Carregando..." : "Selecione um produto"} />
+              <SelectValue
+                placeholder={
+                  products.length === 0
+                    ? "Carregando..."
+                    : "Selecione um produto"
+                }
+              />
             </SelectTrigger>
             <SelectContent>
               {products.map((product) => (
@@ -93,7 +102,9 @@ const SalesForm = ({ products, onAddProductToSale }: SalesFormProps) => {
         {selectedProduct && (
           <div className="space-y-2">
             <Label>Preço</Label>
-            <p className="text-lg font-semibold">{selectedProduct.preco}</p>
+            <p className="text-lg font-semibold">
+              {selectedProduct.preco} Reais
+            </p>
           </div>
         )}
 
@@ -120,18 +131,24 @@ const SalesForm = ({ products, onAddProductToSale }: SalesFormProps) => {
   );
 };
 
-
-
 // === Página de Vendas ===
 const Sales = () => {
   const { createSale, products } = useSales();
   const { clientes, createCliente } = useClientes();
   const { vendedores, createVendedor } = useVendedores();
   const [saleItems, setSaleItems] = useState<SaleItem[]>([]);
-  const [selectedCliente, setSelectedCliente] = useState<string | undefined>(undefined);
-  const [selectedVendedor, setSelectedVendedor] = useState<string | undefined>(undefined);
-  const [discount, setDiscount] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<string | undefined>(undefined);
+  const [selectedCliente, setSelectedCliente] = useState<string | undefined>(
+    undefined
+  );
+  const [selectedVendedor, setSelectedVendedor] = useState<string | undefined>(
+    undefined
+  );
+  const [discount, setDiscount] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<string | undefined>(
+    undefined
+  );
+  const [nomeCliente, setNomeCliente] = useState<string>("");
+  const [nomeVendedor, setNomeVendedor] = useState("");
 
   const handleAddProductToSale = (product: Product, quantity: number) => {
     const newSaleItems = JSON.parse(JSON.stringify(saleItems));
@@ -144,10 +161,11 @@ const Sales = () => {
     setSaleItems(newSaleItems);
   };
 
-  const handleRemoveItem = (id: string) => setSaleItems(saleItems.filter(i => i.id !== id));
+  const handleRemoveItem = (id: string) =>
+    setSaleItems(saleItems.filter((i) => i.id !== id));
   const handleUpdateQuantity = (id: string, quantity: number) => {
     if (quantity <= 0) return handleRemoveItem(id);
-    setSaleItems(saleItems.map(i => i.id === id ? { ...i, quantity } : i));
+    setSaleItems(saleItems.map((i) => (i.id === id ? { ...i, quantity } : i)));
   };
 
   const handleFinalizeSale = async () => {
@@ -171,7 +189,7 @@ const Sales = () => {
       vendedorId: selectedVendedor,
       desconto: parseFloat(discount) || 0,
       forma_pagamento: paymentMethod,
-      itens: saleItems.map(item => ({
+      itens: saleItems.map((item) => ({
         produtoId: item.id,
         quantidade: item.quantity,
         precoUnitario: item.preco,
@@ -183,7 +201,7 @@ const Sales = () => {
       setSaleItems([]);
       setSelectedCliente(undefined);
       setSelectedVendedor(undefined);
-      setDiscount('');
+      setDiscount("");
       setPaymentMethod(undefined);
       alert("Venda criada com sucesso!");
     } catch (err) {
@@ -199,20 +217,30 @@ const Sales = () => {
           <ShoppingCart className="h-6 w-6 text-primary-foreground" />
         </div>
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Registrar Venda</h1>
-          <p className="text-muted-foreground">Adicione produtos e finalize a venda</p>
+          <h1 className="text-3xl font-bold text-foreground">
+            Registrar Venda
+          </h1>
+          <p className="text-muted-foreground">
+            Adicione produtos e finalize a venda
+          </p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-1">
-          <SalesForm products={products} onAddProductToSale={handleAddProductToSale} />
+          <SalesForm
+            products={products}
+            onAddProductToSale={handleAddProductToSale}
+          />
         </div>
         <div className="lg:col-span-2">
           <div className="space-y-2 mb-4">
             <Label htmlFor="client-name">Cliente</Label>
             <div className="flex gap-2">
-              <Select value={selectedCliente} onValueChange={setSelectedCliente}>
+              <Select
+                value={selectedCliente}
+                onValueChange={setSelectedCliente}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione um cliente" />
                 </SelectTrigger>
@@ -235,9 +263,29 @@ const Sales = () => {
                   <div className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="new-client-name">Nome</Label>
-                      <Input id="new-client-name" />
+                      <Input
+                        onChange={(nome) => setNomeCliente(nome.target.value)}
+                      />
                     </div>
-                    <Button onClick={() => { createCliente({ nome: (document.getElementById('new-client-name') as HTMLInputElement).value, email: '', telefone: '' }) }}>Salvar</Button>
+                    <Button
+                      onClick={() => {
+                        try {
+                          createCliente({
+                            nome: nomeCliente,
+                            email: null,
+                            telefone: null,
+                            endereco: null,
+                          });
+                          setNomeCliente("");
+                          alert("Cliente criado com sucesso!");
+
+                        } catch (err) {
+                          console.log(err);
+                        }
+                      }}
+                    >
+                      Salvar
+                    </Button>
                   </div>
                 </DialogContent>
               </Dialog>
@@ -247,7 +295,10 @@ const Sales = () => {
           <div className="space-y-2 mb-4">
             <Label htmlFor="vendedor">Vendedor</Label>
             <div className="flex gap-2">
-              <Select value={selectedVendedor} onValueChange={setSelectedVendedor}>
+              <Select
+                value={selectedVendedor}
+                onValueChange={setSelectedVendedor}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione um vendedor" />
                 </SelectTrigger>
@@ -271,8 +322,22 @@ const Sales = () => {
                     <div className="space-y-2">
                       <Label htmlFor="new-vendedor-name">Nome</Label>
                       <Input id="new-vendedor-name" />
-                    </div> 
-                    <Button onClick={() => { createVendedor({ nome: (document.getElementById('new-vendedor-name') as HTMLInputElement).value, email: '', meta: 0 }) }}>Salvar</Button>
+                    </div>
+                    <Button
+                      onClick={() => {
+                        createVendedor({
+                          nome: (
+                            document.getElementById(
+                              "new-vendedor-name"
+                            ) as HTMLInputElement
+                          ).value,
+                          email: "",
+                          meta: 0,
+                        });
+                      }}
+                    >
+                      Salvar
+                    </Button>
                   </div>
                 </DialogContent>
               </Dialog>
@@ -282,7 +347,15 @@ const Sales = () => {
           <div className="grid grid-cols-2 gap-4 mb-4">
             <div className="space-y-2">
               <Label htmlFor="discount">Desconto (%)</Label>
-              <Input id="discount" type="number" value={discount} onChange={(e) => setDiscount(e.target.value)} onBlur={(e) => setDiscount(String(parseFloat(e.target.value) || 0))} />
+              <Input
+                id="discount"
+                type="number"
+                value={discount}
+                onChange={(e) => setDiscount(e.target.value)}
+                onBlur={(e) =>
+                  setDiscount(String(parseFloat(e.target.value) || 0))
+                }
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="payment-method">Forma de Pagamento</Label>
@@ -299,16 +372,23 @@ const Sales = () => {
             </div>
           </div>
 
-          <SalesTable items={saleItems} discount={parseFloat(discount) || 0} onRemoveItem={handleRemoveItem} onUpdateQuantity={handleUpdateQuantity} />
+          <SalesTable
+            items={saleItems}
+            discount={parseFloat(discount) || 0}
+            onRemoveItem={handleRemoveItem}
+            onUpdateQuantity={handleUpdateQuantity}
+          />
           <div className="flex justify-end mt-4">
-            <Button onClick={handleFinalizeSale} disabled={saleItems.length === 0} className="bg-gradient-primary hover:opacity-90 shadow-md">
+            <Button
+              onClick={handleFinalizeSale}
+              disabled={saleItems.length === 0}
+              className="bg-gradient-primary hover:opacity-90 shadow-md"
+            >
               <DollarSign className="h-4 w-4 mr-2" /> Finalizar Venda
             </Button>
           </div>
         </div>
       </div>
-
-
     </div>
   );
 };

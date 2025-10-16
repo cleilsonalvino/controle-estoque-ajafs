@@ -80,18 +80,27 @@ const EditProdutoDialog: React.FC<{
   const [saving, setSaving] = useState(false);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
+  const [precoInput, setPrecoInput] = useState("");
 
-  // Busca os dados para os selects quando o modal abre
+  const { fetchProdutos } = useProdutos();
+
+  // Atualiza form quando troca de produto
+  useEffect(() => {
+    setForm(produto ?? null);
+  }, [produto]);
+
+  // Atualiza input de preço quando muda o produto
+  useEffect(() => {
+    setPrecoInput(produto ? produto.preco.toString().replace(".", ",") : "");
+  }, [produto]);
+
+  // Busca categorias e fornecedores ao abrir
   useEffect(() => {
     if (open) {
       fetchCategorias().then(setCategorias);
       fetchFornecedores().then(setFornecedores);
     }
   }, [open]);
-
-  useEffect(() => {
-    setForm(produto ?? null);
-  }, [produto]);
 
   const handleChange = (key: keyof Produto, value: any) => {
     if (!form) return;
@@ -102,48 +111,42 @@ const EditProdutoDialog: React.FC<{
     if (!form) return;
     const list = path === "categoria" ? categorias : fornecedores;
     const selected = list.find((item) => item.id === id);
-    if (selected) {
-      setForm({ ...form, [path]: selected });
-    }
+    if (selected) setForm({ ...form, [path]: selected });
   };
 
-  const formatPriceBRL = (v: string | number) => {
-    const n = Number(
-      String(v)
-        .replace(/[^0-9.,]/g, "")
-        .replace(/,/g, ".")
-    );
-    if (Number.isNaN(n)) return "";
-    return n.toLocaleString("pt-BR", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
+  // ===== Preço =====
+  const handlePriceInput = (v: string) => {
+    const cleaned = v.replace(/[^0-9,]/g, ""); // só números e vírgula
+    setPrecoInput(cleaned);
   };
 
-  const parseBRLToNumber = (v: string) => {
-    const cleaned = v.replace(/\./g, "").replace(",", ".");
-    const n = Number(cleaned);
-    return Number.isFinite(n) ? n : 0;
+  const formatPrecoOnBlur = () => {
+    if (!precoInput) return setPrecoInput("0,00");
+
+    let [reais, centavos] = precoInput.split(",");
+    if (!centavos) centavos = "00";
+    else if (centavos.length === 1) centavos += "0";
+    else if (centavos.length > 2) centavos = centavos.slice(0, 2);
+
+    setPrecoInput(`${reais},${centavos}`);
   };
 
   const canSave = useMemo(() => {
     if (!form) return false;
-    return (
-      (form.nome?.trim()?.length ?? 0) > 0 && 
-      String(form.preco ?? "").length > 0
-    );
-  }, [form]);
+    return (form.nome?.trim()?.length ?? 0) > 0 && precoInput.length > 0;
+  }, [form, precoInput]);
 
   const onSubmit = async () => {
     if (!form || !canSave) return;
     try {
       setSaving(true);
-      const precoNumber =
-        typeof form.preco === "string"
-          ? parseBRLToNumber(form.preco)
-          : Number(form.preco);
-      onSave({ ...form, preco: String(precoNumber.toFixed(2)) });
+      // Converte para decimal antes de salvar
+      const precoNumber = String(Number(precoInput.replace(",", ".")));
+      onSave({ ...form, preco: precoNumber });
       onOpenChange(false);
+      fetchProdutos();
+    } catch (error) {
+      console.error("Erro ao salvar produto:", error);
     } finally {
       setSaving(false);
     }
@@ -157,8 +160,9 @@ const EditProdutoDialog: React.FC<{
         <DialogHeader>
           <DialogTitle className="text-2xl">Editar produto</DialogTitle>
         </DialogHeader>
+
         <div className="space-y-6 py-2">
-          {/* ... outros campos do formulário ... */}
+          {/* Nome e Preço */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="md:col-span-2 space-y-2">
               <Label htmlFor="nome">Nome</Label>
@@ -172,19 +176,14 @@ const EditProdutoDialog: React.FC<{
               <Label htmlFor="preco">Preço (R$)</Label>
               <Input
                 id="preco"
-                value={formatPriceBRL(form.preco)}
-                onChange={(e) => handleChange("preco", e.target.value)}
+                value={precoInput}
+                onChange={(e) => handlePriceInput(e.target.value)}
+                onBlur={formatPrecoOnBlur}
               />
             </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="image">URL da imagem</Label>
-            <Input
-              id="image"
-              value={form.image ?? ""}
-              onChange={(e) => handleChange("image", e.target.value)}
-            />
-          </div>
+
+          {/* Descrição */}
           <div className="space-y-2">
             <Label htmlFor="descricao">Descrição</Label>
             <Textarea
@@ -194,15 +193,13 @@ const EditProdutoDialog: React.FC<{
               className="min-h-28"
             />
           </div>
+
           <Separator />
 
-          {/* Categoria e Fornecedor com SELECT */}
+          {/* Categoria e Fornecedor */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label
-                htmlFor="categoriaNome"
-                className="flex items-center gap-2"
-              >
+              <Label htmlFor="categoriaNome" className="flex items-center gap-2">
                 <TagIcon className="w-4 h-4" /> Categoria
               </Label>
               <Select
@@ -221,11 +218,9 @@ const EditProdutoDialog: React.FC<{
                 </SelectContent>
               </Select>
             </div>
+
             <div className="space-y-2">
-              <Label
-                htmlFor="fornecedorNome"
-                className="flex items-center gap-2"
-              >
+              <Label htmlFor="fornecedorNome" className="flex items-center gap-2">
                 <Package className="w-4 h-4" /> Fornecedor
               </Label>
               <Select
@@ -246,7 +241,7 @@ const EditProdutoDialog: React.FC<{
             </div>
           </div>
 
-          {/* ... restante do formulário (Estoque) ... */}
+          {/* Estoque */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="estoqueAtual" className="flex items-center gap-2">
@@ -256,10 +251,7 @@ const EditProdutoDialog: React.FC<{
                 id="estoqueAtual"
                 value={String(form.estoqueAtual ?? "")}
                 onChange={(e) =>
-                  handleChange(
-                    "estoqueAtual",
-                    e.target.value.replace(/[^0-9-]/g, "")
-                  )
+                  handleChange("estoqueAtual", e.target.value.replace(/[^0-9-]/g, ""))
                 }
               />
             </div>
@@ -269,10 +261,7 @@ const EditProdutoDialog: React.FC<{
                 id="estoqueMinimo"
                 value={String(form.estoqueMinimo ?? "")}
                 onChange={(e) =>
-                  handleChange(
-                    "estoqueMinimo",
-                    e.target.value.replace(/[^0-9-]/g, "")
-                  )
+                  handleChange("estoqueMinimo", e.target.value.replace(/[^0-9-]/g, ""))
                 }
               />
             </div>
@@ -280,11 +269,7 @@ const EditProdutoDialog: React.FC<{
         </div>
 
         <DialogFooter className="gap-2 sm:gap-4">
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={saving}
-          >
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
             Cancelar
           </Button>
           <Button onClick={onSubmit} disabled={!canSave || saving}>
@@ -295,6 +280,8 @@ const EditProdutoDialog: React.FC<{
     </Dialog>
   );
 };
+
+
 
 /**
  * Modal de Criação de Produto
@@ -318,6 +305,9 @@ const CreateProdutoDialog: React.FC<{
   const [saving, setSaving] = useState(false);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
+
+    const { fetchProdutos } =
+    useProdutos();
 
   useEffect(() => {
     if (open) {
@@ -374,6 +364,8 @@ const CreateProdutoDialog: React.FC<{
         estoqueAtual: "0",
         estoqueMinimo: "0",
       });
+
+      fetchProdutos();
     } finally {
       setSaving(false);
     }

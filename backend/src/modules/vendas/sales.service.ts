@@ -71,10 +71,18 @@
   };
 
 
-  export const getVendasService = async () => {
-    const vendas = await prisma.venda.findMany({ include: { itens: true } });
-    return vendas;
-  };
+export const getVendasService = async () => {
+  const vendas = await prisma.venda.findMany({
+    include: {
+      itens: true,
+      cliente: {
+        select: { nome: true, id: true}, // retorna só o nome (sem id)
+      },
+    },
+  });
+  return vendas;
+};
+
 
   export const getVendaByIdService = async (id: string) => {
     const venda = await prisma.venda.findUnique({

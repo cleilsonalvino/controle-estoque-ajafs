@@ -6,6 +6,7 @@ const clienteService = new ClienteService();
 
 export const createClienteController = async (req: Request, res: Response) => {
   try {
+    console.log(req.body);
     const data = CreateClienteSchema.parse(req.body);
     const cliente = await clienteService.create(data);
     res.status(201).json(cliente);

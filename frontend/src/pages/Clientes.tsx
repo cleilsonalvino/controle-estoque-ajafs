@@ -56,13 +56,19 @@ const Clientes = () => {
                     <Label htmlFor="telefone">Telefone</Label>
                     <Input id="telefone" />
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="endereco">Endereço</Label>
+                    <Input id="endereco" />
+                  </div>
+                  
                 </div>
                 <DialogFooter>
                   <Button onClick={() => {
                     const nome = (document.getElementById('nome') as HTMLInputElement).value;
                     const email = (document.getElementById('email') as HTMLInputElement).value;
                     const telefone = (document.getElementById('telefone') as HTMLInputElement).value;
-                    createCliente({ nome, email, telefone });
+                    const endereco = (document.getElementById('endereco') as HTMLInputElement).value;
+                    createCliente({ nome, email, telefone, endereco });
                     setIsCreateModalOpen(false);
                   }}>Salvar</Button>
                   <DialogClose asChild>
@@ -78,7 +84,7 @@ const Clientes = () => {
                 <TableHead>Nome</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Telefone</TableHead>
-                <TableHead></TableHead>
+                <TableHead>Endereço</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -87,6 +93,7 @@ const Clientes = () => {
                   <TableCell>{cliente.nome}</TableCell>
                   <TableCell>{cliente.email}</TableCell>
                   <TableCell>{cliente.telefone}</TableCell>
+                  <TableCell>{cliente.endereco}</TableCell>
                   <TableCell className="text-right">
                     <Button variant="outline" size="sm" onClick={() => { setSelectedCliente(cliente); setIsEditModalOpen(true); }}>Editar</Button>
                     <Button variant="destructive" size="sm" className="ml-2" onClick={() => { setSelectedCliente(cliente); setIsDeleteModalOpen(true); }}>Excluir</Button>
@@ -117,6 +124,10 @@ const Clientes = () => {
                 <Label htmlFor="edit-telefone">Telefone</Label>
                 <Input id="edit-telefone" defaultValue={selectedCliente.telefone} />
               </div>
+                            <div className="space-y-2">
+                <Label htmlFor="edit-endereco">Endereço</Label>
+                <Input id="edit-endereco" defaultValue={selectedCliente.endereco} />
+              </div>
             </div>
           )}
           <DialogFooter>
@@ -125,7 +136,8 @@ const Clientes = () => {
                 const nome = (document.getElementById('edit-nome') as HTMLInputElement).value;
                 const email = (document.getElementById('edit-email') as HTMLInputElement).value;
                 const telefone = (document.getElementById('edit-telefone') as HTMLInputElement).value;
-                updateCliente(selectedCliente.id, { nome, email, telefone });
+                const endereco = (document.getElementById('edit-endereco') as HTMLInputElement).value;
+                updateCliente(selectedCliente.id, { nome, email, telefone, endereco });
                 setIsEditModalOpen(false);
               }
             }}>Salvar</Button>

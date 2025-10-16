@@ -18,7 +18,9 @@ export interface Product {
 export interface Sale {
   id: string;
   numero: string;
-  cliente: string;
+  cliente: {
+    nome: string
+  }
   total: string;
   status: string;
   paymentMethod: string;

@@ -8,8 +8,11 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Calendar } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
 import { useProdutos } from "@/contexts/ProdutoContext";
+import StockTurnoverChart from "@/components/GiroEstoque";
+import { useSales } from "@/contexts/SalesContext";
 
 // ==============================
 // Helpers — preço como string
@@ -67,6 +70,11 @@ const StockDashboard = ({ products }: { products: Product[] }) => {
       : 0;
   }, [products, totalProducts]);
 
+  const {sales} = useSales();
+
+  
+
+
   const stats = [
     {
       title: "Total de Produtos",
@@ -83,9 +91,9 @@ const StockDashboard = ({ products }: { products: Product[] }) => {
       color: "bg-gradient-success",
     },
     {
-      title: "Estoque Médio",
-      value: averageStock.toString(),
-      description: "Quantidade média por produto",
+      title: "Total de vendas",
+      value: sales.length.toString(),
+      description: "total de vendas da empresa",
       icon: TrendingUp,
       color: "bg-primary",
     },
@@ -150,13 +158,6 @@ const ChartCard = ({ title, children }: { title: string; children: React.ReactNo
   </Card>
 );
 
-const StockTurnoverChart = () => (
-  <ChartCard title="Giro de Estoque">
-    <div className="flex items-center justify-center h-full text-muted-foreground">
-      [Gráfico de Giro de Estoque - Placeholder]
-    </div>
-  </ChartCard>
-);
 
 const TemporalEvolutionChart = () => (
   <ChartCard title="Evolução Temporal do Valor Total">

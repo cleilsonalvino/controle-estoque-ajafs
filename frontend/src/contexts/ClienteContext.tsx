@@ -5,8 +5,9 @@ import api from "@/lib/api";
 export interface Cliente {
   id: string;
   nome: string;
-  email: string;
-  telefone: string;
+  email?: string;
+  telefone?: string;
+  endereco?: string;
 }
 
 interface ClienteContextProps {
@@ -47,6 +48,7 @@ export const ClienteProvider = ({ children }: ClienteProviderProps) => {
   };
 
   const createCliente = async (clienteData: Omit<Cliente, 'id'>) => {
+    console.log(clienteData);
     const response = await api.post("/clientes/create", clienteData);
     setClientes((prev) => [response.data, ...prev]);
     return response.data;

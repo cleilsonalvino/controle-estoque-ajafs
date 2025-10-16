@@ -44,3 +44,7 @@ export const updateVendaSchema = z.object({
     )
     .optional(),
 });
+
+
+export type CreateVendaDto = z.infer<typeof createVendaSchema>;
+export type UpdateVendaDto = z.infer<typeof updateVendaSchema>;
