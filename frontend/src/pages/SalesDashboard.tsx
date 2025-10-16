@@ -8,7 +8,11 @@ import { Download, AlertTriangle, TrendingUp, UserCheck } from "lucide-react";
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import * as XLSX from 'xlsx';
+
 import { useSales } from "@/contexts/SalesContext";
+import { useProdutos } from "@/contexts/ProdutoContext";
+import { useCategories } from "@/contexts/CategoryContext";
+import { Badge } from "@/components/ui/badge";
 import { useEffect, useMemo, useState } from 'react';
 
 // ========================
@@ -17,22 +21,21 @@ import { useEffect, useMemo, useState } from 'react';
 type ItemVenda = {
   produtoId?: string;
   quantidade?: number | string;
-  quantity?: number | string; // fallback
-  valorUnitario?: number | string;
+  quantity?: number | string; 
+  precoUnitario?: number | string;  // <-- usar este campo (é o da API)
 };
+
 
 type Venda = {
   id: string;
   numero: string;
   clienteId?: string;
-  cliente: {
-    nome: string;
-  };        // se existir no seu contexto     // se existir no seu contexto
+  cliente?: { nome: string } | null; // opcional
   vendedorId?: string;
-  salesperson?: string;        // se existir
+  salesperson?: string;
   criadoEm: string;            // ISO
   desconto?: number | string;
-  formaPagamento?: string;     // p.ex. "pix"
+  formaPagamento?: string;     // ex.: "pix"
   status: 'Concluída' | 'Pendente' | 'Cancelada' | string;
   total: number | string;      // pode vir string
   itens?: ItemVenda[];
@@ -41,6 +44,12 @@ type Venda = {
 };
 
 type Produto = {
+  id: string;
+  nome: string;
+  categoria?: { id: string; nome?: string };
+};
+
+type Categoria = {
   id: string;
   nome: string;
 };
@@ -56,6 +65,7 @@ const toNumber = (v: unknown) => {
   }
   return 0;
 };
+
 const fmtBRL = (n: number) =>
   n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -67,20 +77,236 @@ const monthKey = (d: Date) =>
 const monthLabel = (d: Date) =>
   d.toLocaleString('pt-BR', { month: 'short' }).replace('.', ''); // jan, fev...
 
-const getClienteDisplay = (s) =>
-  s.cliente.nome ?? s.cliente.nome ?? 'Cliente não informado';
+const getClienteDisplay = (s: Venda) =>
+  s?.cliente?.nome ?? 'Cliente não informado';
 
 // ========================
-// Componente
+// Blocos auxiliares
+// ========================
+const SalesLast6Months = () => {
+  const { sales: allSalesRaw } = useSales() as { sales?: Venda[] };
+  const allSales = Array.isArray(allSalesRaw) ? allSalesRaw : [];
+
+  const salesData = useMemo(() => {
+    const today = new Date();
+    const last6Months = Array.from({ length: 6 }, (_, i) => {
+      const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+      return { key: monthKey(d), month: monthLabel(d), value: 0, products: 0 };
+    }).reverse();
+
+    const seed = last6Months.reduce<Record<string, { key: string; month: string; value: number; products: number }>>(
+      (acc, m) => ({ ...acc, [m.key]: m }),
+      {}
+    );
+
+    const salesByMonth = allSales.reduce((acc, sale) => {
+      const saleDate = new Date(sale.criadoEm);
+      const key = monthKey(saleDate);
+      if (acc[key]) {
+        acc[key].value += toNumber(sale.total);
+        const itens = Array.isArray(sale.itens) ? sale.itens : [];
+        acc[key].products += itens.reduce((sum, item) => sum + toNumber(item.quantidade), 0);
+      }
+      return acc;
+    }, seed);
+
+    return Object.values(salesByMonth);
+  }, [allSales]);
+
+  const maxValue = Math.max(...salesData.map(d => d.value), 70000);
+
+  return (
+    <Card className="bg-gradient-card border-0 shadow-md">
+      <CardHeader>
+        <CardTitle>Vendas nos Últimos 6 Meses</CardTitle>
+        <CardDescription>Evolução mensal de vendas e produtos</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          {salesData.map((item) => (
+            <div key={item.key} className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <div className="text-sm font-medium w-10 capitalize">{item.month}</div>
+                <div className="flex-1">
+                  <div className="w-full bg-muted rounded-full h-2">
+                    <div
+                      className="bg-gradient-primary h-2 rounded-full"
+                      style={{ width: `${maxValue > 0 ? (item.value / maxValue) * 100 : 0}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-sm font-semibold">{fmtBRL(item.value)}</div>
+                <div className="text-xs text-muted-foreground">{item.products} produtos</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+const TopSellingProducts = () => {
+  const { sales: allSalesRaw } = useSales() as { sales?: Venda[] };
+  const { produtos: produtosRaw } = useProdutos() as { produtos: Produto[] };
+  const allSales = Array.isArray(allSalesRaw) ? allSalesRaw : [];
+  const produtos = Array.isArray(produtosRaw) ? produtosRaw : [];
+
+  const topProducts = useMemo(() => {
+    const quantities = new Map<string, number>(); // productId -> qty
+
+    for (const sale of allSales) {
+      const itens = Array.isArray(sale.itens) ? sale.itens : [];
+      for (const item of itens) {
+        const productId = item.produtoId;
+        if (!productId) continue;
+        const qty = toNumber(item.quantidade ?? item.quantity);
+        quantities.set(productId, (quantities.get(productId) ?? 0) + qty);
+      }
+    }
+
+    const sorted = [...quantities.entries()]
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 5);
+
+    return sorted.map(([productId, sales]) => {
+      const product = produtos.find(p => p.id === productId);
+      // receita do produto
+      const revenue = allSales.reduce((acc, sale) => {
+        const itens = Array.isArray(sale.itens) ? sale.itens : [];
+        for (const i of itens) {
+          if (i.produtoId === productId) {
+            acc += toNumber(i.quantidade ?? i.quantity) * toNumber(i.precoUnitario);
+          }
+        }
+        return acc;
+      }, 0);
+
+      return {
+        name: product?.nome ?? 'Produto Desconhecido',
+        sales,
+        revenue,
+      };
+    });
+  }, [allSales, produtos]);
+
+  return (
+    <Card className="bg-gradient-card border-0 shadow-md">
+      <CardHeader>
+        <CardTitle>Produtos Mais Vendidos</CardTitle>
+        <CardDescription>Ranking de produtos por volume de vendas</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          {topProducts.map((product, index) => (
+            <div key={`${product.name}-${index}`} className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <Badge variant="outline" className="w-6 h-6 p-0 flex items-center justify-center text-xs">
+                  {index + 1}
+                </Badge>
+                <div>
+                  <div className="text-sm font-medium line-clamp-1">{product.name}</div>
+                  <div className="text-xs text-muted-foreground">{product.sales} produtos vendidos</div>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-sm font-semibold">
+                  {fmtBRL(product.revenue)}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+const SalesByCategory = () => {
+  const { sales: allSalesRaw } = useSales() as { sales?: Venda[] };
+  const { produtos: produtosRaw } = useProdutos() as { produtos: Produto[] };
+  const { categories: categoriesRaw } = useCategories() as { categories: Categoria[] };
+  const allSales = Array.isArray(allSalesRaw) ? allSalesRaw : [];
+  const produtos = Array.isArray(produtosRaw) ? produtosRaw : [];
+  const categories = Array.isArray(categoriesRaw) ? categoriesRaw : [];
+
+  const categoryData = useMemo(() => {
+    const byCat = new Map<string, number>(); // categoryId -> total R$
+
+    for (const sale of allSales) {
+      const itens = Array.isArray(sale.itens) ? sale.itens : [];
+      for (const item of itens) {
+        const p = produtos.find(prod => prod.id === item.produtoId);
+        const catId = p?.categoria?.id;
+        if (!catId) continue;
+        const value = toNumber(item.quantidade ?? item.quantity) * toNumber(item.precoUnitario);
+        byCat.set(catId, (byCat.get(catId) ?? 0) + value);
+      }
+    }
+
+    const total = [...byCat.values()].reduce((sum, v) => sum + v, 0);
+
+    return categories.map(cat => {
+      const value = byCat.get(cat.id) ?? 0;
+      const percentage = total > 0 ? (value / total) * 100 : 0;
+      return {
+        id: cat.id,
+        name: cat.nome,
+        value,
+        percentage,
+      };
+    });
+  }, [allSales, produtos, categories]);
+
+  return (
+    <Card className="bg-gradient-card border-0 shadow-md">
+      <CardHeader>
+        <CardTitle>Vendas por Categoria</CardTitle>
+        <CardDescription>Distribuição de vendas entre categorias de produtos</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-6">
+          {categoryData.map((c) => (
+            <div key={c.id} className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium">{c.name}</span>
+                <span className="text-sm text-muted-foreground">{c.percentage.toFixed(2)}%</span>
+              </div>
+              <div className="w-full bg-muted rounded-full h-2">
+                <div
+                  className="bg-gradient-primary h-2 rounded-full"
+                  style={{ width: `${c.percentage}%` }}
+                />
+              </div>
+              <div className="flex justify-between items-center text-xs text-muted-foreground">
+                <span>{fmtBRL(c.value)}</span>
+                <span>{c.percentage.toFixed(2)}% do total</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+// ========================
+// Componente principal
 // ========================
 const SalesDashboard = () => {
-  const { sales: allSalesRaw, products: productsRaw } = useSales() as {
-    sales: Venda[] | undefined;
-    products?: Produto[];
-  };
+  const { sales: allSalesRaw } = useSales() as { sales?: Venda[] };
+  const { produtos, fetchProdutos } = useProdutos() as { produtos: Produto[]; fetchProdutos: () => void };
+  const { categories, fetchCategories } = useCategories() as { categories: Categoria[]; fetchCategories: () => void };
+
+  useEffect(() => {
+    fetchProdutos?.();
+    fetchCategories?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const allSales = Array.isArray(allSalesRaw) ? allSalesRaw : [];
-  const products = Array.isArray(productsRaw) ? productsRaw : [];
 
   const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date }>();
   const [customerFilter, setCustomerFilter] = useState('');
@@ -95,8 +321,7 @@ const SalesDashboard = () => {
     if (dateRange?.from && dateRange?.to) {
       const from = new Date(dateRange.from);
       const to = new Date(dateRange.to);
-      // incluir o fim do dia
-      to.setHours(23, 59, 59, 999);
+      to.setHours(23, 59, 59, 999); // incluir fim do dia
       arr = arr.filter(s => {
         const d = new Date(s.criadoEm);
         return d >= from && d <= to;
@@ -105,9 +330,7 @@ const SalesDashboard = () => {
 
     if (customerFilter.trim()) {
       const term = customerFilter.toLowerCase();
-      arr = arr.filter(s =>
-        getClienteDisplay(s.cliente.nome).toLowerCase().includes(term)
-      );
+      arr = arr.filter(s => getClienteDisplay(s).toLowerCase().includes(term));
     }
 
     if (statusFilter && statusFilter !== 'todos') {
@@ -123,7 +346,6 @@ const SalesDashboard = () => {
   );
   const numberOfSales = allSales.length;
   const averageTicket = numberOfSales > 0 ? totalRevenue / numberOfSales : 0;
-  const estimatedProfit = totalRevenue * 0.25;
 
   const pendingSales = allSales.filter(s => s.status === 'Pendente').length;
   const cancelledSales = allSales.filter(s => s.status === 'Cancelada').length;
@@ -132,8 +354,7 @@ const SalesDashboard = () => {
   const currentMonthIndex = now.getMonth();
   const lastMonthIndex = currentMonthIndex === 0 ? 11 : currentMonthIndex - 1;
   const currentYear = now.getFullYear();
-  const lastMonthYear =
-    currentMonthIndex === 0 ? currentYear - 1 : currentYear;
+  const lastMonthYear = currentMonthIndex === 0 ? currentYear - 1 : currentYear;
 
   const currentMonthSales = allSales.filter(s => {
     const d = new Date(s.criadoEm);
@@ -181,7 +402,6 @@ const SalesDashboard = () => {
       cur.total += toNumber(s.total);
       map.set(k, cur);
     }
-    // ordenar por chave YYYY-MM
     return [...map.values()].sort((a, b) => (a.key < b.key ? -1 : 1));
   }, [allSales]);
 
@@ -191,7 +411,7 @@ const SalesDashboard = () => {
       const key = getClienteDisplay(s);
       map.set(key, (map.get(key) ?? 0) + toNumber(s.total));
     }
-    const arr = [...map.entries()].map(([name, value]) => ({ name, total: value}));
+    const arr = [...map.entries()].map(([name, total]) => ({ name, total }));
     arr.sort((a, b) => b.total - a.total);
     return arr.slice(0, 5);
   }, [allSales]);
@@ -208,10 +428,10 @@ const SalesDashboard = () => {
   const topProducts = useMemo(() => {
     const map = new Map<string, number>();
     for (const s of allSales) {
-      if (!Array.isArray(s.itens)) continue;
-      for (const it of s.itens) {
+      const itens = Array.isArray(s.itens) ? s.itens : [];
+      for (const it of itens) {
         const qtd = toNumber(it.quantidade ?? it.quantity);
-        const prod = products.find(p => p.id === it.produtoId);
+        const prod = (produtos ?? []).find(p => p.id === it.produtoId);
         const name = prod?.nome ?? 'Produto Desconhecido';
         map.set(name, (map.get(name) ?? 0) + qtd);
       }
@@ -219,7 +439,7 @@ const SalesDashboard = () => {
     const arr = [...map.entries()].map(([name, value]) => ({ name, value }));
     arr.sort((a, b) => b.value - a.value);
     return arr.slice(0, 5);
-  }, [allSales, products]);
+  }, [allSales, produtos]);
 
   // ========================
   // Exportações
@@ -231,7 +451,7 @@ const SalesDashboard = () => {
       body: filteredSales.map((s) => [
         s.numero,
         new Date(s.criadoEm).toLocaleDateString('pt-BR'),
-        getClienteDisplay(s.cliente.nome),
+        getClienteDisplay(s),
         s.status,
         fmtBRL(toNumber(s.total)),
       ]),
@@ -308,7 +528,7 @@ const SalesDashboard = () => {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{fmtBRL(estimatedProfit)}</div>
+            <div className="text-2xl font-bold">{fmtBRL(totalRevenue * 0.25)}</div>
             <p className="text-xs text-muted-foreground">Margem suposta de 25%</p>
           </CardContent>
         </Card>
@@ -381,72 +601,11 @@ const SalesDashboard = () => {
 
       {/* Gráficos */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <Card>
-          <CardHeader><CardTitle>Vendas por Período</CardTitle></CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={salesByPeriod}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Line type="monotone" dataKey="total" stroke="#8884d8" activeDot={{ r: 6 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader><CardTitle>Top 5 Clientes</CardTitle></CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={topCustomers} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis type="number" />
-                <YAxis type="category" dataKey="name" />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="total" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+        <SalesLast6Months />
+        <TopSellingProducts />
       </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <Card>
-          <CardHeader><CardTitle>Formas de Pagamento</CardTitle></CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie data={paymentMethods} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} label>
-                  {paymentMethods.map((_, i) => (
-                    <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader><CardTitle>Top 5 Produtos</CardTitle></CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={topProducts}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="value" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 lg:grid-cols-1 gap-6 mb-6">
+        <SalesByCategory />
       </div>
 
       {/* Tabela detalhada e filtros */}
@@ -543,7 +702,6 @@ const SalesDashboard = () => {
         <Card>
           <CardHeader><CardTitle>Projeção de Faturamento</CardTitle></CardHeader>
           <CardContent>
-            {/* Se quiser, substitua por um cálculo real */}
             <p className="text-sm text-muted-foreground">
               A projeção de faturamento para o próximo mês é um placeholder. Ajuste para seu modelo.
             </p>

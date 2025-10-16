@@ -22,7 +22,6 @@ const menuItems = [
   { title: "Dashboard de Vendas", url: "/dashboard-sales", icon: BarChart3 },
   { title: "Registrar Venda", url: "/sales", icon: ShoppingCart },
   { title: "Produtos", url: "/products", icon: Package },
-  { title: "Relatórios", url: "/reports", icon: BarChart3 },
   { title: "Movimentações", url: "/movements", icon: ArrowUpDown },
   { title: "Fornecedores", url: "/suppliers", icon: Users },
   { title: "Categorias", url: "/categories", icon: Tag },
