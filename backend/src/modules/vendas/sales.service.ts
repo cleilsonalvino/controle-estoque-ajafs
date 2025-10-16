@@ -6,16 +6,16 @@
   // Venda Services
 
   export const createVendaService = async (data: any) => {
-    const { itens, cliente } = data;
 
-    if (!itens || itens.length === 0) {
+
+    if (!data.itens || data.itens.length === 0) {
       throw new AppError("A venda precisa ter pelo menos um item", 400);
     }
 
     const venda = await prisma.$transaction(async (prisma) => {
       // 1️⃣ Calcula o total automaticamente
       let total = 0;
-      for (const item of itens) {
+      for (const item of data.itens) {
         total += Number(item.precoUnitario) * Number(item.quantidade);
       }
 
@@ -23,14 +23,19 @@
       const novaVenda = await prisma.venda.create({
         data: {
           numero: `VND-${Date.now()}`, // gera número automático único
-          cliente,
+          clienteId: data.clienteId || null,
+          vendedorId: data.vendedorId || null,
           total,
           status: "Concluída",
+          formaPagamento: data.forma_pagamento || "Dinheiro",
+          desconto: data.desconto || 0,
+          lucroEstimado: data.lucroEstimado || 0,
+          observacoes: data.observacoes || null,
         },
       });
 
       // 3️⃣ Cria os itens da venda
-      const itensVenda = itens.map((item: any) => ({
+      const itensVenda = data.itens.map((item: any) => ({
         vendaId: novaVenda.id,
         produtoId: item.produtoId,
         quantidade: item.quantidade,
@@ -39,7 +44,7 @@
       await prisma.itemVenda.createMany({ data: itensVenda });
 
       // 4️⃣ Atualiza estoque e cria movimentações
-      for (const item of itens) {
+      for (const item of data.itens) {
         // Atualiza estoque
         await prisma.produto.update({
           where: { id: item.produtoId },

@@ -129,8 +129,7 @@ const EditProdutoDialog: React.FC<{
   const canSave = useMemo(() => {
     if (!form) return false;
     return (
-      (form.nome?.trim()?.length ?? 0) > 0 &&
-      (form.descricao?.trim()?.length ?? 0) > 0 &&
+      (form.nome?.trim()?.length ?? 0) > 0 && 
       String(form.preco ?? "").length > 0
     );
   }, [form]);
@@ -308,18 +307,18 @@ const CreateProdutoDialog: React.FC<{
   const [form, setForm] = useState<Omit<Produto, "id">>({
     nome: "",
     descricao: "",
-    preco: "",
+    preco: "", // vamos guardar os centavos como string
     image: "",
     categoria: { id: "", nome: "" },
     fornecedor: { id: "", nome: "" },
     estoqueAtual: "0",
     estoqueMinimo: "0",
   });
+
   const [saving, setSaving] = useState(false);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
 
-  // Busca os dados para os selects quando o modal abre
   useEffect(() => {
     if (open) {
       fetchCategorias().then(setCategorias);
@@ -333,34 +332,28 @@ const CreateProdutoDialog: React.FC<{
   const handleSelectChange = (path: "categoria" | "fornecedor", id: string) => {
     const list = path === "categoria" ? categorias : fornecedores;
     const selected = list.find((item) => item.id === id);
-    if (selected) {
-      setForm({ ...form, [path]: selected });
-    }
+    if (selected) setForm({ ...form, [path]: selected });
   };
 
-  const formatPriceBRL = (v: string | number) => {
-    const n = String(v)
-      .replace(/[^0-9.,]/g, "")
-      .replace(/,/g, ".");
-    const num = parseFloat(n);
-    if (Number.isNaN(num)) return "";
-    return num.toLocaleString("pt-BR", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
+  // Formata centavos para BRL tipo app de banco
+  const formatAsMoney = (value: string) => {
+    const digits = value.replace(/\D/g, "");
+    if (!digits) return "0,00";
+    const number = parseInt(digits, 10);
+    const reais = (number / 100).toFixed(2);
+    return reais.replace(".", ",");
   };
 
-  const parseBRLToNumber = (v: string) => {
-    const cleaned = v.replace(/\./g, "").replace(",", ".");
-    const n = Number(cleaned);
-    return Number.isFinite(n) ? n : 0;
+  // Atualiza o estado com apenas os dígitos
+  const handlePriceInput = (v: string) => {
+    const digits = v.replace(/\D/g, "");
+    setForm({ ...form, preco: digits });
   };
 
   const canSave = useMemo(() => {
     return (
       (form.nome?.trim()?.length ?? 0) > 0 &&
-      (form.descricao?.trim()?.length ?? 0) > 0 &&
-      String(form.preco ?? "").length > 0
+      (form.preco?.length ?? 0) > 0
     );
   }, [form]);
 
@@ -368,11 +361,8 @@ const CreateProdutoDialog: React.FC<{
     if (!canSave) return;
     setSaving(true);
     try {
-      const precoNumber =
-        typeof form.preco === "string"
-          ? parseBRLToNumber(form.preco)
-          : Number(form.preco);
-      onCreate({ ...form, preco: String(precoNumber.toFixed(2)) });
+      const precoNumber = (Number(form.preco) / 100).toFixed(2); // converte centavos para reais
+      onCreate({ ...form, preco: precoNumber });
       onOpenChange(false);
       setForm({
         nome: "",
@@ -396,7 +386,6 @@ const CreateProdutoDialog: React.FC<{
           <DialogTitle className="text-2xl">Criar novo produto</DialogTitle>
         </DialogHeader>
         <div className="space-y-6 py-2">
-          {/* ... outros campos ... */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="md:col-span-2 space-y-2">
               <Label htmlFor="nome-create">Nome</Label>
@@ -410,11 +399,12 @@ const CreateProdutoDialog: React.FC<{
               <Label htmlFor="preco-create">Preço (R$)</Label>
               <Input
                 id="preco-create"
-                value={formatPriceBRL(form.preco)}
-                onChange={(e) => handleChange("preco", e.target.value)}
+                value={formatAsMoney(form.preco)}
+                onChange={(e) => handlePriceInput(e.target.value)}
               />
             </div>
           </div>
+
           <div className="space-y-2">
             <Label htmlFor="image-create">URL da imagem</Label>
             <Input
@@ -423,6 +413,7 @@ const CreateProdutoDialog: React.FC<{
               onChange={(e) => handleChange("image", e.target.value)}
             />
           </div>
+
           <div className="space-y-2">
             <Label htmlFor="descricao-create">Descrição</Label>
             <Textarea
@@ -432,15 +423,13 @@ const CreateProdutoDialog: React.FC<{
               className="min-h-28"
             />
           </div>
+
           <Separator />
 
-          {/* Categoria e Fornecedor com SELECT */}
+          {/* Categoria e Fornecedor */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label
-                htmlFor="categoriaNome-create"
-                className="flex items-center gap-2"
-              >
+              <Label htmlFor="categoriaNome-create" className="flex items-center gap-2">
                 <TagIcon className="w-4 h-4" /> Categoria
               </Label>
               <Select
@@ -459,11 +448,9 @@ const CreateProdutoDialog: React.FC<{
                 </SelectContent>
               </Select>
             </div>
+
             <div className="space-y-2">
-              <Label
-                htmlFor="fornecedorNome-create"
-                className="flex items-center gap-2"
-              >
+              <Label htmlFor="fornecedorNome-create" className="flex items-center gap-2">
                 <Package className="w-4 h-4" /> Fornecedor
               </Label>
               <Select
@@ -484,23 +471,17 @@ const CreateProdutoDialog: React.FC<{
             </div>
           </div>
 
-          {/* ... restante do formulário (Estoque) ... */}
+          {/* Estoque */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label
-                htmlFor="estoqueAtual-create"
-                className="flex items-center gap-2"
-              >
+              <Label htmlFor="estoqueAtual-create" className="flex items-center gap-2">
                 <Boxes className="w-4 h-4" /> Estoque Atual
               </Label>
               <Input
                 id="estoqueAtual-create"
                 value={String(form.estoqueAtual)}
                 onChange={(e) =>
-                  handleChange(
-                    "estoqueAtual",
-                    e.target.value.replace(/[^0-9-]/g, "")
-                  )
+                  handleChange("estoqueAtual", e.target.value.replace(/[^0-9-]/g, ""))
                 }
               />
             </div>
@@ -510,10 +491,7 @@ const CreateProdutoDialog: React.FC<{
                 id="estoqueMinimo-create"
                 value={String(form.estoqueMinimo)}
                 onChange={(e) =>
-                  handleChange(
-                    "estoqueMinimo",
-                    e.target.value.replace(/[^0-9-]/g, "")
-                  )
+                  handleChange("estoqueMinimo", e.target.value.replace(/[^0-9-]/g, ""))
                 }
               />
             </div>
@@ -521,11 +499,7 @@ const CreateProdutoDialog: React.FC<{
         </div>
 
         <DialogFooter className="gap-2 sm:gap-4">
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={saving}
-          >
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
             Cancelar
           </Button>
           <Button onClick={onSubmit} disabled={!canSave || saving}>
@@ -697,7 +671,8 @@ const Products: React.FC = () => {
               Clique em "Adicionar Produto" para começar.
             </p>
           </motion.div>
-        ) : produtosOrdenados.length === 0 ? (
+        ) : produtosOrdenados.filter((p) => p.nome !== "Produto Excluido")
+            .length === 0 ? (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -720,7 +695,7 @@ const Products: React.FC = () => {
             initial="hidden"
             animate="visible"
           >
-            {produtosOrdenados.map((produto: Produto, i: number) => (
+            {produtosOrdenados.filter((p: Produto) => p.nome !== "Produto Excluido").map((produto: Produto, i: number) => (
               <motion.div key={produto.id} variants={cardVariants} custom={i}>
                 <Card className="shadow-sm border-border/60 hover:shadow-lg transition-all duration-300 group overflow-hidden flex flex-col h-full">
                   <div className="relative">
@@ -734,7 +709,7 @@ const Products: React.FC = () => {
                       <img
                         src={
                           produto.image ||
-                          "https://via.placeholder.com/400x300.png?text=Sem+Imagem"
+                          "https://placehold.co/600x400?text=Foto+Produto"
                         }
                         alt={produto.nome}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
@@ -801,6 +776,7 @@ const Products: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
       {selectedProduct && (
         <EditProdutoDialog
           open={openEdit}

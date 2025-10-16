@@ -73,27 +73,30 @@ export const ProdutoProvider = ({ children }: ProdutoProviderProps) => {
     }
   };
 
-  const createProduto = async (novoProduto: Omit<Produto, "id">) => {
-    try {
-      const produtoParaEnviar = {
-        nome: novoProduto.nome,
-        descricao: novoProduto.descricao,
-        preco: Number(novoProduto.preco),
-        estoqueAtual: Number(novoProduto.estoqueAtual),
-        estoqueMinimo: Number(novoProduto.estoqueMinimo),
-        categoriaId: novoProduto.categoria.id,
-        fornecedorId: novoProduto.fornecedor.id,
-      };
+    const createProduto = async (novoProduto: Omit<Produto, "id">) => {
+      try {
+        const produtoParaEnviar = {
+          nome: novoProduto.nome,
+          descricao: novoProduto.descricao,
+          preco: Number(novoProduto.preco),
+          estoqueAtual: Number(novoProduto.estoqueAtual),
+          estoqueMinimo: Number(novoProduto.estoqueMinimo),
+          categoriaId: novoProduto.categoria.id,
+          fornecedorId: novoProduto.fornecedor.id,
+        };
 
-      const { data } = await api.post<Produto>("/produtos/create", produtoParaEnviar);
-      setProdutos((prev) => [...prev, data]);
-      toast.success("Produto criado com sucesso!");
-      return data;
-    } catch (error) {
-      console.error("Erro ao criar produto:", error);
-      toast.error("Erro ao criar produto");
-    }
-  };
+        console.log("Produto para enviar:", produtoParaEnviar);
+
+
+        const { data } = await api.post<Produto>("/produtos/create", produtoParaEnviar);
+        setProdutos((prev) => [...prev, data]);
+        toast.success("Produto criado com sucesso!");
+        return data;
+      } catch (error) {
+        console.error("Erro ao criar produto:", error);
+        toast.error("Erro ao criar produto");
+      }
+    };
 
   const updateProduto = async (id: string, produtoAtualizado: Omit<Produto, "id">) => {
     try {
@@ -103,8 +106,8 @@ export const ProdutoProvider = ({ children }: ProdutoProviderProps) => {
         preco: Number(produtoAtualizado.preco),
         estoqueAtual: Number(produtoAtualizado.estoqueAtual),
         estoqueMinimo: Number(produtoAtualizado.estoqueMinimo),
-        categoriaId: produtoAtualizado.categoria.id,
-        fornecedorId: produtoAtualizado.fornecedor.id,
+        categoriaId: produtoAtualizado.categoria.id || "categoria_padrao",
+        fornecedorId: produtoAtualizado.fornecedor.id || "fornecedor_padrao",
       };
 
       const { data } = await api.patch<Produto>(`/produtos/${id}`, produtoParaEnviar);

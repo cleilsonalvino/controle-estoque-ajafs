@@ -30,6 +30,8 @@ export interface Sale {
 interface SaleData {
   clienteId: string;
   vendedorId: string;
+  desconto: number;
+  forma_pagamento: string;
   itens: {
     produtoId: string;
     quantidade: number;
@@ -86,6 +88,7 @@ export const SalesProvider = ({ children }: SalesProviderProps) => {
   };
 
   const createSale = async (saleData: SaleData) => {
+    console.log(saleData);
     const response = await axios.post("/vendas/create", saleData);
     setSales((prev) => [response.data, ...prev]);
     return response.data;

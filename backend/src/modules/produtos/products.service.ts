@@ -4,6 +4,7 @@ import { AppError } from "../../shared/errors.ts";
 const prisma = new PrismaClient();
 
 export const createProductService = async (data: any) => {
+  console.log("Dados recebidos para criação do produto:", data);
   const product = await prisma.produto.findUnique({
     where: { nome: data.nome },
   });
@@ -14,6 +15,15 @@ export const createProductService = async (data: any) => {
 
   const createProduct = await prisma.produto.create({
     data,
+  });
+
+  const movimentacao = await prisma.movimentacao.create({
+    data: {
+      tipo: "ENTRADA",
+      quantidade: data.estoqueAtual || 0,
+      produtoId: createProduct.id,
+      observacao: "Estoque inicial do produto",
+    },
   });
   return createProduct;
 };

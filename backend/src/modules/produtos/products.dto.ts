@@ -19,3 +19,6 @@ export const updateProductSchema = z.object({
   fornecedorId: z.string().uuid().optional(),
   categoriaId: z.string().uuid().optional(),
 });
+
+export type createProductDto = z.infer<typeof createProductSchema>;
+export type updateProductDto = z.infer<typeof updateProductSchema>;

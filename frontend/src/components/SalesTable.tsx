@@ -1,35 +1,24 @@
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  TableFooter,
-} from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Trash2 } from "lucide-react";
-import type { SaleItem } from "@/pages/Sales";
+import { SaleItem } from "@/pages/Sales";
 
 interface SalesTableProps {
   items: SaleItem[];
+  discount: number;
   onRemoveItem: (productId: string) => void;
   onUpdateQuantity: (productId: string, quantity: number) => void;
 }
 
-export const SalesTable = ({
-  items,
-  onRemoveItem,
-  onUpdateQuantity,
-}: SalesTableProps) => {
-  const subtotal = items.reduce(
-    (acc, item) => acc + Number(item.preco)  * item.quantity,
-    0
-  );
+export const SalesTable = ({ items, discount, onRemoveItem, onUpdateQuantity }: SalesTableProps) => {
+  const subtotal = items.reduce((acc, item) => acc + Number(item.preco) * item.quantity, 0);
+  console.log(discount)
+  const discountAmount = (subtotal * discount) / 100;
+  const total = subtotal - discountAmount;
 
   return (
-    <Table>
+    <Table className="bg-gray-300 rounded-lg shadow-md overflow-hidden">
       <TableHeader>
         <TableRow>
           <TableHead>Produto</TableHead>
@@ -49,24 +38,14 @@ export const SalesTable = ({
                   type="number"
                   min={1}
                   value={item.quantity}
-                  onChange={(e) =>
-                    onUpdateQuantity(item.id, Number(e.target.value))
-                  }
+                  onChange={(e) => onUpdateQuantity(item.id, Number(e.target.value))}
                   className="w-16"
                 />
               </TableCell>
+              <TableCell className="text-right">{item.preco}</TableCell>
+              <TableCell className="text-right">{(Number(item.preco) * item.quantity).toFixed(2)}</TableCell>
               <TableCell className="text-right">
-                {item.preco}
-              </TableCell>
-              <TableCell className="text-right">
-                {(Number(item.preco) * item.quantity)}
-              </TableCell>
-              <TableCell className="text-right">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => onRemoveItem(item.id)}
-                >
+                <Button variant="ghost" size="icon" onClick={() => onRemoveItem(item.id)}>
                   <Trash2 className="h-4 w-4 text-red-500" />
                 </Button>
               </TableCell>
@@ -82,15 +61,18 @@ export const SalesTable = ({
       </TableBody>
       <TableFooter>
         <TableRow>
-          <TableCell colSpan={3} className="text-right font-bold">
-            Total
-          </TableCell>
-          <TableCell className="text-right font-bold">
-            {subtotal.toLocaleString("pt-BR", {
-              style: "currency",
-              currency: "BRL",
-            })}
-          </TableCell>
+          <TableCell colSpan={3} className="text-right font-bold">Subtotal</TableCell>
+          <TableCell className="text-right font-bold">{subtotal.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</TableCell>
+          <TableCell></TableCell>
+        </TableRow>
+        <TableRow>
+          <TableCell colSpan={3} className="text-right font-bold">Desconto</TableCell>
+          <TableCell className="text-right font-bold">{discount}%</TableCell>
+          <TableCell></TableCell>
+        </TableRow>
+        <TableRow>
+          <TableCell colSpan={3} className="text-right font-bold">Total</TableCell>
+          <TableCell className="text-right font-bold">{total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</TableCell>
           <TableCell></TableCell>
         </TableRow>
       </TableFooter>

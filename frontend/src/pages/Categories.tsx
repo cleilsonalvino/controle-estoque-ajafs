@@ -37,7 +37,11 @@ const Categories = () => {
     resetForm();
   };
 
-  const handleDeleteCategory = (id: string) => {
+  const handleDeleteCategory = (id: string, nome: string) => {
+    if(nome === 'Sem Categoria'){
+      alert('Não é possível excluir esta categoria');
+      return;
+    }
     deleteCategory(id);
   };
 
@@ -51,6 +55,11 @@ const Categories = () => {
   };
 
   const openEditDialog = (category: Category) => {
+    if(category.nome === 'Sem Categoria'){
+       alert('Não é possível editar esta categoria');
+       setShowAddDialog(false);
+       return;
+    }
     setEditingCategory(category);
     setFormData({
       nome: category.nome,
@@ -132,7 +141,7 @@ const Categories = () => {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => handleDeleteCategory(category.id)}
+                    onClick={() => handleDeleteCategory(category.id, category.nome)}
                     className="text-destructive hover:text-destructive-foreground hover:bg-destructive"
                   >
                     <Trash2 className="h-4 w-4" />

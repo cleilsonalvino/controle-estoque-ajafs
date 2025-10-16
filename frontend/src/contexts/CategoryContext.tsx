@@ -73,7 +73,7 @@ export const CategoryProvider = ({ children }: CategoryProviderProps) => {
 
   const deleteCategory = async (id: string) => {
     try {
-      await api.delete(`/categorias/delete/${id}`);
+      await api.delete(`/categorias/${id}`);
       setCategories((prev) => prev.filter((c) => c.id !== id));
       toast.success("Categoria removida!");
     } catch (error) {

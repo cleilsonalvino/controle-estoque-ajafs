@@ -104,13 +104,6 @@ const SalesDashboard = () => {
     return acc;
   }, []).sort((a, b) => b.value - a.value)[0];
 
-  const totalByPaymentType = allSales.reduce((acc, sale) => { // @ts-ignore
-    if (!acc[sale.paymentMethod]) {
-      acc[sale.paymentMethod] = 0;
-    }
-    acc[sale.paymentMethod] += sale.total;
-    return acc;
-  }, {});
 
   const salesByPeriod = allSales.reduce((acc, sale) => {
     const month = new Date(sale.criadoEm).toLocaleString('default', { month: 'short' }); // @ts-ignore
@@ -143,17 +136,26 @@ const SalesDashboard = () => {
     return acc;
   }, []);
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
-  const topProducts = allSales.flatMap(sale => sale.itens).reduce((acc, item) => { // @ts-ignore
-    const product = products.find(p => p.id === item.produtoId);
+
+const topProducts = (allSales || [])
+  .flatMap(sale => Array.isArray(sale.itens) ? sale.itens : [])
+  .reduce((acc, item) => {
+    const product = products?.find?.(p => p.id === item?.produtoId);
     const productName = product ? product.nome : 'Produto Desconhecido';
     const existingProduct = acc.find(p => p.name === productName);
+
+    const quantidade = item?.quantidade ?? item?.quantity ?? 0;
+
     if (existingProduct) {
-      existingProduct.value += item.quantity;
+      existingProduct.value += quantidade;
     } else {
-      acc.push({ name: productName, value: item.quantidade });
+      acc.push({ name: productName, value: quantidade });
     }
     return acc;
-  }, []).sort((a, b) => b.value - a.value).slice(0, 5);
+  }, [])
+  .sort((a, b) => b.value - a.value)
+  .slice(0, 5);
+
   // @ts-ignore
   const salespeople = allSales.reduce((acc, sale) => { // @ts-ignore
     const existingSalesperson = acc.find(item => item.name === sale.salesperson);

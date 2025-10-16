@@ -56,6 +56,7 @@ export const SalesForm = ({ products, onAddProductToSale }: SalesFormProps) => {
               <SelectValue placeholder="Selecione um produto" />
             </SelectTrigger>
             <SelectContent>
+              
               {products.map((product) => (
                 <SelectItem key={product.id} value={product.id}>
                   {product.nome}

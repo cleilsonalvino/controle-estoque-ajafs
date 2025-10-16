@@ -38,6 +38,7 @@ export const getProductByIdController = async (req: Request, res: Response) => {
 
 export const updateProductController = async (req: Request, res: Response) => {
   const { id } = req.params;
+  console.log("ID do produto a ser atualizado:", req.body);
   const validation = updateProductSchema.safeParse(req.body);
 
   if (!validation.success) {

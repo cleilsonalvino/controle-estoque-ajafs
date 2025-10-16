@@ -39,7 +39,11 @@ const Suppliers = () => {
     resetForm();
   };
 
-  const handleDeleteSupplier = (id: string) => {
+  const handleDeleteSupplier = (id: string, nome: string) => {
+    if(nome === 'Sem Fornecedor'){
+      alert('Não é possível excluir este fornecedor');
+      return;
+    }
     deleteSupplier(id);
   };
 
@@ -56,6 +60,11 @@ const Suppliers = () => {
   };
 
   const openEditDialog = (supplier: Supplier) => {
+    if(supplier.nome === 'Sem Fornecedor'){
+       alert('Não é possível editar este fornecedor');
+       setShowAddDialog(false);
+       return;
+    }
     setEditingSupplier(supplier);
     setFormData({
       nome: supplier.nome,
@@ -152,7 +161,7 @@ const Suppliers = () => {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => handleDeleteSupplier(supplier.id)}
+                    onClick={() => handleDeleteSupplier(supplier.id, supplier.nome)}
                     className="text-destructive hover:text-destructive-foreground hover:bg-destructive"
                   >
                     <Trash2 className="h-4 w-4" />

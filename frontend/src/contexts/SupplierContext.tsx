@@ -76,7 +76,7 @@ export const SupplierProvider = ({ children }: SupplierProviderProps) => {
 
   const deleteSupplier = async (id: string) => {
     try {
-      await api.delete(`/fornecedores/delete/${id}`);
+      await api.delete(`/fornecedores/${id}`);
       setSuppliers((prev) => prev.filter((s) => s.id !== id));
       toast.success("Fornecedor removido!");
     } catch (error) {

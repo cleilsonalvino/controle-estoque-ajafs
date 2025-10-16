@@ -39,13 +39,13 @@ model Produto {
   preco         Decimal  @db.Decimal(14, 2)
   estoqueAtual  Decimal  @default(0) @db.Decimal(14, 3)
   estoqueMinimo Decimal? @db.Decimal(14, 3)
-  categoriaId   String? // opcional — produto pode não ter categoria
-  fornecedorId  String?
+  categoriaId   String?  
+  fornecedorId  String? 
   criadoEm      DateTime @default(now())
   atualizadoEm  DateTime @updatedAt
 
-  categoria     CategoriaProduto? @relation(fields: [categoriaId], references: [id])
-  fornecedor    Fornecedor?       @relation(fields: [fornecedorId], references: [id])
+  categoria     CategoriaProduto? @relation(fields: [categoriaId], references: [id], onDelete: Cascade)
+  fornecedor    Fornecedor?       @relation(fields: [fornecedorId], references: [id], onDelete: Cascade)
   movimentacoes Movimentacao[]
   itensVenda    ItemVenda[]
 }
@@ -69,7 +69,7 @@ enum TipoMovimentacao {
 
 model Movimentacao {
   id         String           @id @default(uuid())
-  produtoId  String
+  produtoId  String           
   tipo       TipoMovimentacao
   quantidade Decimal          @db.Decimal(14, 3)
   observacao String?
@@ -104,7 +104,7 @@ model Venda {
   vendedorId      String?     // FK para Vendedor
   criadoEm        DateTime @default(now())
   total           Decimal  @db.Decimal(14, 2)
-  status          String   @default("Pendente")
+  status          String   @default("Concluída")
   formaPagamento  String?  // Pix, Cartão, Dinheiro
   desconto        Decimal? @db.Decimal(14, 2)
   lucroEstimado   Decimal? @db.Decimal(14, 2)
@@ -121,13 +121,13 @@ model Venda {
 // ================================
 model ItemVenda {
   id            String  @id @default(uuid())
-  vendaId       String
-  produtoId     String
+  vendaId       String 
+  produtoId     String 
   quantidade    Decimal @db.Decimal(14, 3)
   precoUnitario Decimal @db.Decimal(14, 2)
 
-  venda   Venda   @relation(fields: [vendaId], references: [id])
-  produto Produto @relation(fields: [produtoId], references: [id])
+  venda   Venda   @relation(fields: [vendaId], references: [id], onDelete: Cascade)
+  produto Produto @relation(fields: [produtoId], references: [id], onDelete: Cascade)
 }
 
 // ================================

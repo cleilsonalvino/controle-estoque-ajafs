@@ -28,7 +28,7 @@ import {
 import { useSales } from "@/contexts/SalesContext";
 import { useClientes } from "@/contexts/ClienteContext";
 import { useVendedores } from "@/contexts/VendedorContext";
-import { TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { SalesTable } from "@/components/SalesTable";
 
 
 // === Tipagem ===
@@ -78,7 +78,7 @@ const SalesForm = ({ products, onAddProductToSale }: SalesFormProps) => {
           <Label htmlFor="product">Produto</Label>
           <Select value={selectedProductId} onValueChange={setSelectedProductId}>
             <SelectTrigger>
-              <SelectValue placeholder="Selecione um produto" />
+              <SelectValue placeholder={products.length === 0 ? "Carregando..." : "Selecione um produto"} />
             </SelectTrigger>
             <SelectContent>
               {products.map((product) => (
@@ -120,70 +120,7 @@ const SalesForm = ({ products, onAddProductToSale }: SalesFormProps) => {
   );
 };
 
-// === SalesTable ===
-interface SalesTableProps {
-  items: SaleItem[];
-  onRemoveItem: (productId: string) => void;
-  onUpdateQuantity: (productId: string, quantity: number) => void;
-}
 
-const SalesTable = ({ items, onRemoveItem, onUpdateQuantity }: SalesTableProps) => {
-  const subtotal = items.reduce((acc, item) => acc + Number(item.preco) * item.quantity, 0);
-
-  return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Produto</TableHead>
-          <TableHead className="w-[100px]">Qtd.</TableHead>
-          <TableHead className="text-right">Preço Unit.</TableHead>
-          <TableHead className="text-right">Total</TableHead>
-          <TableHead className="w-[50px]"></TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {items.length > 0 ? (
-          items.map((item) => (
-            <TableRow key={item.id}>
-              <TableCell className="font-medium">{item.nome}</TableCell>
-              <TableCell>
-                <Input
-                  type="number"
-                  min={1}
-                  value={item.quantity}
-                  onChange={(e) => onUpdateQuantity(item.id, Number(e.target.value))}
-                  className="w-16"
-                />
-              </TableCell>
-              <TableCell className="text-right">{item.preco}</TableCell>
-              <TableCell className="text-right">{(Number(item.preco) * item.quantity).toFixed(2)}</TableCell>
-              <TableCell className="text-right">
-                <Button variant="ghost" size="icon" onClick={() => onRemoveItem(item.id)}>
-                  <Trash2 className="h-4 w-4 text-red-500" />
-                </Button>
-              </TableCell>
-            </TableRow>
-          ))
-        ) : (
-          <TableRow>
-            <TableCell colSpan={5} className="text-center">
-              Nenhum produto na venda.
-            </TableCell>
-          </TableRow>
-        )}
-      </TableBody>
-      <TableFooter>
-        <TableRow>
-          <TableCell colSpan={3} className="text-right font-bold">Total</TableCell>
-          <TableCell className="text-right font-bold">
-            {subtotal.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-          </TableCell>
-          <TableCell></TableCell>
-        </TableRow>
-      </TableFooter>
-    </Table>
-  );
-};
 
 // === Página de Vendas ===
 const Sales = () => {
@@ -193,14 +130,18 @@ const Sales = () => {
   const [saleItems, setSaleItems] = useState<SaleItem[]>([]);
   const [selectedCliente, setSelectedCliente] = useState<string | undefined>(undefined);
   const [selectedVendedor, setSelectedVendedor] = useState<string | undefined>(undefined);
+  const [discount, setDiscount] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<string | undefined>(undefined);
 
   const handleAddProductToSale = (product: Product, quantity: number) => {
-    const existing = saleItems.find((i) => i.id === product.id);
+    const newSaleItems = JSON.parse(JSON.stringify(saleItems));
+    const existing = newSaleItems.find((i) => i.id === product.id);
     if (existing) {
-      setSaleItems(saleItems.map((i) => i.id === product.id ? { ...i, quantity: i.quantity + quantity } : i));
+      existing.quantity += quantity;
     } else {
-      setSaleItems([...saleItems, { ...product, quantity }]);
+      newSaleItems.push({ ...product, quantity });
     }
+    setSaleItems(newSaleItems);
   };
 
   const handleRemoveItem = (id: string) => setSaleItems(saleItems.filter(i => i.id !== id));
@@ -220,9 +161,16 @@ const Sales = () => {
       return;
     }
 
+    if (!paymentMethod) {
+      alert("Por favor, selecione uma forma de pagamento.");
+      return;
+    }
+
     const saleData = {
       clienteId: selectedCliente,
       vendedorId: selectedVendedor,
+      desconto: parseFloat(discount) || 0,
+      forma_pagamento: paymentMethod,
       itens: saleItems.map(item => ({
         produtoId: item.id,
         quantidade: item.quantity,
@@ -235,6 +183,8 @@ const Sales = () => {
       setSaleItems([]);
       setSelectedCliente(undefined);
       setSelectedVendedor(undefined);
+      setDiscount('');
+      setPaymentMethod(undefined);
       alert("Venda criada com sucesso!");
     } catch (err) {
       console.error(err);
@@ -328,7 +278,28 @@ const Sales = () => {
               </Dialog>
             </div>
           </div>
-          <SalesTable items={saleItems} onRemoveItem={handleRemoveItem} onUpdateQuantity={handleUpdateQuantity} />
+
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <div className="space-y-2">
+              <Label htmlFor="discount">Desconto (%)</Label>
+              <Input id="discount" type="number" value={discount} onChange={(e) => setDiscount(e.target.value)} onBlur={(e) => setDiscount(String(parseFloat(e.target.value) || 0))} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="payment-method">Forma de Pagamento</Label>
+              <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a forma de pagamento" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pix">Pix</SelectItem>
+                  <SelectItem value="cartao">Cartão de Crédito</SelectItem>
+                  <SelectItem value="dinheiro">Dinheiro</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <SalesTable items={saleItems} discount={parseFloat(discount) || 0} onRemoveItem={handleRemoveItem} onUpdateQuantity={handleUpdateQuantity} />
           <div className="flex justify-end mt-4">
             <Button onClick={handleFinalizeSale} disabled={saleItems.length === 0} className="bg-gradient-primary hover:opacity-90 shadow-md">
               <DollarSign className="h-4 w-4 mr-2" /> Finalizar Venda
