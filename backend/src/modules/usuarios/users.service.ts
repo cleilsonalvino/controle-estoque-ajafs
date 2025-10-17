@@ -1,6 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { hash } from "bcrypt";
-import { AppError } from "../../shared/errors.ts";
+import { CustomError } from "../../shared/errors.ts";
 
 const prisma = new PrismaClient();
 
@@ -25,7 +25,7 @@ export const getUserByIdService = async (id: string) => {
     where: { id },
   });
   if (!user) {
-    throw new AppError("Usuário não encontrado", 404);
+    throw new CustomError("Usuário não encontrado", 404);
   }
   return user;
 };

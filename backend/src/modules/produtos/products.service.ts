@@ -1,5 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-import { AppError } from "../../shared/errors.ts";
+import { CustomError } from "../../shared/errors.ts";
 
 const prisma = new PrismaClient();
 
@@ -10,21 +10,16 @@ export const createProductService = async (data: any) => {
   });
 
   if (product) {
-    throw new AppError("Produto já existe", 400);
+    throw new CustomError("Produto já existe", 400);
   }
 
   const createProduct = await prisma.produto.create({
-    data,
-  });
-
-  const movimentacao = await prisma.movimentacao.create({
     data: {
-      tipo: "ENTRADA",
-      quantidade: data.estoqueAtual || 0,
-      produtoId: createProduct.id,
-      observacao: "Estoque inicial do produto",
+      ...data,
+      estoqueAtual: 0, // Estoque inicial é sempre 0
     },
   });
+
   return createProduct;
 };
 
@@ -33,6 +28,8 @@ export const getProductsService = async () => {
     include: {
       categoria: true,
       fornecedor: true,
+      Lote: true,
+
     },
   });
   return products;
@@ -43,41 +40,24 @@ export const getProductByIdService = async (id: string) => {
     where: { id },
   });
   if (!product) {
-    throw new AppError("Produto não encontrado", 404);
+    throw new CustomError("Produto não encontrado", 404);
   }
   return product;
 };
 
 export const updateProductService = async (id: string, data: any) => {
-  // Busca o produto atual
   const productData = await prisma.produto.findUnique({
     where: { id },
   });
 
   if (!productData) {
-    throw new AppError("Produto não encontrado", 404);
+    throw new CustomError("Produto não encontrado", 404);
   }
 
-  const estoqueNovo = Number(data.estoqueAtual);
-  const estoqueAntigo = Number(productData.estoqueAtual);
-  const diferenca = estoqueNovo - estoqueAntigo;
+  // O estoque não deve ser atualizado diretamente aqui.
+  // As atualizações de estoque são feitas através de movimentações de lote.
+  delete data.estoqueAtual;
 
-  // Verifica se o estoque foi alterado
-  if (diferenca !== 0) {
-    const tipoMovimentacao = diferenca > 0 ? "ENTRADA" : "SAIDA";
-    const quantidade = Math.abs(diferenca);
-
-    await prisma.movimentacao.create({
-      data: {
-        tipo: tipoMovimentacao,
-        quantidade,
-        produtoId: id,
-        observacao: "Ajuste manual de estoque",
-      },
-    });
-  }
-
-  // Atualiza o produto
   const product = await prisma.produto.update({
     where: { id },
     data,
@@ -90,7 +70,7 @@ export const updateProductService = async (id: string, data: any) => {
 
 export const deleteProductService = async (id: string) => {
   if (!id) {
-    throw new AppError("ID do produto é obrigatório", 400);
+    throw new CustomError("ID do produto é obrigatório", 400);
   }
 
   const product = await prisma.produto.findUnique({
@@ -98,7 +78,7 @@ export const deleteProductService = async (id: string) => {
   });
 
   if (!product) {
-    throw new AppError("Produto não encontrado", 404);
+    throw new CustomError("Produto não encontrado", 404);
   }
 
   const deletedProduct = await prisma.produto.delete({
@@ -117,7 +97,7 @@ export const addCategoryToProductService = async (
   });
 
   if (!product) {
-    throw new AppError("Produto não encontrado", 404);
+    throw new CustomError("Produto não encontrado", 404);
   }
 
   const category = await prisma.categoriaProduto.findUnique({
@@ -125,7 +105,7 @@ export const addCategoryToProductService = async (
   });
 
   if (!category) {
-    throw new AppError("Categoria não encontrada", 404);
+    throw new CustomError("Categoria não encontrada", 404);
   }
 
   const updatedProduct = await prisma.produto.update({
@@ -149,7 +129,7 @@ export const addSupplierToProductService = async (
   });
 
   if (!product) {
-    throw new AppError("Produto não encontrado", 404);
+    throw new CustomError("Produto não encontrado", 404);
   }
 
   const supplier = await prisma.fornecedor.findUnique({
@@ -157,7 +137,7 @@ export const addSupplierToProductService = async (
   });
 
   if (!supplier) {
-    throw new AppError("Fornecedor não encontrado", 404);
+    throw new CustomError("Fornecedor não encontrado", 404);
   }
 
   const updatedProduct = await prisma.produto.update({

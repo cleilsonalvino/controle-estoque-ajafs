@@ -3,7 +3,8 @@ import { z } from "zod";
 export const createProductSchema = z.object({
   nome: z.string(),
   descricao: z.string().optional().default(""),
-  preco: z.number().nonnegative().default(0),
+  precoCusto: z.number().nonnegative().optional().default(0),
+  precoVenda: z.number().nonnegative().optional().default(0),
   estoqueAtual: z.number().nonnegative().optional().default(0),
   estoqueMinimo: z.number().nonnegative().optional().default(0),
   fornecedorId: z.string().uuid().optional(),

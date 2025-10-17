@@ -110,6 +110,7 @@ model Venda {
   criadoEm        DateTime @default(now())
   total           Decimal  @db.Decimal(14, 2)
   status          String   @default("Concluída")
+  tipoVenda       String   @default("Produto")
   formaPagamento  String?  // Pix, Cartão, Dinheiro
   desconto        Decimal? @db.Decimal(14, 2)
   lucroEstimado   Decimal? @db.Decimal(14, 2)

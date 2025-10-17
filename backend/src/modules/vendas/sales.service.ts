@@ -1,5 +1,5 @@
   import { PrismaClient } from "@prisma/client";
-  import { AppError } from "../../shared/errors.ts";
+  import { CustomError } from "../../shared/errors.ts";
 
   const prisma = new PrismaClient();
 
@@ -9,7 +9,7 @@
 
 
     if (!data.itens || data.itens.length === 0) {
-      throw new AppError("A venda precisa ter pelo menos um item", 400);
+      throw new CustomError("A venda precisa ter pelo menos um item", 400);
     }
 
     const venda = await prisma.$transaction(async (prisma) => {
@@ -90,7 +90,7 @@ export const getVendasService = async () => {
       include: { itens: true },
     });
     if (!venda) {
-      throw new AppError("Venda não encontrada", 404);
+      throw new CustomError("Venda não encontrada", 404);
     }
     return venda;
   };
@@ -99,7 +99,7 @@ export const getVendasService = async () => {
     const { itens, cliente } = data;
 
     if (!itens || itens.length === 0) {
-      throw new AppError("A venda precisa ter pelo menos um item", 400);
+      throw new CustomError("A venda precisa ter pelo menos um item", 400);
     }
 
     const vendaAtual = await prisma.venda.findUnique({
@@ -108,7 +108,7 @@ export const getVendasService = async () => {
     });
 
     if (!vendaAtual) {
-      throw new AppError("Venda não encontrada", 404);
+      throw new CustomError("Venda não encontrada", 404);
     }
 
     const vendaAtualizada = await prisma.$transaction(async (prisma) => {
@@ -200,7 +200,7 @@ export const getVendasService = async () => {
     });
 
     if (!venda) {
-      throw new AppError("Venda não encontrada", 404);
+      throw new CustomError("Venda não encontrada", 404);
     }
 
     await prisma.$transaction(async (prisma) => {

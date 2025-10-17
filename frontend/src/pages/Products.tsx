@@ -33,18 +33,110 @@ import {
   PlusCircle,
   LayoutGrid,
   XCircle,
+  Eye,
+  Table
 } from "lucide-react";
+import { Table as ShadcnTable, TableHeader, TableBody, TableRow, TableHead, TableCell, } from "@/components/ui/table";
+import { Category as Categoria } from "@/contexts/CategoryContext";
+import { Supplier as Fornecedor } from "@/contexts/SupplierContext";
 import api from "@/lib/api";
 
-// Tipagem para os dados da API
-type Categoria = {
-  id: string;
-  nome: string;
-};
 
-type Fornecedor = {
-  id: string;
-  nome: string;
+// Renomeado para evitar conflito
+/**
+ * Modal de Detalhes do Produto (Componente 1)
+ */
+const ProdutoDetalhesDialog: React.FC<{
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  produto: Produto | null;
+}> = ({ open, onOpenChange, produto }) => {
+  if (!produto) return null;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-3xl max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="text-2xl">Detalhes do Produto</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-6 py-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div>
+              <img
+                src={produto.image || "https://placehold.co/600x400?text=Foto+Produto"}
+                alt={produto.nome}
+                className="w-full h-auto object-cover rounded-lg shadow-md"
+              />
+            </div>
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-lg font-semibold">{produto.nome}</h3>
+                <p className="text-muted-foreground">{produto.descricao}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Preço de Custo</Label>
+                  <p className="font-semibold">R$ {Number(produto.precoCusto).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                </div>
+                <div>
+                  <Label>Preço de Venda</Label>
+                  <p className="font-semibold">R$ {Number(produto.precoVenda).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                </div>
+                <div>
+                  <Label>Estoque Atual</Label>
+                  <p className="font-semibold">{produto.estoqueAtual}</p>
+                </div>
+                <div>
+                  <Label>Estoque Mínimo</Label>
+                  <p className="font-semibold">{produto.estoqueMinimo}</p>
+                </div>
+                <div>
+                  <Label>Categoria</Label>
+                  <p className="font-semibold">{produto.categoria?.nome || "Sem categoria"}</p>
+                </div>
+                <div>
+                  <Label>Fornecedor</Label>
+                  <p className="font-semibold">{produto.fornecedor?.nome || "Sem fornecedor"}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <h4 className="text-lg font-semibold mb-2">Lotes</h4>
+            <ShadcnTable>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Lote</TableHead>
+                  <TableHead>Validade</TableHead>
+                  <TableHead className="text-right">Quantidade</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {produto.lotes?.map((lote) => (
+                  <TableRow key={lote.id}>
+                    <TableCell>{lote.lote}</TableCell>
+                    <TableCell>{new Date(lote.validade).toLocaleDateString('pt-BR')}</TableCell>
+                    <TableCell className="text-right">{lote.quantidade}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </ShadcnTable>
+            {(!produto.lotes || produto.lotes.length === 0) && (
+              <p className="text-center text-muted-foreground py-4">Nenhum lote cadastrado para este produto.</p>
+            )}
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Fechar
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
 };
 
 // ALTERADO: As funções agora fazem chamadas de API reais
@@ -67,6 +159,11 @@ const fetchFornecedores = async (): Promise<Fornecedor[]> => {
     return [];
   }
 };
+
+/**
+ * Modal de Detalhes do Produto (Componente 2)
+ */
+
 /**
  * Modal de Edição de Produto
  */
@@ -173,8 +270,8 @@ const EditProdutoDialog: React.FC<{
 
         <div className="space-y-6 py-2">
           {/* Nome, Preço de Custo e Preço de Venda */}
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div class="md:col-span-1 space-y-2">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="md:col-span-1 space-y-2">
               <Label htmlFor="nome">Nome</Label>
               <Input
                 id="nome"
@@ -182,7 +279,7 @@ const EditProdutoDialog: React.FC<{
                 onChange={(e) => handleChange("nome", e.target.value)}
               />
             </div>
-            <div class="space-y-2">
+            <div className="space-y-2">
               <Label htmlFor="precoCusto">Preço de Custo (R$)</Label>
               <Input
                 id="precoCusto"
@@ -191,7 +288,7 @@ const EditProdutoDialog: React.FC<{
                 onBlur={() => formatPrecoOnBlur('precoCusto')}
               />
             </div>
-            <div class="space-y-2">
+            <div className="space-y-2">
               <Label htmlFor="precoVenda">Preço de Venda (R$)</Label>
               <Input
                 id="precoVenda"
@@ -320,6 +417,7 @@ const CreateProdutoDialog: React.FC<{
     fornecedor: { id: "", nome: "" },
     estoqueAtual: "0",
     estoqueMinimo: "0",
+    lotes: [],
   });
 
   const [saving, setSaving] = useState(false);
@@ -354,7 +452,7 @@ const CreateProdutoDialog: React.FC<{
   const canSave = useMemo(() => {
     return (
       (form.nome?.trim()?.length ?? 0) > 0 &&
-      (form.preco?.length ?? 0) > 0
+      (form.precoCusto?.length ?? 0) > 0
     );
   }, [form]);
 
@@ -376,6 +474,7 @@ const CreateProdutoDialog: React.FC<{
         fornecedor: { id: "", nome: "" },
         estoqueAtual: "0",
         estoqueMinimo: "0",
+        lotes: [],
       });
 
       fetchProdutos();
@@ -400,8 +499,8 @@ const CreateProdutoDialog: React.FC<{
                 onChange={(e) => handleChange("nome", e.target.value)}
               />
             </div>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div class="space-y-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
               <Label htmlFor="preco-custo-create">Preço de Custo (R$)</Label>
               <Input
                 id="preco-custo-create"
@@ -409,7 +508,7 @@ const CreateProdutoDialog: React.FC<{
                 onChange={(e) => handlePriceInput("precoCusto", e.target.value)}
               />
             </div>
-            <div class="space-y-2">
+            <div className="space-y-2">
               <Label htmlFor="preco-venda-create">Preço de Venda (R$)</Label>
               <Input
                 id="preco-venda-create"
@@ -537,6 +636,7 @@ const Products: React.FC = () => {
   const [selectedProduct, setSelectedProduct] = useState<Produto | null>(null);
   const [openEdit, setOpenEdit] = useState(false);
   const [openCreate, setOpenCreate] = useState(false);
+  const [openDetalhes, setOpenDetalhes] = useState(false);
   const [filtro, setFiltro] = useState("");
   const [ordenacao, setOrdenacao] = useState("nome-asc");
 
@@ -705,90 +805,62 @@ const Products: React.FC = () => {
             </Button>
           </motion.div>
         ) : (
-          <motion.div
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
-            initial="hidden"
-            animate="visible"
-          >
-            {produtosOrdenados.filter((p: Produto) => p.nome !== "Produto Excluido").map((produto: Produto, i: number) => (
-              <motion.div key={produto.id} variants={cardVariants} custom={i}>
-                <Card className="shadow-sm border-border/60 hover:shadow-lg transition-all duration-300 group overflow-hidden flex flex-col h-full">
-                  <div className="relative">
-                    <div className="absolute top-3 right-3 z-10">
-                      {estoqueBadge(
-                        produto.estoqueAtual,
-                        produto.estoqueMinimo
-                      )}
-                    </div>
-                    <div className="overflow-hidden h-48">
-                      <img
-                        src={
-                          produto.image ||
-                          "https://placehold.co/600x400?text=Foto+Produto"
-                        }
-                        alt={produto.nome}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                      />
-                    </div>
-                  </div>
-                  <CardHeader>
-                    <CardTitle className="text-xl font-bold tracking-tight line-clamp-1">
-                      {produto.nome}
-                    </CardTitle>
-                    <p className="text-sm text-muted-foreground line-clamp-2 pt-1 min-h-[40px]">
-                      {produto.descricao}
-                    </p>
-                    <p className="text-sm bg-background bg-green-200 rounded-md p-2">
-                      Estoque atual: {produto.estoqueAtual}
-                    </p>
-                    <span className="text-sm bg-background bg-yellow-200 rounded-md p-2">
-                      Estoque mínimo: {produto.estoqueMinimo}
-                    </span>
-                    <span></span>
-                  </CardHeader>
-                  <CardContent className="space-y-4 flex-1 flex flex-col justify-between">
-                    <div className="flex items-end justify-between">
-                      <div className="text-sm">
-                        <span className="text-muted-foreground flex items-center gap-2">
-                          <TagIcon size={14} />{" "}
-                          {produto.categoria?.nome || "Sem categoria"}
-                        </span>
-                        <span className="text-muted-foreground flex items-center gap-2 mt-1">
-                          <Package size={14} />{" "}
-                          {produto.fornecedor?.nome || "Sem fornecedor"}
-                        </span>
-                      </div>
-                      <div className="text-right">
-                                                <p className="text-2xl font-extrabold text-primary">
-                                                  un. R${ " "}
-                                                  {Number(produto.precoVenda).toLocaleString("pt-BR", {
-                                                    minimumFractionDigits: 2,
-                                                  })}
-                                                </p>
-                      </div>
-                    </div>
-                    <div className="pt-2 flex gap-2">
-                      <Button
-                        size="sm"
-                        className="flex-1"
-                        onClick={() => handleOpenEdit(produto)}
-                      >
-                        <Edit3 className="w-4 h-4 mr-2" /> Editar
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => deleteProduto(produto.id)}
-                        className="flex-1"
-                      >
-                        <Trash2 className="w-4 h-4 mr-2" /> Deletar
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
-          </motion.div>
+          <ShadcnTable>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Imagem</TableHead>
+                <TableHead>Produto</TableHead>
+                <TableHead>Categoria</TableHead>
+                <TableHead>Fornecedor</TableHead>
+                <TableHead>Estoque</TableHead>
+                <TableHead>Preço de Venda</TableHead>
+                <TableHead>Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {produtosOrdenados.filter((p: Produto) => p.nome !== "Produto Excluido").map((produto: Produto) => (
+                <TableRow key={produto.id}>
+                  <TableCell>
+                    <img
+                      src={produto.image || "https://placehold.co/40x40?text=Foto"}
+                      alt={produto.nome}
+                      className="w-10 h-10 object-cover rounded-md"
+                    />
+                  </TableCell>
+                  <TableCell className="font-medium">{produto.nome}</TableCell>
+                  <TableCell>{produto.categoria?.nome || "Sem categoria"}</TableCell>
+                  <TableCell>{produto.fornecedor?.nome || "Sem fornecedor"}</TableCell>
+                  <TableCell>{produto.estoqueAtual}</TableCell>
+                  <TableCell>R$ {Number(produto.precoVenda).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</TableCell>
+                  <TableCell className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setSelectedProduct(produto);
+                        setOpenDetalhes(true);
+                      }}
+                    >
+                      <Eye className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={() => handleOpenEdit(produto)}
+                    >
+                      <Edit3 className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => deleteProduto(produto.id)}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </ShadcnTable>
         )}
       </AnimatePresence>
 
@@ -805,6 +877,13 @@ const Products: React.FC = () => {
         onOpenChange={setOpenCreate}
         onCreate={handleCreate}
       />
+      {selectedProduct && (
+        <ProdutoDetalhesDialog
+          open={openDetalhes}
+          onOpenChange={setOpenDetalhes}
+          produto={selectedProduct}
+        />
+      )}
     </div>
   );
 };

@@ -8,6 +8,8 @@ import categorysRouter from "../modules/categorias/category.routes.ts";
 import stockRouter from "../modules/estoque/stock.router.ts";
 import { vendedoresRouter } from "../modules/vendedores/vendedores.router.ts";
 import { clientesRouter } from "../modules/clientes/cliente.routes.ts";
+import { servicesRouter } from "../modules/servicos/services.router.ts";
+import { lotesRouter } from "../modules/lotes/lotes.router.ts";
 
 const router = Router();
 
@@ -20,5 +22,7 @@ router.use("/auth", authRouter);
 router.use("/estoque", stockRouter);
 router.use("/vendedores", vendedoresRouter);
 router.use("/clientes", clientesRouter);
+router.use("/servicos", servicesRouter);
+router.use("/lotes", lotesRouter);
 
 export default router;

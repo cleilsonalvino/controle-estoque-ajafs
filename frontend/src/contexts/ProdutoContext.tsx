@@ -3,6 +3,13 @@ import api from "@/lib/api"; // já configurado no seu projeto
 import { toast } from "sonner"; // opcional, se quiser mostrar notificações
 
 
+export interface Lote {
+  id: string;
+  lote: string;
+  validade: string;
+  quantidade: number;
+}
+
 // types.ts ou dentro do contexto mesmo
 export interface Produto {
   id: string;
@@ -21,6 +28,7 @@ export interface Produto {
     nome: string;
   };
   image?: string;
+  lotes: Lote[];
 }
 
 interface ProdutoContextType {

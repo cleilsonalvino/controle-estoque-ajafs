@@ -37,7 +37,7 @@ export const TipoServicoProvider = ({ children }: TipoServicoProviderProps) => {
   const fetchTiposServicos = async () => {
     try {
       setLoading(true);
-      const { data } = await api.get<TipoServico[]>("/tipos-servicos");
+      const { data } = await api.get<TipoServico[]>("/servicos");
       setTiposServicos(data);
     } catch (error) {
       console.error("Erro ao buscar tipos de serviços:", error);
@@ -49,7 +49,7 @@ export const TipoServicoProvider = ({ children }: TipoServicoProviderProps) => {
 
   const createTipoServico = async (newTipoServico: Omit<TipoServico, "id">) => {
     try {
-      const { data } = await api.post<TipoServico>("/tipos-servicos/create", newTipoServico);
+      const { data } = await api.post<TipoServico>("/servicos/create", newTipoServico);
       setTiposServicos((prev) => [...prev, data]);
       toast.success("Tipo de serviço criado com sucesso!");
       return data;
@@ -61,7 +61,7 @@ export const TipoServicoProvider = ({ children }: TipoServicoProviderProps) => {
 
   const updateTipoServico = async (id: string, updatedTipoServico: Omit<TipoServico, "id">) => {
     try {
-      const { data } = await api.put<TipoServico>(`/tipos-servicos/${id}`, updatedTipoServico);
+      const { data } = await api.put<TipoServico>(`/servicos/${id}`, updatedTipoServico);
       setTiposServicos((prev) => prev.map((ts) => (ts.id === id ? data : ts)));
       toast.success("Tipo de serviço atualizado com sucesso!");
       return data;
@@ -73,7 +73,7 @@ export const TipoServicoProvider = ({ children }: TipoServicoProviderProps) => {
 
   const deleteTipoServico = async (id: string) => {
     try {
-      await api.delete(`/tipos-servicos/${id}`);
+      await api.delete(`/servicos/${id}`);
       setTiposServicos((prev) => prev.filter((ts) => ts.id !== id));
       toast.success("Tipo de serviço removido!");
     } catch (error){

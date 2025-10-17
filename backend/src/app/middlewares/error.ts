@@ -1,5 +1,5 @@
 import { type Request, type Response, type NextFunction } from "express";
-import { AppError } from "../../shared/errors.ts";
+import { CustomError } from "../../shared/errors.ts";
 
 export const errorHandler = (
   err: Error,
@@ -7,7 +7,7 @@ export const errorHandler = (
   res: Response,
   next: NextFunction
 ) => {
-  if (err instanceof AppError) {
+  if (err instanceof CustomError) {
     return res.status(err.statusCode).json({ message: err.message });
   }
 

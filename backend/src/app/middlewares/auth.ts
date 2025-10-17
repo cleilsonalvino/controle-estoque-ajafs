@@ -1,6 +1,6 @@
 import { type Request, type Response, type NextFunction } from "express";
 import jwt from "jsonwebtoken";
-import { AppError } from "../../shared/errors.ts";
+import { CustomError } from "../../shared/errors.ts";
 
 interface TokenPayload {
   id: string;
@@ -19,7 +19,7 @@ export const authMiddleware = (req: Request, res: Response, next: NextFunction) 
   const { authorization } = req.headers;
 
   if (!authorization) {
-    throw new AppError("Token não fornecido", 401);
+    throw new CustomError("Token não fornecido", 401);
   }
 
   const [token] = authorization.split(" ");
@@ -30,6 +30,6 @@ export const authMiddleware = (req: Request, res: Response, next: NextFunction) 
     req.userId = id;
     return next();
   } catch {
-    throw new AppError("Token inválido", 401);
+    throw new CustomError("Token inválido", 401);
   }
 };

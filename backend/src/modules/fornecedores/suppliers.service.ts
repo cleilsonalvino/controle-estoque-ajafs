@@ -1,5 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-import { AppError } from "../../shared/errors.ts";
+import { CustomError } from "../../shared/errors.ts";
 
 const prisma = new PrismaClient();
 
@@ -20,7 +20,7 @@ export const getSupplierByIdService = async (id: string) => {
     where: { id },
   });
   if (!supplier) {
-    throw new AppError("Fornecedor não encontrado", 404);
+    throw new CustomError("Fornecedor não encontrado", 404);
   }
   return supplier;
 };

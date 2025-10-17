@@ -12,6 +12,7 @@ import {
 import { createProductSchema, updateProductSchema } from "./products.dto.ts";
 
 export const createProductController = async (req: Request, res: Response) => {
+  console.log("Requisição recebida para criar produto:", req.body);
   const validation = createProductSchema.safeParse(req.body);
 
   if (!validation.success) {

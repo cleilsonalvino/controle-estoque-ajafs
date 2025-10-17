@@ -1,5 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-import { AppError } from "../../shared/errors.ts";
+import { CustomError } from "../../shared/errors.ts";
 
 const prisma = new PrismaClient();
 
@@ -19,7 +19,7 @@ export const getCategoryByIdService = async (id: string) => {
     where: { id },
   });
   if (!category) {
-    throw new AppError("Categoria não encontrada", 404);
+    throw new CustomError("Categoria não encontrada", 404);
   }
   return category;
 }
