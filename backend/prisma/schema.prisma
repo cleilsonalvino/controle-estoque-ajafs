@@ -36,7 +36,8 @@ model Produto {
   id            String   @id @default(uuid())
   nome          String   @unique
   descricao     String?
-  preco         Decimal  @db.Decimal(14, 2)
+  precoCusto    Decimal  @db.Decimal(14, 2) @default(0)
+  precoVenda    Decimal  @db.Decimal(14, 2) @default(0)
   estoqueAtual  Decimal  @default(0) @db.Decimal(14, 3)
   estoqueMinimo Decimal? @db.Decimal(14, 3)
   categoriaId   String?  
@@ -48,6 +49,8 @@ model Produto {
   fornecedor    Fornecedor?       @relation(fields: [fornecedorId], references: [id], onDelete: Cascade)
   movimentacoes Movimentacao[]
   itensVenda    ItemVenda[]
+
+  Lote Lote[]
 }
 
 model CategoriaProduto {
@@ -92,6 +95,8 @@ model Fornecedor {
   atualizadoEm DateTime @updatedAt
 
   produtos Produto[]
+
+  Lote Lote[]
 }
 
 // ================================
@@ -111,9 +116,11 @@ model Venda {
   observacoes     String?
 
   // Relações
+
   cliente   Cliente?   @relation(fields: [clienteId], references: [id])
   vendedor  Vendedor?  @relation(fields: [vendedorId], references: [id])
   itens     ItemVenda[]
+  ItemServico ItemServico[]
 }
 
 // ================================
@@ -157,4 +164,74 @@ model Vendedor {
   atualizadoEm DateTime @updatedAt
 
   vendas Venda[]
+}
+
+
+//======================
+// Serviços
+//======================
+
+model Servico {
+  id             String   @id @default(uuid())
+  nome           String   @unique
+  descricao      String?
+  precoCusto     Decimal  @db.Decimal(14, 2) @default(0)
+  precoVenda     Decimal  @db.Decimal(14, 2) @default(0)
+  duracaoMinutos Int?     // opcional, tempo estimado do serviço
+  categoriaId    String?
+  criadoEm       DateTime @default(now())
+  atualizadoEm   DateTime @updatedAt
+
+  categoria      CategoriaServico? @relation(fields: [categoriaId], references: [id], onDelete: Cascade)
+  itensServico   ItemServico[]     // relação com a venda
+}
+
+model CategoriaServico {
+  id        String  @id @default(uuid())
+  nome      String  @unique
+  descricao String?
+
+  servicos  Servico[]
+}
+
+model ItemServico {
+  id            String   @id @default(uuid())
+  vendaId       String
+  servicoId     String
+  quantidade    Int      @default(1)
+  precoUnitario Decimal  @db.Decimal(14, 2)
+
+  venda   Venda   @relation(fields: [vendaId], references: [id], onDelete: Cascade)
+  servico Servico @relation(fields: [servicoId], references: [id], onDelete: Cascade)
+}
+
+//======================
+// Lotes
+//======================
+
+model Lote {
+  id              String   @id @default(uuid())
+  produtoId       String
+  fornecedorId    String?
+  precoCusto      Decimal  @db.Decimal(14, 2)
+  quantidadeTotal Decimal  @db.Decimal(14, 3)
+  quantidadeAtual Decimal  @db.Decimal(14, 3)
+  dataCompra      DateTime @default(now())
+  validade        DateTime?
+  criadoEm        DateTime @default(now())
+
+  produto    Produto    @relation(fields: [produtoId], references: [id], onDelete: Cascade)
+  fornecedor Fornecedor? @relation(fields: [fornecedorId], references: [id], onDelete: SetNull)
+  movimentacoes MovimentacaoLote[]
+}
+
+model MovimentacaoLote {
+  id             String           @id @default(uuid())
+  loteId         String
+  tipo           TipoMovimentacao
+  quantidade     Decimal          @db.Decimal(14, 3)
+  observacao     String?
+  criadoEm       DateTime         @default(now())
+
+  lote Lote @relation(fields: [loteId], references: [id], onDelete: Cascade)
 }

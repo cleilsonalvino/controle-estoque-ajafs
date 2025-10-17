@@ -8,7 +8,8 @@ export interface Produto {
   id: string;
   nome: string;
   descricao: string;
-  preco: string;
+  precoCusto: string;
+  precoVenda: string;
   estoqueAtual: string;
   estoqueMinimo: string;
   categoria: {
@@ -78,7 +79,8 @@ export const ProdutoProvider = ({ children }: ProdutoProviderProps) => {
         const produtoParaEnviar = {
           nome: novoProduto.nome,
           descricao: novoProduto.descricao,
-          preco: Number(novoProduto.preco),
+          precoCusto: Number(novoProduto.precoCusto),
+          precoVenda: Number(novoProduto.precoVenda),
           estoqueAtual: Number(novoProduto.estoqueAtual),
           estoqueMinimo: Number(novoProduto.estoqueMinimo),
           categoriaId: novoProduto.categoria.id,
@@ -103,7 +105,8 @@ export const ProdutoProvider = ({ children }: ProdutoProviderProps) => {
       const produtoParaEnviar = {
         nome: produtoAtualizado.nome,
         descricao: produtoAtualizado.descricao,
-        preco: Number(produtoAtualizado.preco),
+        precoCusto: Number(produtoAtualizado.precoCusto),
+        precoVenda: Number(produtoAtualizado.precoVenda),
         estoqueAtual: Number(produtoAtualizado.estoqueAtual),
         estoqueMinimo: Number(produtoAtualizado.estoqueMinimo),
         categoriaId: produtoAtualizado.categoria.id || "categoria_padrao",

@@ -28,18 +28,25 @@ import {
 import { useSales } from "@/contexts/SalesContext";
 import { useClientes } from "@/contexts/ClienteContext";
 import { useVendedores } from "@/contexts/VendedorContext";
+import { useTiposServicos } from "@/contexts/TiposServicosContext";
 import { SalesTable } from "@/components/SalesTable";
 
 // === Tipagem ===
 export interface Product {
   id: string;
   nome: string;
-  preco: number; // Changed from string to number
+  precoCusto: number;
+  precoVenda: number;
 }
 
-export interface SaleItem extends Product {
+export interface SaleItem {
+  id: string;
+  nome: string;
+  preco: number;
   quantity: number;
+  type: 'produto' | 'servico';
   produtoId?: string;
+  servicoId?: string;
   quantidade?: string;
   precoUnitario?: string;
 }
@@ -47,64 +54,98 @@ export interface SaleItem extends Product {
 // === SalesForm ===
 interface SalesFormProps {
   products: Product[];
-  onAddProductToSale: (product: Product, quantity: number) => void;
+  tiposServicos: any[]; // Adjust this type as needed
+  saleType: 'produto' | 'servico';
+  setSaleType: (type: 'produto' | 'servico') => void;
+  onAddProductToSale: (item: any, quantity: number) => void;
 }
 
-const SalesForm = ({ products, onAddProductToSale }: SalesFormProps) => {
-  const [selectedProductId, setSelectedProductId] = useState<
-    string | undefined
-  >(undefined); // Keep as string
+const SalesForm = ({ products, tiposServicos, saleType, setSaleType, onAddProductToSale }: SalesFormProps) => {
+  const [selectedItemId, setSelectedItemId] = useState<string | undefined>(undefined);
   const [quantity, setQuantity] = useState(1);
+  const [preco, setPreco] = useState(0);
 
-  const selectedProduct = products.find((p) => p.id === selectedProductId);
+  const selectedItem = saleType === 'produto' 
+    ? products.find((p) => p.id === selectedItemId)
+    : tiposServicos.find((s) => s.id === selectedItemId);
 
   const handleAddClick = () => {
-    if (selectedProduct && quantity > 0) {
-      // selectedProduct is of type Product from SalesContext
-      onAddProductToSale(selectedProduct, quantity);
-      setSelectedProductId(undefined);
+    if (selectedItem && quantity > 0) {
+      const itemToAdd = saleType === 'servico' ? { ...selectedItem, preco } : selectedItem;
+      onAddProductToSale(itemToAdd, quantity);
+      setSelectedItemId(undefined);
       setQuantity(1);
+      setPreco(0);
     }
   };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Adicionar Produto</CardTitle>
-        <CardDescription>Selecione um produto e a quantidade</CardDescription>
+        <CardTitle>Adicionar Item</CardTitle>
+        <CardDescription>Selecione o tipo de item, o item e a quantidade</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="product">Produto</Label>
-          <Select
-            value={selectedProductId}
-            onValueChange={setSelectedProductId}
-          >
+          <Label htmlFor="sale-type">Tipo de Venda</Label>
+          <Select value={saleType} onValueChange={(value) => setSaleType(value as 'produto' | 'servico')}>
             <SelectTrigger>
-              <SelectValue
-                placeholder={
-                  products.length === 0
-                    ? "Carregando..."
-                    : "Selecione um produto"
-                }
-              />
+              <SelectValue placeholder="Selecione o tipo de venda" />
             </SelectTrigger>
             <SelectContent>
-              {products.map((product) => (
-                <SelectItem key={product.id} value={product.id}>
-                  {product.nome}
-                </SelectItem>
-              ))}
+              <SelectItem value="produto">Produto</SelectItem>
+              <SelectItem value="servico">Serviço</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
-        {selectedProduct && (
+        {saleType === 'produto' ? (
+          <div className="space-y-2">
+            <Label htmlFor="product">Produto</Label>
+            <Select value={selectedItemId} onValueChange={setSelectedItemId}>
+              <SelectTrigger>
+                <SelectValue placeholder={products.length === 0 ? "Carregando..." : "Selecione um produto"} />
+              </SelectTrigger>
+              <SelectContent>
+                {products.map((product) => (
+                  <SelectItem key={product.id} value={product.id}>
+                    {product.nome}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <Label htmlFor="service">Serviço</Label>
+            <Select value={selectedItemId} onValueChange={setSelectedItemId}>
+              <SelectTrigger>
+                <SelectValue placeholder={tiposServicos.length === 0 ? "Carregando..." : "Selecione um serviço"} />
+              </SelectTrigger>
+              <SelectContent>
+                {tiposServicos.map((servico) => (
+                  <SelectItem key={servico.id} value={servico.id}>
+                    {servico.nome}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        {selectedItem && (
           <div className="space-y-2">
             <Label>Preço</Label>
-            <p className="text-lg font-semibold">
-              {selectedProduct.preco} Reais
-            </p>
+            {saleType === 'produto' ? (
+              <p className="text-lg font-semibold">{selectedItem.precoVenda} Reais</p>
+            ) : (
+              <Input
+                type="number"
+                value={preco}
+                onChange={(e) => setPreco(Number(e.target.value))}
+                placeholder="Digite o preço do serviço"
+              />
+            )}
           </div>
         )}
 
@@ -121,7 +162,7 @@ const SalesForm = ({ products, onAddProductToSale }: SalesFormProps) => {
 
         <Button
           onClick={handleAddClick}
-          disabled={!selectedProduct || quantity <= 0}
+          disabled={!selectedItem || quantity <= 0 || (saleType === 'servico' && preco <= 0)}
           className="w-full bg-gradient-primary hover:opacity-90 shadow-md"
         >
           Adicionar à Venda
@@ -136,6 +177,8 @@ const Sales = () => {
   const { createSale, products } = useSales();
   const { clientes, createCliente } = useClientes();
   const { vendedores, createVendedor } = useVendedores();
+  const { tiposServicos } = useTiposServicos();
+  const [saleType, setSaleType] = useState<'produto' | 'servico'>('produto');
   const [saleItems, setSaleItems] = useState<SaleItem[]>([]);
   const [selectedCliente, setSelectedCliente] = useState<string | undefined>(
     undefined
@@ -150,13 +193,13 @@ const Sales = () => {
   const [nomeCliente, setNomeCliente] = useState<string>("");
   const [nomeVendedor, setNomeVendedor] = useState("");
 
-  const handleAddProductToSale = (product: Product, quantity: number) => {
+  const handleAddProductToSale = (item: any, quantity: number) => {
     const newSaleItems = JSON.parse(JSON.stringify(saleItems));
-    const existing = newSaleItems.find((i) => i.id === product.id);
+    const existing = newSaleItems.find((i) => i.id === item.id && i.type === saleType);
     if (existing) {
       existing.quantity += quantity;
     } else {
-      newSaleItems.push({ ...product, quantity });
+      newSaleItems.push({ ...item, quantity, type: saleType });
     }
     setSaleItems(newSaleItems);
   };
@@ -190,9 +233,10 @@ const Sales = () => {
       desconto: parseFloat(discount) || 0,
       forma_pagamento: paymentMethod,
       itens: saleItems.map((item) => ({
-        produtoId: item.id,
+        produtoId: item.type === 'produto' ? item.id : undefined,
+        servicoId: item.type === 'servico' ? item.id : undefined,
         quantidade: item.quantity,
-        precoUnitario: item.preco,
+        precoUnitario: item.type === 'produto' ? item.precoVenda : item.preco,
       })),
     };
 
@@ -230,6 +274,9 @@ const Sales = () => {
         <div className="lg:col-span-1">
           <SalesForm
             products={products}
+            tiposServicos={tiposServicos}
+            saleType={saleType}
+            setSaleType={setSaleType}
             onAddProductToSale={handleAddProductToSale}
           />
         </div>

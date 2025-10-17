@@ -22,8 +22,10 @@ import { SupplierProvider } from "@/contexts/SupplierContext";
 import { SalesProvider } from "./contexts/SalesContext";
 import { ClienteProvider } from "./contexts/ClienteContext";
 import { VendedorProvider } from "./contexts/VendedorContext";
+import { TipoServicoProvider } from "./contexts/TiposServicosContext";
 import Clientes from "./pages/Clientes";
 import Vendedores from "./pages/Vendedores";
+import TiposServicos from "./pages/TiposServicos";
 
 const queryClient = new QueryClient();
 
@@ -40,25 +42,28 @@ const App = () => (
                 <ProdutoProvider>
                   <ClienteProvider>
                     <VendedorProvider>
-                      <Routes>
-                        <Route path="/login" element={<LoginPage />} />
-                        <Route element={<ProtectedRoute />}>
-                          <Route path="/" element={<Layout />}>
-                            <Route index element={<Dashboard />} />
-                            <Route path="/products" element={<Products />} />
-                            <Route path="/movements" element={<Movements />} />
-                            <Route path="/suppliers" element={<Suppliers />} />
-                            <Route path="/categories" element={<Categories />} />
-                            <Route path="/sales" element={<Sales />} />
-                            <Route path="/dashboard-sales" element={<SalesDashboard />} />
-                            <Route path="/clientes" element={<Clientes />} />
-                            <Route path="/vendedores" element={<Vendedores />} />
-                            <Route path="/settings" element={<Settings />} />
+                      <TipoServicoProvider>
+                        <Routes>
+                          <Route path="/login" element={<LoginPage />} />
+                          <Route element={<ProtectedRoute />}>
+                            <Route path="/" element={<Layout />}>
+                              <Route index element={<Dashboard />} />
+                              <Route path="/products" element={<Products />} />
+                              <Route path="/movements" element={<Movements />} />
+                              <Route path="/suppliers" element={<Suppliers />} />
+                              <Route path="/categories" element={<Categories />} />
+                              <Route path="/tipos-servicos" element={<TiposServicos />} />
+                              <Route path="/sales" element={<Sales />} />
+                              <Route path="/dashboard-sales" element={<SalesDashboard />} />
+                              <Route path="/clientes" element={<Clientes />} />
+                              <Route path="/vendedores" element={<Vendedores />} />
+                              <Route path="/settings" element={<Settings />} />
+                            </Route>
                           </Route>
-                        </Route>
-                        {/* Catch-all route for 404 */}
-                        <Route path="*" element={<NotFound />} />
-                      </Routes>
+                          {/* Catch-all route for 404 */}
+                          <Route path="*" element={<NotFound />} />
+                        </Routes>
+                      </TipoServicoProvider>
                     </VendedorProvider>
                   </ClienteProvider>
                 </ProdutoProvider>

@@ -80,7 +80,8 @@ const EditProdutoDialog: React.FC<{
   const [saving, setSaving] = useState(false);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
-  const [precoInput, setPrecoInput] = useState("");
+  const [precoCustoInput, setPrecoCustoInput] = useState("");
+  const [precoVendaInput, setPrecoVendaInput] = useState("");
 
   const { fetchProdutos } = useProdutos();
 
@@ -91,7 +92,8 @@ const EditProdutoDialog: React.FC<{
 
   // Atualiza input de preço quando muda o produto
   useEffect(() => {
-    setPrecoInput(produto ? produto.preco.toString().replace(".", ",") : "");
+    setPrecoCustoInput(produto ? produto.precoCusto.toString().replace(".", ",") : "");
+    setPrecoVendaInput(produto ? produto.precoVenda.toString().replace(".", ",") : "");
   }, [produto]);
 
   // Busca categorias e fornecedores ao abrir
@@ -115,34 +117,42 @@ const EditProdutoDialog: React.FC<{
   };
 
   // ===== Preço =====
-  const handlePriceInput = (v: string) => {
+  const handlePriceInput = (field: 'precoCusto' | 'precoVenda', v: string) => {
     const cleaned = v.replace(/[^0-9,]/g, ""); // só números e vírgula
-    setPrecoInput(cleaned);
+    if (field === 'precoCusto') {
+      setPrecoCustoInput(cleaned);
+    } else {
+      setPrecoVendaInput(cleaned);
+    }
   };
 
-  const formatPrecoOnBlur = () => {
-    if (!precoInput) return setPrecoInput("0,00");
+  const formatPrecoOnBlur = (field: 'precoCusto' | 'precoVenda') => {
+    const value = field === 'precoCusto' ? precoCustoInput : precoVendaInput;
+    const setter = field === 'precoCusto' ? setPrecoCustoInput : setPrecoVendaInput;
 
-    let [reais, centavos] = precoInput.split(",");
+    if (!value) return setter("0,00");
+
+    let [reais, centavos] = value.split(",");
     if (!centavos) centavos = "00";
     else if (centavos.length === 1) centavos += "0";
     else if (centavos.length > 2) centavos = centavos.slice(0, 2);
 
-    setPrecoInput(`${reais},${centavos}`);
+    setter(`${reais},${centavos}`);
   };
 
   const canSave = useMemo(() => {
     if (!form) return false;
-    return (form.nome?.trim()?.length ?? 0) > 0 && precoInput.length > 0;
-  }, [form, precoInput]);
+    return (form.nome?.trim()?.length ?? 0) > 0 && precoCustoInput.length > 0 && precoVendaInput.length > 0;
+  }, [form, precoCustoInput, precoVendaInput]);
 
   const onSubmit = async () => {
     if (!form || !canSave) return;
     try {
       setSaving(true);
       // Converte para decimal antes de salvar
-      const precoNumber = String(Number(precoInput.replace(",", ".")));
-      onSave({ ...form, preco: precoNumber });
+      const precoCustoNumber = String(Number(precoCustoInput.replace(",", ".")));
+      const precoVendaNumber = String(Number(precoVendaInput.replace(",", ".")));
+      onSave({ ...form, precoCusto: precoCustoNumber, precoVenda: precoVendaNumber });
       onOpenChange(false);
       fetchProdutos();
     } catch (error) {
@@ -162,9 +172,9 @@ const EditProdutoDialog: React.FC<{
         </DialogHeader>
 
         <div className="space-y-6 py-2">
-          {/* Nome e Preço */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="md:col-span-2 space-y-2">
+          {/* Nome, Preço de Custo e Preço de Venda */}
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="md:col-span-1 space-y-2">
               <Label htmlFor="nome">Nome</Label>
               <Input
                 id="nome"
@@ -172,13 +182,22 @@ const EditProdutoDialog: React.FC<{
                 onChange={(e) => handleChange("nome", e.target.value)}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="preco">Preço (R$)</Label>
+            <div class="space-y-2">
+              <Label htmlFor="precoCusto">Preço de Custo (R$)</Label>
               <Input
-                id="preco"
-                value={precoInput}
-                onChange={(e) => handlePriceInput(e.target.value)}
-                onBlur={formatPrecoOnBlur}
+                id="precoCusto"
+                value={precoCustoInput}
+                onChange={(e) => handlePriceInput('precoCusto', e.target.value)}
+                onBlur={() => formatPrecoOnBlur('precoCusto')}
+              />
+            </div>
+            <div class="space-y-2">
+              <Label htmlFor="precoVenda">Preço de Venda (R$)</Label>
+              <Input
+                id="precoVenda"
+                value={precoVendaInput}
+                onChange={(e) => handlePriceInput('precoVenda', e.target.value)}
+                onBlur={() => formatPrecoOnBlur('precoVenda')}
               />
             </div>
           </div>
@@ -294,7 +313,8 @@ const CreateProdutoDialog: React.FC<{
   const [form, setForm] = useState<Omit<Produto, "id">>({
     nome: "",
     descricao: "",
-    preco: "", // vamos guardar os centavos como string
+    precoCusto: "",
+    precoVenda: "",
     image: "",
     categoria: { id: "", nome: "" },
     fornecedor: { id: "", nome: "" },
@@ -325,19 +345,10 @@ const CreateProdutoDialog: React.FC<{
     if (selected) setForm({ ...form, [path]: selected });
   };
 
-  // Formata centavos para BRL tipo app de banco
-  const formatAsMoney = (value: string) => {
-    const digits = value.replace(/\D/g, "");
-    if (!digits) return "0,00";
-    const number = parseInt(digits, 10);
-    const reais = (number / 100).toFixed(2);
-    return reais.replace(".", ",");
-  };
-
   // Atualiza o estado com apenas os dígitos
-  const handlePriceInput = (v: string) => {
+  const handlePriceInput = (field: 'precoCusto' | 'precoVenda', v: string) => {
     const digits = v.replace(/\D/g, "");
-    setForm({ ...form, preco: digits });
+    setForm({ ...form, [field]: digits });
   };
 
   const canSave = useMemo(() => {
@@ -351,13 +362,15 @@ const CreateProdutoDialog: React.FC<{
     if (!canSave) return;
     setSaving(true);
     try {
-      const precoNumber = (Number(form.preco) / 100).toFixed(2); // converte centavos para reais
-      onCreate({ ...form, preco: precoNumber });
+      const precoCustoNumber = (Number(form.precoCusto) / 100).toFixed(2); // converte centavos para reais
+      const precoVendaNumber = (Number(form.precoVenda) / 100).toFixed(2); // converte centavos para reais
+      onCreate({ ...form, precoCusto: precoCustoNumber, precoVenda: precoVendaNumber });
       onOpenChange(false);
       setForm({
         nome: "",
         descricao: "",
-        preco: "",
+        precoCusto: "",
+        precoVenda: "",
         image: "",
         categoria: { id: "", nome: "" },
         fornecedor: { id: "", nome: "" },
@@ -387,14 +400,24 @@ const CreateProdutoDialog: React.FC<{
                 onChange={(e) => handleChange("nome", e.target.value)}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="preco-create">Preço (R$)</Label>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="space-y-2">
+              <Label htmlFor="preco-custo-create">Preço de Custo (R$)</Label>
               <Input
-                id="preco-create"
-                value={formatAsMoney(form.preco)}
-                onChange={(e) => handlePriceInput(e.target.value)}
+                id="preco-custo-create"
+                value={form.precoCusto}
+                onChange={(e) => handlePriceInput("precoCusto", e.target.value)}
               />
             </div>
+            <div class="space-y-2">
+              <Label htmlFor="preco-venda-create">Preço de Venda (R$)</Label>
+              <Input
+                id="preco-venda-create"
+                value={form.precoVenda}
+                onChange={(e) => handlePriceInput("precoVenda", e.target.value)}
+              />
+            </div>
+          </div>
           </div>
 
           <div className="space-y-2">
@@ -584,9 +607,9 @@ const Products: React.FC = () => {
       if (criterio === "nome") {
         valA = a.nome.toLowerCase();
         valB = b.nome.toLowerCase();
-      } else if (criterio === "preco") {
-        valA = Number(a.preco);
-        valB = Number(b.preco);
+      } else if (criterio === "precoVenda") {
+        valA = Number(a.precoVenda);
+        valB = Number(b.precoVenda);
       }
       if (valA < valB) return direcao === "asc" ? -1 : 1;
       if (valA > valB) return direcao === "asc" ? 1 : -1;
@@ -638,8 +661,8 @@ const Products: React.FC = () => {
             <SelectContent>
               <SelectItem value="nome-asc">Nome (A-Z)</SelectItem>
               <SelectItem value="nome-desc">Nome (Z-A)</SelectItem>
-              <SelectItem value="preco-asc">Preço (Menor)</SelectItem>
-              <SelectItem value="preco-desc">Preço (Maior)</SelectItem>
+              <SelectItem value="precoVenda-asc">Preço (Menor)</SelectItem>
+              <SelectItem value="precoVenda-desc">Preço (Maior)</SelectItem>
             </SelectContent>
           </Select>
           <Button onClick={() => setOpenCreate(true)} className="h-10 gap-2">
@@ -736,12 +759,12 @@ const Products: React.FC = () => {
                         </span>
                       </div>
                       <div className="text-right">
-                        <p className="text-2xl font-extrabold text-primary">
-                          un. R${" "}
-                          {Number(produto.preco).toLocaleString("pt-BR", {
-                            minimumFractionDigits: 2,
-                          })}
-                        </p>
+                                                <p className="text-2xl font-extrabold text-primary">
+                                                  un. R${ " "}
+                                                  {Number(produto.precoVenda).toLocaleString("pt-BR", {
+                                                    minimumFractionDigits: 2,
+                                                  })}
+                                                </p>
                       </div>
                     </div>
                     <div className="pt-2 flex gap-2">
