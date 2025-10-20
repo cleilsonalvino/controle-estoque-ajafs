@@ -7,6 +7,7 @@ const api = axios.create({
   headers: {
     "Content-Type": "application/json",
     "Accept": "application/json",
+    "Authorization": `Bearer ${localStorage.getItem("token") || "gZkbjTWA9kqvtvw9Zqg1qk1XYZTNTKdq0x0Dmce1Dn8y0bTXe0j1ZGDS46Br1Ayiqc6"}`,
   },
 });
 

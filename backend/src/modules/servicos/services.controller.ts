@@ -1,6 +1,9 @@
-import { type Request, type Response } from 'express';
-import { ServiceService } from './services.service.ts';
-import { type CreateServiceDto, type UpdateServiceDto } from './services.dto.ts';
+import { type Request, type Response } from "express";
+import { ServiceService } from "./services.service.ts";
+import {
+  type CreateServiceDto,
+  type UpdateServiceDto,
+} from "./services.dto.ts";
 
 const serviceService = new ServiceService();
 
@@ -23,8 +26,18 @@ export class ServiceController {
 
   async update(req: Request, res: Response) {
     const { id } = req.params;
-    const service = await serviceService.update(id as string, req.body as UpdateServiceDto);
-    res.status(200).json(service);
+
+    // A validação é feita aqui pelo middleware
+    try {
+      const service = await serviceService.update(
+        id as string,
+        req.body as UpdateServiceDto
+      );
+      res.status(200).json(service);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Erro interno no servidor" });
+    }
   }
 
   async delete(req: Request, res: Response) {

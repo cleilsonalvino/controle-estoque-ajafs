@@ -29,20 +29,8 @@ export class ServiceService {
   }
 
   async getAll(query: any) {
-    const { page = 1, limit = 10, sortBy = 'nome', order = 'asc' } = query;
-    const skip = (page - 1) * limit;
-
-    const services = await prisma.servico.findMany({
-      skip,
-      take: Number(limit),
-      orderBy: {
-        [sortBy]: order,
-      },
-    });
-
-    const total = await prisma.servico.count();
-
-    return { data: services, total };
+    const services = await prisma.servico.findMany();
+    return services;
   }
 
   async getById(id: string) {

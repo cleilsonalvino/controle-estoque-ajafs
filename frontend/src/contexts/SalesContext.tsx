@@ -7,12 +7,25 @@ import {
   useEffect,
 } from "react";
 import axios from "@/lib/api"; // seu axios configurado
-import type { SaleItem } from "@/pages/Sales";
+
+export interface SaleItem {
+  id: string;
+  produto: Product;
+  precoVenda: number;
+  precoCusto: number;
+  quantity: number;
+  type: "produto" | "servico";
+  produtoId?: string;
+  servicoId?: string;
+  quantidade?: string;
+  precoUnitario?: string;
+}
 
 export interface Product {
   id: string;
   nome: string;
-  preco: number;
+  precoVenda: number;
+  precoCusto: number;
 }
 
 export interface Sale {
@@ -23,8 +36,12 @@ export interface Sale {
   }
   total: string;
   status: string;
-  paymentMethod: string;
-  salesperson: string;
+  formaPagamento: string;
+  desconto: number;
+  vendedor: {
+    nome: string
+  }
+  produto: Product[];
   itens: SaleItem[];
   criadoEm?: string;
 }

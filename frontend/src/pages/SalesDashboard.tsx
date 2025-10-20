@@ -4,55 +4,19 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Download, AlertTriangle, TrendingUp, UserCheck } from "lucide-react";
+import { Download, AlertTriangle, TrendingUp, UserCheck, Eye, FileText, XCircle } from "lucide-react";
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 
 import { useSales } from "@/contexts/SalesContext";
-import { useProdutos } from "@/contexts/ProdutoContext";
-import { useCategories } from "@/contexts/CategoryContext";
+import { useProdutos, Produto } from "@/contexts/ProdutoContext";
+import { useCategories, Category } from "@/contexts/CategoryContext";
 import { Badge } from "@/components/ui/badge";
-import { useEffect, useMemo, useState } from 'react';
-
-// ========================
-// Tipos
-// ========================
-type ItemVenda = {
-  produtoId?: string;
-  quantidade?: number | string;
-  quantity?: number | string; 
-  precoUnitario?: number | string;  // <-- usar este campo (é o da API)
-};
-
-
-type Venda = {
-  id: string;
-  numero: string;
-  clienteId?: string;
-  cliente?: { nome: string } | null; // opcional
-  vendedorId?: string;
-  salesperson?: string;
-  criadoEm: string;            // ISO
-  desconto?: number | string;
-  formaPagamento?: string;     // ex.: "pix"
-  status: 'Concluída' | 'Pendente' | 'Cancelada' | string;
-  total: number | string;      // pode vir string
-  itens?: ItemVenda[];
-  lucroEstimado?: number | string;
-  observacoes?: string | null;
-};
-
-type Produto = {
-  id: string;
-  nome: string;
-  categoria?: { id: string; nome?: string };
-};
-
-type Categoria = {
-  id: string;
-  nome: string;
-};
+import { useEffect, useMemo, useState } from "react";
+import SaleDetails from '@/components/SaleDetails';
+import NotaFiscalModal from '@/components/NotaFiscalModal';
+import { Sale, SaleItem, Product } from '@/contexts/SalesContext';
 
 // ========================
 // Utils
@@ -77,14 +41,14 @@ const monthKey = (d: Date) =>
 const monthLabel = (d: Date) =>
   d.toLocaleString('pt-BR', { month: 'short' }).replace('.', ''); // jan, fev...
 
-const getClienteDisplay = (s: Venda) =>
+const getClienteDisplay = (s: Sale) =>
   s?.cliente?.nome ?? 'Cliente não informado';
 
 // ========================
 // Blocos auxiliares
 // ========================
 const SalesLast6Months = () => {
-  const { sales: allSalesRaw } = useSales() as { sales?: Venda[] };
+  const { sales: allSalesRaw } = useSales();
   const allSales = Array.isArray(allSalesRaw) ? allSalesRaw : [];
 
   const salesData = useMemo(() => {
@@ -149,7 +113,7 @@ const SalesLast6Months = () => {
 };
 
 const TopSellingProducts = () => {
-  const { sales: allSalesRaw } = useSales() as { sales?: Venda[] };
+  const { sales: allSalesRaw } = useSales();
   const { produtos: produtosRaw } = useProdutos() as { produtos: Produto[] };
   const allSales = Array.isArray(allSalesRaw) ? allSalesRaw : [];
   const produtos = Array.isArray(produtosRaw) ? produtosRaw : [];
@@ -225,9 +189,9 @@ const TopSellingProducts = () => {
 };
 
 const SalesByCategory = () => {
-  const { sales: allSalesRaw } = useSales() as { sales?: Venda[] };
+  const { sales: allSalesRaw } = useSales();
   const { produtos: produtosRaw } = useProdutos() as { produtos: Produto[] };
-  const { categories: categoriesRaw } = useCategories() as { categories: Categoria[] };
+  const { categories: categoriesRaw } = useCategories() as { categories: Category[] };
   const allSales = Array.isArray(allSalesRaw) ? allSalesRaw : [];
   const produtos = Array.isArray(produtosRaw) ? produtosRaw : [];
   const categories = Array.isArray(categoriesRaw) ? categoriesRaw : [];
@@ -295,10 +259,12 @@ const SalesByCategory = () => {
 // ========================
 // Componente principal
 // ========================
-const SalesDashboard = () => {
-  const { sales: allSalesRaw } = useSales() as { sales?: Venda[] };
+const SalesDashboard = () => { // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { sales: allSalesRaw, updateSale } = useSales();
   const { produtos, fetchProdutos } = useProdutos() as { produtos: Produto[]; fetchProdutos: () => void };
-  const { categories, fetchCategories } = useCategories() as { categories: Categoria[]; fetchCategories: () => void };
+  const { categories, fetchCategories } = useCategories() as { categories: Category[]; fetchCategories: () => void };
+  const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
+  const [saleForNotaFiscal, setSaleForNotaFiscal] = useState<Sale | null>(null);
 
   useEffect(() => {
     fetchProdutos?.();
@@ -442,6 +408,30 @@ const SalesDashboard = () => {
   }, [allSales, produtos]);
 
   // ========================
+  // Ações
+  // ========================
+  const handleCancelSale = async (saleId: string) => {
+    if (window.confirm("Tem certeza que deseja cancelar esta venda?")) {
+      try {
+        await updateSale(saleId, 'Cancelada' , []);
+        alert("Venda cancelada com sucesso!");
+      } catch (error) {
+        console.error("Erro ao cancelar venda:", error);
+        alert("Erro ao cancelar venda.");
+      }
+    }
+  };
+
+  const handleIssueNotaFiscal = (sale: Sale) => {
+    setSaleForNotaFiscal(sale);
+  };
+
+  const confirmIssueNotaFiscal = (saleId: string) => {
+    alert(`Simulando emissão de nota fiscal para a venda ${saleId}`);
+    setSaleForNotaFiscal(null);
+  };
+
+  // ========================
   // Exportações
   // ========================
   const exportToPDF = () => {
@@ -481,6 +471,8 @@ const SalesDashboard = () => {
   // ========================
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
+      {selectedSale && <SaleDetails sale={selectedSale} onClose={() => setSelectedSale(null)} />}
+      {saleForNotaFiscal && <NotaFiscalModal sale={saleForNotaFiscal} onClose={() => setSaleForNotaFiscal(null)} onConfirm={confirmIssueNotaFiscal} />}
       <h1 className="text-3xl font-bold text-gray-800 mb-6">Dashboard de Vendas</h1>
 
       {/* Cards resumo */}
@@ -656,6 +648,7 @@ const SalesDashboard = () => {
                 <TableHead>Cliente</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Valor</TableHead>
+                <TableHead className="text-center">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -666,6 +659,17 @@ const SalesDashboard = () => {
                   <TableCell>{getClienteDisplay(s)}</TableCell>
                   <TableCell>{s.status}</TableCell>
                   <TableCell className="text-right">{fmtBRL(toNumber(s.total))}</TableCell>
+                  <TableCell className="text-center">
+                    <Button variant="ghost" size="icon" onClick={() => setSelectedSale(s)}>
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => handleIssueNotaFiscal(s)}>
+                      <FileText className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => handleCancelSale(s.id)}>
+                      <XCircle className="h-4 w-4 text-red-500" />
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

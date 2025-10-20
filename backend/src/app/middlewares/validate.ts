@@ -11,6 +11,7 @@ export const validate = (schema: AnyZodObject) => (
     schema.parse(req.body);
     next();
   } catch (error) {
+    console.log(req.body);
     res.status(400).json(error);
   }
 };

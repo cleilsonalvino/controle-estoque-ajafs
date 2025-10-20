@@ -10,6 +10,8 @@ import { vendedoresRouter } from "../modules/vendedores/vendedores.router.ts";
 import { clientesRouter } from "../modules/clientes/cliente.routes.ts";
 import { servicesRouter } from "../modules/servicos/services.router.ts";
 import { lotesRouter } from "../modules/lotes/lotes.router.ts";
+import categoriaServicoRouter from "../modules/categorias-servicos/categoria-servico.router.ts";
+import { empresaRouter } from "../modules/empresa/empresa.router.ts";
 
 const router = Router();
 
@@ -24,5 +26,7 @@ router.use("/vendedores", vendedoresRouter);
 router.use("/clientes", clientesRouter);
 router.use("/servicos", servicesRouter);
 router.use("/lotes", lotesRouter);
+router.use("/categorias-servicos", categoriaServicoRouter);
+router.use("/empresa", empresaRouter);
 
 export default router;

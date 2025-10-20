@@ -7,9 +7,12 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useTiposServicos, TipoServico } from "@/contexts/TiposServicosContext";
+import { useServiceCategories } from "@/contexts/ServiceCategoryContext";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const TiposServicos = () => {
   const { tiposServicos, loading, createTipoServico, updateTipoServico, deleteTipoServico } = useTiposServicos();
+  const { serviceCategories } = useServiceCategories();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingTipoServico, setEditingTipoServico] = useState<TipoServico | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -17,6 +20,10 @@ const TiposServicos = () => {
   const [formData, setFormData] = useState({
     nome: "",
     descricao: "",
+    precoCusto: 0.0,
+    precoVenda: 0.0,
+    duracaoMinutos: 0,
+    categoriaId: "",
   });
 
   const filteredTiposServicos = tiposServicos.filter(tipoServico =>
@@ -26,13 +33,23 @@ const TiposServicos = () => {
 
   const handleAddTipoServico = () => {
     if (!formData.nome) return;
-    createTipoServico(formData);
+    createTipoServico({
+      ...formData,
+      precoCusto: Number(formData.precoCusto) || 0,
+      precoVenda: Number(formData.precoVenda) || 0,
+      duracaoMinutos: Number(formData.duracaoMinutos) || 0,
+    });
     resetForm();
   };
 
   const handleUpdateTipoServico = () => {
     if (!editingTipoServico || !formData.nome) return;
-    updateTipoServico(editingTipoServico.id, formData);
+    updateTipoServico(editingTipoServico.id, {
+      ...formData,
+      precoCusto: Number(formData.precoCusto) || 0,
+      precoVenda: Number(formData.precoVenda) || 0,
+      duracaoMinutos: Number(formData.duracaoMinutos) || 0,
+    });
     resetForm();
   };
 
@@ -44,6 +61,10 @@ const TiposServicos = () => {
     setFormData({
       nome: "",
       descricao: "",
+      precoCusto: 0.0,
+      precoVenda: 0.0,
+      duracaoMinutos: 0,
+      categoriaId: "",
     });
     setShowAddDialog(false);
     setEditingTipoServico(null);
@@ -54,6 +75,10 @@ const TiposServicos = () => {
     setFormData({
       nome: tipoServico.nome,
       descricao: tipoServico.descricao,
+      precoCusto: tipoServico.precoCusto ?? 0,
+      precoVenda: tipoServico.precoVenda ?? 0,
+      duracaoMinutos: tipoServico.duracaoMinutos ?? 0,
+      categoriaId: tipoServico.categoriaId || "",
     });
     setShowAddDialog(true);
   };
@@ -116,6 +141,12 @@ const TiposServicos = () => {
               <CardContent className="space-y-4">
                 <div className="text-sm text-muted-foreground line-clamp-3">
                   {tipoServico.descricao || "Sem descrição"}
+                </div>
+                <div className="text-sm text-red-600 line-clamp-3">
+                  Preço de Custo: {tipoServico.precoCusto || "Sem preço de custo"}
+                </div>
+                <div className="text-sm text-green-500 line-clamp-3">
+                  Preço de Venda: {tipoServico.precoVenda || "Sem preço de venda"}
                 </div>
 
                 <div className="flex gap-2 pt-2">
@@ -189,6 +220,55 @@ const TiposServicos = () => {
                 onChange={(e) => setFormData(prev => ({ ...prev, descricao: e.target.value }))}
                 rows={3}
               />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Preço de Custo</Label>
+                <Input
+                  type="number"
+                  placeholder="0.00"
+                  value={formData.precoCusto}
+                  onChange={(e) => setFormData(prev => ({ ...prev, precoCusto: Number(e.target.value) }))}
+                  step={0.1}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Preço de Venda</Label>
+                <Input
+                  type="number"
+                  placeholder="0.00"
+                  step={0.1}
+                  value={formData.precoVenda}
+                  onChange={(e) => setFormData(prev => ({ ...prev, precoVenda: Number(e.target.value) }))}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Duração (minutos)</Label>
+              <Input
+                type="number"
+                placeholder="60"
+                value={formData.duracaoMinutos}
+                onChange={(e) => setFormData(prev => ({ ...prev, duracaoMinutos: Number(e.target.value) }))}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Categoria</Label>
+              <Select value={formData.categoriaId} onValueChange={(value) => setFormData(prev => ({ ...prev, categoriaId: value }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione uma categoria" />
+                </SelectTrigger>
+                <SelectContent>
+                  {serviceCategories.map(category => (
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 

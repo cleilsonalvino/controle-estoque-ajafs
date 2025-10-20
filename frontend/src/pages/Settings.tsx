@@ -1,6 +1,6 @@
-import { useState } from "react";
-import { Settings as SettingsIcon, Save, Bell, Shield, Database, Palette, User, Building, Search as SearchIcon } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useEffect } from "react";
+import { Settings as SettingsIcon, Save, Bell, Shield, Database, Palette, Building } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,8 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { useEmpresa, Empresa } from "@/contexts/EmpresaContext";
 
-// DADOS AUXILIARES: Array com os estados brasileiros para o select
 const estadosBrasileiros = [
   { sigla: "AC", nome: "Acre" }, { sigla: "AL", nome: "Alagoas" }, { sigla: "AP", nome: "Amapá" },
   { sigla: "AM", nome: "Amazonas" }, { sigla: "BA", nome: "Bahia" }, { sigla: "CE", nome: "Ceará" },
@@ -23,79 +23,48 @@ const estadosBrasileiros = [
   { sigla: "SP", nome: "São Paulo" }, { sigla: "SE", nome: "Sergipe" }, { sigla: "TO", nome: "Tocantins" }
 ];
 
-
 const Settings = () => {
   const { toast } = useToast();
+  const { empresa, loading, createEmpresa, updateEmpresa } = useEmpresa();
   
-  // 1. ESTADO: Adicionados novos campos para dados da empresa
-  const [settings, setSettings] = useState({
-    // Empresa
-    cnpj: "",
-    razaoSocial: "",
-    nomeFantasia: "",
-    inscEstadual: "",
-    inscMunicipal: "",
-    cnae: "",
-    telefone: "(11) 99999-9999",
-    email: "contato@minhaempresa.com",
-    cep: "",
-    estado: "",
-    cidade: "",
-    endereco: "",
-    numero: "",
-    complemento: "",
-    bairro: "",
-    
-    // Notificações
-    emailNotifications: true,
-    stockAlerts: true,
-    lowStockThreshold: "10",
-    dailyReports: false,
-    
-    // Sistema
-    autoSave: true,
-    backupFrequency: "daily",
-    theme: "system",
-    language: "pt-BR",
-    
-    // Estoque
-    defaultMinStock: "5",
-    currencySymbol: "R$",
-    taxRate: "18",
-  });
+  const [formData, setFormData] = useState<Partial<Empresa & { emailNotifications: boolean, stockAlerts: boolean, lowStockThreshold: string, dailyReports: boolean, autoSave: boolean, backupFrequency: string, theme: string, language: string, defaultMinStock: string, currencySymbol: string, taxRate: string }>>({});
 
-  const handleSettingChange = (key: string, value: any) => {
-    setSettings(prev => ({ ...prev, [key]: value }));
+  useEffect(() => {
+    if (empresa) {
+      setFormData(empresa);
+    }
+  }, [empresa]);
+
+  const handleFormChange = (key: any, value: any) => {
+    setFormData(prev => ({ ...prev, [key]: value }));
   };
 
-  // 3. FUNCIONALIDADE: Adicionadas funções placeholder para interatividade
-  const handleAutofill = () => {
-    toast({
-      title: "Buscando dados do CNPJ...",
-      description: "Em uma aplicação real, aqui seria feita a chamada à API para preencher os dados.",
-    });
-    // Lógica da API para buscar dados do CNPJ aqui
+  const handleSaveEmpresa = async () => {
+    if (!empresa) {
+      await updateEmpresa(formData);
+    } else {
+      await createEmpresa(formData as Omit<Empresa, "id">);
+    }
   };
 
-  const handleCepLookup = () => {
-    toast({
-      title: "Buscando endereço...",
-      description: "Aqui seria feita a chamada à API dos Correios ou ViaCEP.",
-    });
-     // Lógica da API para buscar dados do CEP aqui
+  const handleSaveNotifications = async () => {
+    await updateEmpresa(formData);
+  };
+
+  const handleSaveSystem = async () => {
+    await updateEmpresa(formData);
+  };
+
+  const handleSaveStock = async () => {
+    await updateEmpresa(formData);
+  };
+
+  if (loading) {
+    return <p>Carregando...</p>;
   }
-
-  const handleSave = () => {
-    console.log("Salvando configurações:", settings);
-    toast({
-      title: "Configurações salvas!",
-      description: "Suas configurações foram atualizadas com sucesso.",
-    });
-  };
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto">
-      {/* Header */}
       <div className="mb-8">
         <div className="flex flex-wrap gap-4 justify-between items-center">
           <div className="flex items-center gap-4">
@@ -107,15 +76,10 @@ const Settings = () => {
               <p className="text-muted-foreground">Personalize o sistema conforme suas necessidades</p>
             </div>
           </div>
-          <Button onClick={handleSave} size="lg">
-            <Save className="h-4 w-4 mr-2" />
-            Salvar Alterações
-          </Button>
         </div>
       </div>
 
       <div className="space-y-8">
-        {/* 2. JSX: Card "Informações da Empresa" completamente reestruturado */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-xl">
@@ -133,11 +97,10 @@ const Settings = () => {
                 <div className="flex gap-2">
                   <Input
                     id="cnpj"
-                    value={settings.cnpj}
-                    onChange={(e) => handleSettingChange("cnpj", e.target.value)}
+                    value={formData.cnpj || ""}
+                    onChange={(e) => handleFormChange("cnpj", e.target.value)}
                     placeholder="00.000.000/0001-00"
                   />
-                  <Button variant="outline" onClick={handleAutofill}>Autopreencher</Button>
                 </div>
               </div>
             </div>
@@ -147,16 +110,16 @@ const Settings = () => {
                 <Label htmlFor="razaoSocial">Razão Social / Nome</Label>
                 <Input
                   id="razaoSocial"
-                  value={settings.razaoSocial}
-                  onChange={(e) => handleSettingChange("razaoSocial", e.target.value)}
+                  value={formData.razaoSocial || ""}
+                  onChange={(e) => handleFormChange("razaoSocial", e.target.value)}
                 />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="nomeFantasia">Nome Fantasia</Label>
                 <Input
                   id="nomeFantasia"
-                  value={settings.nomeFantasia}
-                  onChange={(e) => handleSettingChange("nomeFantasia", e.target.value)}
+                  value={formData.nomeFantasia || ""}
+                  onChange={(e) => handleFormChange("nomeFantasia", e.target.value)}
                 />
               </div>
             </div>
@@ -166,24 +129,24 @@ const Settings = () => {
                 <Label htmlFor="inscEstadual">Inscrição Estadual</Label>
                 <Input
                   id="inscEstadual"
-                  value={settings.inscEstadual}
-                  onChange={(e) => handleSettingChange("inscEstadual", e.target.value)}
+                  value={formData.inscEstadual || ""}
+                  onChange={(e) => handleFormChange("inscEstadual", e.target.value)}
                 />
               </div>
                <div className="space-y-2">
                 <Label htmlFor="inscMunicipal">Inscrição Municipal</Label>
                 <Input
                   id="inscMunicipal"
-                  value={settings.inscMunicipal}
-                  onChange={(e) => handleSettingChange("inscMunicipal", e.target.value)}
+                  value={formData.inscMunicipal || ""}
+                  onChange={(e) => handleFormChange("inscMunicipal", e.target.value)}
                 />
               </div>
                <div className="space-y-2">
                 <Label htmlFor="cnae">CNAE Principal</Label>
                 <Input
                   id="cnae"
-                  value={settings.cnae}
-                  onChange={(e) => handleSettingChange("cnae", e.target.value)}
+                  value={formData.cnae || ""}
+                  onChange={(e) => handleFormChange("cnae", e.target.value)}
                 />
               </div>
             </div>
@@ -197,8 +160,8 @@ const Settings = () => {
                 <Label htmlFor="telefone">Telefone</Label>
                 <Input
                   id="telefone"
-                  value={settings.telefone}
-                  onChange={(e) => handleSettingChange("telefone", e.target.value)}
+                  value={formData.telefone || ""}
+                  onChange={(e) => handleFormChange("telefone", e.target.value)}
                 />
               </div>
                <div className="space-y-2">
@@ -206,8 +169,8 @@ const Settings = () => {
                 <Input
                   id="email"
                   type="email"
-                  value={settings.email}
-                  onChange={(e) => handleSettingChange("email", e.target.value)}
+                  value={formData.email || ""}
+                  onChange={(e) => handleFormChange("email", e.target.value)}
                 />
               </div>
             </div>
@@ -218,15 +181,14 @@ const Settings = () => {
                  <div className="flex gap-2">
                   <Input
                     id="cep"
-                    value={settings.cep}
-                    onChange={(e) => handleSettingChange("cep", e.target.value)}
+                    value={formData.cep || ""}
+                    onChange={(e) => handleFormChange("cep", e.target.value)}
                   />
-                  <Button variant="outline" size="icon" onClick={handleCepLookup}><SearchIcon className="h-4 w-4"/></Button>
                  </div>
               </div>
               <div className="space-y-2">
                  <Label>Estado</Label>
-                 <Select value={settings.estado} onValueChange={(value) => handleSettingChange("estado", value)}>
+                 <Select value={formData.estado || ""} onValueChange={(value) => handleFormChange("estado", value)}>
                    <SelectTrigger><SelectValue placeholder="Selecione o estado" /></SelectTrigger>
                    <SelectContent>
                      {estadosBrasileiros.map(uf => (
@@ -239,9 +201,8 @@ const Settings = () => {
                  <Label>Cidade</Label>
                  <Input
                     id="cidade"
-                    value={settings.cidade}
-                    onChange={(e) => handleSettingChange("cidade", e.target.value)}
-                    // Em uma app real, este campo poderia ser um Select dinâmico
+                    value={formData.cidade || ""}
+                    onChange={(e) => handleFormChange("cidade", e.target.value)}
                  />
               </div>
             </div>
@@ -251,16 +212,16 @@ const Settings = () => {
                 <Label htmlFor="endereco">Endereço (Rua, Av.)</Label>
                 <Input
                   id="endereco"
-                  value={settings.endereco}
-                  onChange={(e) => handleSettingChange("endereco", e.target.value)}
+                  value={formData.endereco || ""}
+                  onChange={(e) => handleFormChange("endereco", e.target.value)}
                 />
               </div>
                <div className="md:col-span-2 space-y-2">
                 <Label htmlFor="numero">Número</Label>
                 <Input
                   id="numero"
-                  value={settings.numero}
-                  onChange={(e) => handleSettingChange("numero", e.target.value)}
+                  value={formData.numero || ""}
+                  onChange={(e) => handleFormChange("numero", e.target.value)}
                 />
               </div>
             </div>
@@ -270,23 +231,28 @@ const Settings = () => {
                 <Label htmlFor="complemento">Complemento</Label>
                 <Input
                   id="complemento"
-                  value={settings.complemento}
-                  onChange={(e) => handleSettingChange("complemento", e.target.value)}
+                  value={formData.complemento || ""}
+                  onChange={(e) => handleFormChange("complemento", e.target.value)}
                 />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="bairro">Bairro</Label>
                 <Input
                   id="bairro"
-                  value={settings.bairro}
-                  onChange={(e) => handleSettingChange("bairro", e.target.value)}
+                  value={formData.bairro || ""}
+                  onChange={(e) => handleFormChange("bairro", e.target.value)}
                 />
               </div>
             </div>
           </CardContent>
+          <CardFooter className="flex justify-end">
+            <Button onClick={handleSaveEmpresa}>
+              <Save className="h-4 w-4 mr-2" />
+              {empresa ? "Salvar" : "Cadastrar"}
+            </Button>
+          </CardFooter>
         </Card>
 
-        {/* Notificações */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -306,8 +272,8 @@ const Settings = () => {
                 </p>
               </div>
               <Switch
-                checked={settings.emailNotifications}
-                onCheckedChange={(checked) => handleSettingChange("emailNotifications", checked)}
+                checked={formData.emailNotifications || false}
+                onCheckedChange={(checked) => handleFormChange("emailNotifications", checked)}
               />
             </div>
             
@@ -321,20 +287,20 @@ const Settings = () => {
                 </p>
               </div>
               <Switch
-                checked={settings.stockAlerts}
-                onCheckedChange={(checked) => handleSettingChange("stockAlerts", checked)}
+                checked={formData.stockAlerts || false}
+                onCheckedChange={(checked) => handleFormChange("stockAlerts", checked)}
               />
             </div>
 
-            {settings.stockAlerts && (
+            {formData.stockAlerts && (
               <div className="space-y-2 pl-4 border-l-2 ml-2">
                 <Label htmlFor="lowStockThreshold">Limite para Alerta de Estoque Baixo</Label>
                 <Input
                   id="lowStockThreshold"
                   type="number"
                   min="1"
-                  value={settings.lowStockThreshold}
-                  onChange={(e) => handleSettingChange("lowStockThreshold", e.target.value)}
+                  value={formData.lowStockThreshold || ""}
+                  onChange={(e) => handleFormChange("lowStockThreshold", e.target.value)}
                   className="w-32"
                 />
                 <p className="text-xs text-muted-foreground">
@@ -353,14 +319,19 @@ const Settings = () => {
                 </p>
               </div>
               <Switch
-                checked={settings.dailyReports}
-                onCheckedChange={(checked) => handleSettingChange("dailyReports", checked)}
+                checked={formData.dailyReports || false}
+                onCheckedChange={(checked) => handleFormChange("dailyReports", checked)}
               />
             </div>
           </CardContent>
+          <CardFooter className="flex justify-end">
+            <Button onClick={handleSaveNotifications}>
+              <Save className="h-4 w-4 mr-2" />
+              Salvar
+            </Button>
+          </CardFooter>
         </Card>
 
-                {/* Sistema */}
         <Card className="bg-gradient-card border-0 shadow-md">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -380,8 +351,8 @@ const Settings = () => {
                 </p>
               </div>
               <Switch
-                checked={settings.autoSave}
-                onCheckedChange={(checked) => handleSettingChange("autoSave", checked)}
+                checked={formData.autoSave || false}
+                onCheckedChange={(checked) => handleFormChange("autoSave", checked)}
               />
             </div>
             
@@ -391,8 +362,8 @@ const Settings = () => {
               <div className="space-y-2">
                 <Label>Frequência de Backup</Label>
                 <Select 
-                  value={settings.backupFrequency} 
-                  onValueChange={(value) => handleSettingChange("backupFrequency", value)}
+                  value={formData.backupFrequency || ""} 
+                  onValueChange={(value) => handleFormChange("backupFrequency", value)}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -409,8 +380,8 @@ const Settings = () => {
               <div className="space-y-2">
                 <Label>Idioma</Label>
                 <Select 
-                  value={settings.language} 
-                  onValueChange={(value) => handleSettingChange("language", value)}
+                  value={formData.language || ""} 
+                  onValueChange={(value) => handleFormChange("language", value)}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -424,9 +395,14 @@ const Settings = () => {
               </div>
             </div>
           </CardContent>
+          <CardFooter className="flex justify-end">
+            <Button onClick={handleSaveSystem}>
+              <Save className="h-4 w-4 mr-2" />
+              Salvar
+            </Button>
+          </CardFooter>
         </Card>
 
-        {/* Estoque */}
         <Card className="bg-gradient-card border-0 shadow-md">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -445,8 +421,8 @@ const Settings = () => {
                   id="defaultMinStock"
                   type="number"
                   min="0"
-                  value={settings.defaultMinStock}
-                  onChange={(e) => handleSettingChange("defaultMinStock", e.target.value)}
+                  value={formData.defaultMinStock || ""}
+                  onChange={(e) => handleFormChange("defaultMinStock", e.target.value)}
                 />
               </div>
               
@@ -454,8 +430,8 @@ const Settings = () => {
                 <Label htmlFor="currencySymbol">Símbolo da Moeda</Label>
                 <Input
                   id="currencySymbol"
-                  value={settings.currencySymbol}
-                  onChange={(e) => handleSettingChange("currencySymbol", e.target.value)}
+                  value={formData.currencySymbol || ""}
+                  onChange={(e) => handleFormChange("currencySymbol", e.target.value)}
                 />
               </div>
               
@@ -467,15 +443,20 @@ const Settings = () => {
                   min="0"
                   max="100"
                   step="0.01"
-                  value={settings.taxRate}
-                  onChange={(e) => handleSettingChange("taxRate", e.target.value)}
+                  value={formData.taxRate || ""}
+                  onChange={(e) => handleFormChange("taxRate", e.target.value)}
                 />
               </div>
             </div>
           </CardContent>
+          <CardFooter className="flex justify-end">
+            <Button onClick={handleSaveStock}>
+              <Save className="h-4 w-4 mr-2" />
+              Salvar
+            </Button>
+          </CardFooter>
         </Card>
 
-        {/* Informações do Sistema */}
         <Card className="bg-gradient-card border-0 shadow-md">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">

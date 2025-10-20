@@ -12,6 +12,7 @@ import {
   ChevronRight,
   LogOut,
   Wrench,
+  Layers,
 } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ const menuItems = [
   { title: "Fornecedores", url: "/suppliers", icon: Users },
   { title: "Categorias", url: "/categories", icon: Tag },
   { title: "Tipos de Serviços", url: "/tipos-servicos", icon: Wrench },
+  { title: "Categorias de Serviço", url: "/service-categories", icon: Layers },
   { title: "Clientes", url: "/clientes", icon: Users },
   { title: "Vendedores", url: "/vendedores", icon: Users },
   { title: "Configurações", url: "/settings", icon: Settings },

@@ -6,6 +6,10 @@ export interface TipoServico {
   id: string;
   nome: string;
   descricao: string;
+  precoCusto: number | 0;
+  precoVenda: number | 0;
+  duracaoMinutos: number | 0;
+  categoriaId: string | null;
 }
 
 interface TipoServicoContextType {
@@ -61,7 +65,7 @@ export const TipoServicoProvider = ({ children }: TipoServicoProviderProps) => {
 
   const updateTipoServico = async (id: string, updatedTipoServico: Omit<TipoServico, "id">) => {
     try {
-      const { data } = await api.put<TipoServico>(`/servicos/${id}`, updatedTipoServico);
+      const { data } = await api.patch<TipoServico>(`/servicos/${id}`, updatedTipoServico);
       setTiposServicos((prev) => prev.map((ts) => (ts.id === id ? data : ts)));
       toast.success("Tipo de serviço atualizado com sucesso!");
       return data;

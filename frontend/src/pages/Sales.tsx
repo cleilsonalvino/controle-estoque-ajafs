@@ -1,6 +1,5 @@
-// pages/Sales.tsx
-import { useState, useEffect } from "react";
-import { ShoppingCart, DollarSign, Trash2, Table } from "lucide-react";
+import { useState } from "react";
+import { ShoppingCart, DollarSign, LayoutDashboard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -30,6 +29,9 @@ import { useClientes } from "@/contexts/ClienteContext";
 import { useVendedores } from "@/contexts/VendedorContext";
 import { useTiposServicos } from "@/contexts/TiposServicosContext";
 import { SalesTable } from "@/components/SalesTable";
+import PDV from "./PDV";
+import CupomFiscal from "@/components/CupomFiscal";
+import { SaleItem } from "@/contexts/SalesContext";
 
 // === Tipagem ===
 export interface Product {
@@ -39,39 +41,39 @@ export interface Product {
   precoVenda: number;
 }
 
-export interface SaleItem {
-  id: string;
-  nome: string;
-  preco: number;
-  quantity: number;
-  type: 'produto' | 'servico';
-  produtoId?: string;
-  servicoId?: string;
-  quantidade?: string;
-  precoUnitario?: string;
-}
+
 
 // === SalesForm ===
 interface SalesFormProps {
   products: Product[];
   tiposServicos: any[]; // Adjust this type as needed
-  saleType: 'produto' | 'servico';
-  setSaleType: (type: 'produto' | 'servico') => void;
+  saleType: "produto" | "servico";
+  setSaleType: (type: "produto" | "servico") => void;
   onAddProductToSale: (item: any, quantity: number) => void;
 }
 
-const SalesForm = ({ products, tiposServicos, saleType, setSaleType, onAddProductToSale }: SalesFormProps) => {
-  const [selectedItemId, setSelectedItemId] = useState<string | undefined>(undefined);
+const SalesForm = ({
+  products,
+  tiposServicos,
+  saleType,
+  setSaleType,
+  onAddProductToSale,
+}: SalesFormProps) => {
+  const [selectedItemId, setSelectedItemId] = useState<string | undefined>(
+    undefined
+  );
   const [quantity, setQuantity] = useState(1);
   const [preco, setPreco] = useState(0);
 
-  const selectedItem = saleType === 'produto' 
-    ? products.find((p) => p.id === selectedItemId)
-    : tiposServicos.find((s) => s.id === selectedItemId);
+  const selectedItem =
+    saleType === "produto"
+      ? products.find((p) => p.id === selectedItemId)
+      : tiposServicos.find((s) => s.id === selectedItemId);
 
   const handleAddClick = () => {
     if (selectedItem && quantity > 0) {
-      const itemToAdd = saleType === 'servico' ? { ...selectedItem, preco } : selectedItem;
+      const itemToAdd =
+        saleType === "servico" ? { ...selectedItem, preco } : selectedItem;
       onAddProductToSale(itemToAdd, quantity);
       setSelectedItemId(undefined);
       setQuantity(1);
@@ -83,12 +85,19 @@ const SalesForm = ({ products, tiposServicos, saleType, setSaleType, onAddProduc
     <Card>
       <CardHeader>
         <CardTitle>Adicionar Item</CardTitle>
-        <CardDescription>Selecione o tipo de item, o item e a quantidade</CardDescription>
+        <CardDescription>
+          Selecione o tipo de item, o item e a quantidade
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="sale-type">Tipo de Venda</Label>
-          <Select value={saleType} onValueChange={(value) => setSaleType(value as 'produto' | 'servico')}>
+          <Select
+            value={saleType}
+            onValueChange={(value) =>
+              setSaleType(value as "produto" | "servico")
+            }
+          >
             <SelectTrigger>
               <SelectValue placeholder="Selecione o tipo de venda" />
             </SelectTrigger>
@@ -99,12 +108,18 @@ const SalesForm = ({ products, tiposServicos, saleType, setSaleType, onAddProduc
           </Select>
         </div>
 
-        {saleType === 'produto' ? (
+        {saleType === "produto" ? (
           <div className="space-y-2">
             <Label htmlFor="product">Produto</Label>
             <Select value={selectedItemId} onValueChange={setSelectedItemId}>
               <SelectTrigger>
-                <SelectValue placeholder={products.length === 0 ? "Carregando..." : "Selecione um produto"} />
+                <SelectValue
+                  placeholder={
+                    products.length === 0
+                      ? "Carregando..."
+                      : "Selecione um produto"
+                  }
+                />
               </SelectTrigger>
               <SelectContent>
                 {products.map((product) => (
@@ -120,7 +135,13 @@ const SalesForm = ({ products, tiposServicos, saleType, setSaleType, onAddProduc
             <Label htmlFor="service">Serviço</Label>
             <Select value={selectedItemId} onValueChange={setSelectedItemId}>
               <SelectTrigger>
-                <SelectValue placeholder={tiposServicos.length === 0 ? "Carregando..." : "Selecione um serviço"} />
+                <SelectValue
+                  placeholder={
+                    tiposServicos.length === 0
+                      ? "Carregando..."
+                      : "Selecione um serviço"
+                  }
+                />
               </SelectTrigger>
               <SelectContent>
                 {tiposServicos.map((servico) => (
@@ -136,8 +157,10 @@ const SalesForm = ({ products, tiposServicos, saleType, setSaleType, onAddProduc
         {selectedItem && (
           <div className="space-y-2">
             <Label>Preço</Label>
-            {saleType === 'produto' ? (
-              <p className="text-lg font-semibold">{selectedItem.precoVenda} Reais</p>
+            {saleType === "produto" ? (
+              <p className="text-lg font-semibold">
+                {selectedItem.precoVenda} Reais
+              </p>
             ) : (
               <Input
                 type="number"
@@ -162,7 +185,11 @@ const SalesForm = ({ products, tiposServicos, saleType, setSaleType, onAddProduc
 
         <Button
           onClick={handleAddClick}
-          disabled={!selectedItem || quantity <= 0 || (saleType === 'servico' && preco <= 0)}
+          disabled={
+            !selectedItem ||
+            quantity <= 0 ||
+            (saleType === "servico" && preco <= 0)
+          }
           className="w-full bg-gradient-primary hover:opacity-90 shadow-md"
         >
           Adicionar à Venda
@@ -178,7 +205,7 @@ const Sales = () => {
   const { clientes, createCliente } = useClientes();
   const { vendedores, createVendedor } = useVendedores();
   const { tiposServicos } = useTiposServicos();
-  const [saleType, setSaleType] = useState<'produto' | 'servico'>('produto');
+  const [saleType, setSaleType] = useState<"produto" | "servico">("produto");
   const [saleItems, setSaleItems] = useState<SaleItem[]>([]);
   const [selectedCliente, setSelectedCliente] = useState<string | undefined>(
     undefined
@@ -191,11 +218,15 @@ const Sales = () => {
     undefined
   );
   const [nomeCliente, setNomeCliente] = useState<string>("");
-  const [nomeVendedor, setNomeVendedor] = useState("");
+  const [isPdvMode, setIsPdvMode] = useState(false);
+  const [showCupom, setShowCupom] = useState(false);
+  const [lastSale, setLastSale] = useState<any>(null);
 
   const handleAddProductToSale = (item: any, quantity: number) => {
     const newSaleItems = JSON.parse(JSON.stringify(saleItems));
-    const existing = newSaleItems.find((i) => i.id === item.id && i.type === saleType);
+    const existing = newSaleItems.find(
+      (i) => i.id === item.id && i.type === saleType
+    );
     if (existing) {
       existing.quantity += quantity;
     } else {
@@ -212,11 +243,6 @@ const Sales = () => {
   };
 
   const handleFinalizeSale = async () => {
-    if (!selectedCliente) {
-      alert("Por favor, selecione um cliente.");
-      return;
-    }
-
     if (!selectedVendedor) {
       alert("Por favor, selecione um vendedor.");
       return;
@@ -233,15 +259,36 @@ const Sales = () => {
       desconto: parseFloat(discount) || 0,
       forma_pagamento: paymentMethod,
       itens: saleItems.map((item) => ({
-        produtoId: item.type === 'produto' ? item.id : undefined,
-        servicoId: item.type === 'servico' ? item.id : undefined,
+        produtoId: item.type === "produto" ? item.id : undefined,
+        servicoId: item.type === "servico" ? item.id : undefined,
         quantidade: item.quantity,
-        precoUnitario: item.type === 'produto' ? item.precoVenda : item.preco,
+        precoUnitario:
+          item.type === "produto" ? item.precoVenda : item.precoCusto,
       })),
     };
 
     try {
       await createSale(saleData);
+      const clientName =
+        clientes.find((c) => c.id === selectedCliente)?.nome || "";
+      const vendedorName =
+        vendedores.find((v) => v.id === selectedVendedor)?.nome || "";
+      const subtotal = saleItems.reduce(
+        (acc, item) => acc + item.precoVenda * item.quantity,
+        0
+      );
+      const total = subtotal - (subtotal * (parseFloat(discount) || 0)) / 100;
+
+      setLastSale({
+        saleItems,
+        total,
+        discount: parseFloat(discount) || 0,
+        paymentMethod,
+        clientName,
+        vendedorName,
+      });
+      setShowCupom(true);
+
       setSaleItems([]);
       setSelectedCliente(undefined);
       setSelectedVendedor(undefined);
@@ -254,19 +301,50 @@ const Sales = () => {
     }
   };
 
+  if (isPdvMode) {
+    return (
+      <PDV
+        saleItems={saleItems}
+        setSaleItems={setSaleItems}
+        products={products}
+        handleFinalizeSale={handleFinalizeSale}
+        setIsPdvMode={setIsPdvMode}
+        selectedCliente={selectedCliente}
+        setSelectedCliente={setSelectedCliente}
+        selectedVendedor={selectedVendedor}
+        setSelectedVendedor={setSelectedVendedor}
+        discount={discount}
+        setDiscount={setDiscount}
+        paymentMethod={paymentMethod}
+        setPaymentMethod={setPaymentMethod}
+      />
+    );
+  }
+
   return (
     <div className="p-6">
-      <div className="mb-8 flex items-center gap-3">
-        <div className="p-2 bg-gradient-primary rounded-lg">
-          <ShoppingCart className="h-6 w-6 text-primary-foreground" />
+      {showCupom && lastSale && (
+        <CupomFiscal {...lastSale} onClose={() => setShowCupom(false)} />
+      )}
+      <div className="mb-8 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-gradient-primary rounded-lg">
+            <ShoppingCart className="h-6 w-6 text-primary-foreground" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">
+              Registrar Venda
+            </h1>
+            <p className="text-muted-foreground">
+              Adicione produtos e finalize a venda
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">
-            Registrar Venda
-          </h1>
-          <p className="text-muted-foreground">
-            Adicione produtos e finalize a venda
-          </p>
+        <div className="flex gap-2">
+          <Button onClick={() => setIsPdvMode(true)} variant="outline">
+            <LayoutDashboard className="h-4 w-4 mr-2" />
+            Modo PDV
+          </Button>
         </div>
       </div>
 
@@ -325,7 +403,6 @@ const Sales = () => {
                           });
                           setNomeCliente("");
                           alert("Cliente criado com sucesso!");
-
                         } catch (err) {
                           console.log(err);
                         }

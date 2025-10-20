@@ -236,3 +236,30 @@ model MovimentacaoLote {
 
   lote Lote @relation(fields: [loteId], references: [id], onDelete: Cascade)
 }
+
+//================
+//Empresa
+//================
+
+model Empresa {
+  id           String   @id @default(uuid())
+  nome         String
+  cnpj         String   @unique
+  telefone     String
+  email        String?  @unique
+  razaoSocial  String
+  nomeFantasia String
+  inscEstadual String
+  inscMunicipal String
+  cnae         String
+
+  // Endereço diretamente na empresa
+  cep         String
+  estado      String
+  cidade      String
+  endereco    String
+  numero      String
+  complemento String?
+  bairro      String
+}
+
