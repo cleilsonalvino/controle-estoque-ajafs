@@ -1,297 +1,178 @@
-import { useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import {
   Package,
   TrendingUp,
-  AlertTriangle,
+  AlertTriangle ,
   DollarSign,
-  Plus,
+  Info,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+  TooltipProvider,
+} from "@/components/ui/tooltip";
 import { useProdutos } from "@/contexts/ProdutoContext";
-import StockTurnoverChart from "@/components/GiroEstoque";
 import { useSales } from "@/contexts/SalesContext";
+import api from "@/lib/api";
 
-// ==============================
-// Helpers — preço como string
-// ==============================
-const parsePrecoToNumber = (v: string | number) => {
-  const s = String(v ?? "");
-  // remove separadores de milhar, troca vírgula por ponto, remove qualquer char extra
-  const n = Number(s.replace(/\./g, "").replace(/,/g, ".").replace(/[^0-9.\-]/g, ""));
-  return Number.isFinite(n) ? n : 0;
-};
-
-const formatBRL = (v: string | number) =>
-  parsePrecoToNumber(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-// ==============================
-// Tipo do Produto
-// ==============================
-export interface Product {
-  id: string;
-  nome: string;
-  descricao: string;
-  preco: string; // <-- agora é string
-  estoqueAtual: number;
-  estoqueMinimo: number;
-  categoria: {
-    id: string;
-    nome: string;
+interface ValorEstoqueResponse {
+  valorEstoque: {
+    total: number;
+    quantidadeLotes: number;
+    produtosDistintos: number;
   };
-  fornecedor: {
-    id: string;
-    nome: string;
-  };
-  image?: string;
 }
 
-// ==============================
-// Componente de Indicadores
-// ==============================
-const StockDashboard = ({ products }: { products: Product[] }) => {
-  const totalProducts = products?.length || 0;
+const Dashboard = () => {
+  const { produtos, loading } = useProdutos();
+  const { sales } = useSales();
 
-  const lowStockProducts = useMemo(
-    () => products?.filter((p) => p.estoqueAtual <= p.estoqueMinimo) ?? [],
-    [products]
+  const [valorEstoque, setValorEstoque] = useState<number>(0);
+  const [qtdLotes, setQtdLotes] = useState<number>(0);
+  const [produtosDistintos, setProdutosDistintos] = useState<number>(0);
+
+  useEffect(() => {
+    const fetchValorEstoque = async () => {
+      try {
+        const { data } = await api.get<ValorEstoqueResponse>("/estoque/valor-estoque");
+        setValorEstoque(data.valorEstoque.total);
+        setQtdLotes(data.valorEstoque.quantidadeLotes);
+        setProdutosDistintos(data.valorEstoque.produtosDistintos);
+      } catch (error) {
+        console.error("Erro ao buscar valor de estoque:", error);
+      }
+    };
+
+    fetchValorEstoque();
+  }, []);
+
+  const lowStockProducts = produtos.filter(
+    (p) =>
+      Number(p.estoqueMinimo) > 0 &&
+      p.lote?.[0]?.quantidadeAtual <= Number(p.estoqueMinimo)
   );
 
-  const totalValue = useMemo(
-    () => products?.reduce((acc, p) => acc + p.estoqueAtual * parsePrecoToNumber(p.preco), 0) ?? 0,
-    [products]
-  );
-
-  const averageStock = useMemo(() => {
-    return totalProducts > 0
-      ? Math.round(products.reduce((acc, p) => acc + p.estoqueAtual, 0) / totalProducts)
-      : 0;
-  }, [products, totalProducts]);
-
-  const {sales} = useSales();
-
-  
-
+  if (loading) {
+    return (
+      <div className="p-6 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {[...Array(4)].map((_, i) => (
+          <Skeleton key={i} className="h-28 rounded-md" />
+        ))}
+      </div>
+    );
+  }
 
   const stats = [
     {
-      title: "Total de Produtos",
-      value: totalProducts.toString(),
-      description: "Produtos cadastrados",
+      title: "Produtos Cadastrados",
+      tooltip:
+        "Número total de produtos registrados no sistema, incluindo aqueles sem estoque ativo.",
+      value: produtos.length,
+      description: "Produtos registrados",
       icon: Package,
       color: "bg-gradient-primary",
     },
     {
-      title: "Valor Total",
-      value: `R$ ${totalValue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
-      description: "Valor total do estoque",
+      title: "Valor Total em Estoque",
+      tooltip:
+        "Soma total (em reais) do valor de custo de todos os lotes ativos no estoque. Produtos distintos são contabilizados apenas uma vez.",
+      value: valorEstoque.toLocaleString("pt-BR", {
+        style: "currency",
+        currency: "BRL",
+      }),
+      description: `${qtdLotes} lotes • ${produtosDistintos} produtos distintos`,
       icon: DollarSign,
       color: "bg-gradient-success",
     },
     {
-      title: "Total de vendas",
-      value: sales.length.toString(),
-      description: "total de vendas da empresa",
+      title: "Total de Vendas",
+      tooltip:
+        "Número de vendas registradas no sistema. Cada venda pode conter um ou mais produtos.",
+      value: sales.length,
+      description: "Vendas registradas",
       icon: TrendingUp,
       color: "bg-primary",
     },
     {
-      title: "Alertas",
-      value: lowStockProducts.length.toString(),
-      description: "Produtos com estoque baixo",
+      title: "Alertas de Estoque",
+      tooltip:
+        "Produtos com quantidade atual igual ou inferior ao estoque mínimo definido.",
+      value: lowStockProducts.length,
+      description: "Abaixo do estoque mínimo",
       icon: AlertTriangle,
       color: lowStockProducts.length > 0 ? "bg-destructive" : "bg-muted",
     },
   ];
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-      {stats.map((stat) => (
-        <Card
-          key={stat.title}
-          className="relative overflow-hidden bg-gradient-card border-0 shadow-md hover:shadow-lg transition-all duration-300"
-        >
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              {stat.title}
-            </CardTitle>
-            <div className={`p-2 rounded-lg ${stat.color}`}>
-              <stat.icon className="h-4 w-4 text-white" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground">{stat.value}</div>
-            <p className="text-xs text-muted-foreground mt-1">{stat.description}</p>
-
-            {stat.title === "Alertas" && lowStockProducts.length > 0 && (
-              <div className="mt-3 space-y-1">
-                {lowStockProducts.slice(0, 2).map((product) => (
-                  <Badge key={product.id} variant="destructive" className="text-xs">
-                    {product.nome} ({product.estoqueAtual} unid.)
-                  </Badge>
-                ))}
-                {lowStockProducts.length > 2 && (
-                  <Badge variant="outline" className="text-xs">
-                    +{lowStockProducts.length - 2} outros
-                  </Badge>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  );
-};
-
-// ==============================
-// Componentes de Gráficos (Simulados)
-// ==============================
-const ChartCard = ({ title, children }: { title: string; children: React.ReactNode }) => (
-  <Card className="shadow-md">
-    <CardHeader>
-      <CardTitle className="text-lg font-semibold">{title}</CardTitle>
-    </CardHeader>
-    <CardContent className="h-64">{children}</CardContent>
-  </Card>
-);
-
-
-const TemporalEvolutionChart = () => (
-  <ChartCard title="Evolução Temporal do Valor Total">
-    <div className="flex items-center justify-center h-full text-muted-foreground">
-      [Gráfico de Linha da Evolução Temporal - Placeholder]
-    </div>
-  </ChartCard>
-);
-
-const StockByCategoryChart = () => (
-  <ChartCard title="Distribuição de Estoque por Categoria">
-    <div className="flex items-center justify-center h-full text-muted-foreground">
-      [Gráfico de Pizza/Donut por Categoria - Placeholder]
-    </div>
-  </ChartCard>
-);
-
-const StockLevelChart = () => (
-  <ChartCard title="Níveis de Estoque vs. Ponto de Reposição">
-    <div className="flex items-center justify-center h-full text-muted-foreground">
-      [Gráfico de Barras com linhas de referência - Placeholder]
-    </div>
-  </ChartCard>
-);
-
-const SupplierPerformanceChart = () => (
-  <ChartCard title="Performance de Fornecedores">
-    <div className="flex items-center justify-center h-full text-muted-foreground">
-      [Gráfico de Barras por Fornecedor - Placeholder]
-    </div>
-  </ChartCard>
-);
-
-const MovementSpeedChart = () => (
-  <ChartCard title="Itens de Alta e Baixa Rotação">
-    <div className="flex items-center justify-center h-full text-muted-foreground">
-      [Gráfico de Funil ou Barras - Placeholder]
-    </div>
-  </ChartCard>
-);
-
-// ==============================
-// Componente Principal (Dashboard)
-// ==============================
-const Dashboard = () => {
-  const { produtos, loading, createProduto } = useProdutos() as unknown as {
-    produtos: Product[];
-    loading: boolean;
-    createProduto: (p: Product) => void;
-  };
-  const [showAddDialog, setShowAddDialog] = useState(false);
-
-  // Exemplo: função para adicionar produto recebendo um shape "externo"
-  const handleAddProductFromDialog = (newProduct: {
-    name: string;
-    category: string;
-    quantity: number;
-    minStock: number;
-    price: number; // vem número, mas vamos salvar string
-  }) => {
-    const productForContext: Product = {
-      id: crypto?.randomUUID?.() ?? String(Date.now()),
-      nome: newProduct.name,
-      descricao: "",
-      preco: String(newProduct.price.toFixed(2)), // <-- salva como string
-      estoqueAtual: newProduct.quantity,
-      estoqueMinimo: newProduct.minStock,
-      categoria: { id: "1", nome: newProduct.category },
-      fornecedor: { id: "1", nome: "Fornecedor Padrão" },
-    };
-
-    createProduto(productForContext);
-    setShowAddDialog(false);
-  };
-
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-screen text-muted-foreground">
-        Carregando dados do estoque...
-      </div>
-    );
-  }
-
-  return (
-    <div className="p-6">
-      {/* Header */}
-      <div className="mb-8">
+    <TooltipProvider delayDuration={100}>
+      <div className="p-6 space-y-10">
+        {/* Cabeçalho */}
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold text-foreground mb-2">Dashboard</h1>
-            <p className="text-muted-foreground">Visão geral do seu estoque</p>
+            <h1 className="text-3xl font-bold text-foreground mb-1">Dashboard</h1>
+            <p className="text-muted-foreground">
+              Visão geral do estoque, lotes e desempenho de vendas
+            </p>
           </div>
         </div>
-      </div>
 
-      {/* Conteúdo */}
-      <div className="space-y-8">
-        <StockDashboard products={produtos} />
+        {/* Indicadores */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {stats.map((stat) => (
+            <Card
+              key={stat.title}
+              className="relative overflow-hidden bg-gradient-card border-0 shadow-md hover:shadow-lg transition-all duration-300"
+            >
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <div className="flex items-center gap-1">
+                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+                    {stat.title}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="w-3.5 h-3.5 text-muted-foreground cursor-pointer" />
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-xs text-sm leading-relaxed">
+                        {stat.tooltip}
+                      </TooltipContent>
+                    </Tooltip>
+                  </CardTitle>
+                </div>
 
-        <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
-          <StockTurnoverChart />
-          <TemporalEvolutionChart />
-          <StockByCategoryChart />
-          <StockLevelChart />
-          <SupplierPerformanceChart />
-          <MovementSpeedChart />
+                <div className={`p-2 rounded-lg ${stat.color}`}>
+                  <stat.icon className="h-4 w-4 text-white" />
+                </div>
+              </CardHeader>
+
+              <CardContent>
+                <div className="text-2xl font-bold text-foreground">{stat.value}</div>
+                <p className="text-xs text-muted-foreground mt-1">{stat.description}</p>
+
+                {stat.title === "Alertas de Estoque" && lowStockProducts.length > 0 && (
+                  <div className="mt-3 space-y-1">
+                    {lowStockProducts.slice(0, 2).map((product) => (
+                      <Badge key={product.id} variant="destructive" className="text-xs">
+                        {product.nome} ({product.lote?.[0]?.quantidadeAtual ?? 0} unid.)
+                      </Badge>
+                    ))}
+                    {lowStockProducts.length > 2 && (
+                      <Badge variant="outline" className="text-xs">
+                        +{lowStockProducts.length - 2} outros
+                      </Badge>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ))}
         </div>
       </div>
-
-      {/* TODO: seu modal de Adicionar Produto pode chamar handleAddProductFromDialog */}
-      {showAddDialog && (
-        <div className="fixed inset-0 grid place-items-center bg-black/40 z-50">
-          <Card className="w-full max-w-lg">
-            <CardHeader>
-              <CardTitle>Novo Produto</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Aqui você pode renderizar seu formulário (Dialog shadcn/ui) e, ao enviar, chamar
-                <code className="px-1">handleAddProductFromDialog</code>.
-              </p>
-            </CardContent>
-            <div className="flex justify-end gap-2 p-4">
-              <Button variant="outline" onClick={() => setShowAddDialog(false)}>
-                Cancelar
-              </Button>
-              <Button onClick={() => handleAddProductFromDialog({ name: "Exemplo", category: "Geral", quantity: 10, minStock: 2, price: 19.9 })}>
-                Inserir Exemplo
-              </Button>
-            </div>
-          </Card>
-        </div>
-      )}
-    </div>
+    </TooltipProvider>
   );
 };
 

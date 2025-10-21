@@ -35,6 +35,7 @@ enum Papel {
 model Produto {
   id            String   @id @default(uuid())
   nome          String   @unique
+  codigoBarras  String?  @unique
   descricao     String?
   precoVenda    Decimal  @db.Decimal(14, 2) @default(0)
   estoqueMinimo Decimal? @db.Decimal(14, 3)

@@ -161,27 +161,25 @@ export class StockService {
       },
     });
   }
+public async getValorEstoque() {
+  const lotes = await prisma.lote.findMany({
+    where: {
+      quantidadeAtual: { gt: 0 },
+    },
+    include: { produto: true },
+  });
 
-  // ============================================
-  // 🔹 Calcula valor total do estoque
-  // ============================================
-  public async getValorEstoque() {
-    const lotes = await prisma.lote.findMany({
-      where: {
-        quantidadeAtual: {
-          gt: 0,
-        },
-      },
-      include: {
-        produto: true,
-      },
-    });
-    
-    const valorEstoque = lotes.reduce((total, lote) => {
-      return total + Number(lote.precoCusto) * Number(lote.quantidadeAtual);
-    }, 0);
+  const valorEstoque = lotes.reduce((total, lote) => {
+    const preco = Number(lote.precoCusto) || 0;
+    const quantidade = Number(lote.quantidadeAtual) || 0;
+    return total + preco * quantidade;
+  }, 0);
 
-    return valorEstoque;
-  }
+  return {
+    total: valorEstoque,
+    quantidadeLotes: lotes.length,
+    produtosDistintos: new Set(lotes.map((l) => l.produtoId)).size,
+  };
+}
 
 }

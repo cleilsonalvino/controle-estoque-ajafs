@@ -5,6 +5,8 @@ const prisma = new PrismaClient();
 
 export const createProductService = async (data: any) => {
   console.log("Dados recebidos para criação do produto:", data);
+
+  // Verifica se já existe produto com o mesmo nome
   const product = await prisma.produto.findUnique({
     where: { nome: data.nome },
   });
@@ -13,18 +15,41 @@ export const createProductService = async (data: any) => {
     throw new CustomError("Produto já existe", 400);
   }
 
+  // Função para gerar código de barras EAN-13 válido
+  const criarBarCode = () => {
+    const prefix = "789"; // Prefixo comum para o Brasil
+    const randomDigits = Array.from({ length: 9 }, () =>
+      Math.floor(Math.random() * 10)
+    ).join("");
+    const partialCode = prefix + randomDigits;
+    let sum = 0;
+    for (let i = 0; i < partialCode.length; i++) {
+      const digit = parseInt(partialCode.charAt(i), 10);
+      sum += i % 2 === 0 ? digit : digit * 3;
+    }
+    const mod = sum % 10;
+    const checkDigit = mod === 0 ? 0 : 10 - mod;
+    return partialCode + checkDigit.toString(); // 13 dígitos no total
+  };
+
+  // Gera o código antes de criar
+  const codigoBarras = criarBarCode();
+
+  // Cria o produto no banco
   const createProduct = await prisma.produto.create({
-    data:{
+    data: {
       nome: data.nome,
       descricao: data.descricao,
       precoVenda: data.preco,
       estoqueMinimo: data.estoqueMinimo,
       categoriaId: data.categoriaId,
-    }
+      codigoBarras, // 👈 aqui vai o código gerado
+    },
   });
 
   return createProduct;
 };
+
 
 export const getProductsService = async () => {
   const products = await prisma.produto.findMany({

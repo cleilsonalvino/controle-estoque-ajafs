@@ -18,6 +18,7 @@ export interface Lote {
 export interface Produto {
   id: string;
   nome: string;
+  codigoBarras: string;
   descricao: string;
   precoVenda: string;
   estoqueMinimo: string;
@@ -35,7 +36,7 @@ interface ProdutoContextType {
   loading: boolean;
   fetchProdutos: () => Promise<void>;
   getProdutoById: (id: string) => Promise<Produto | undefined>;
-  createProduto: (novoProduto: Omit<Produto, "id">) => Promise<Produto | undefined>;
+  createProduto: (novoProduto: Omit<Produto, "id" | "codigoBarras">) => Promise<Produto | undefined>;
   updateProduto: (id: string, produtoAtualizado: Omit<Produto, "id">) => Promise<Produto | undefined>;
   deleteProduto: (id: string) => Promise<void>;
 }
@@ -115,6 +116,7 @@ export const ProdutoProvider = ({ children }: ProdutoProviderProps) => {
       };
 
       const { data } = await api.patch<Produto>(`/produtos/${id}`, produtoParaEnviar);
+      console.log("Produto atualizado:", data);
       setProdutos((prev) => prev.map((p) => (p.id === id ? data : p)));
       toast.success("Produto atualizado com sucesso!");
       return data;

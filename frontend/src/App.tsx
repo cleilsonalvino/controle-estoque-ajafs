@@ -50,7 +50,11 @@ const App = () => (
                           <TipoServicoProvider>
                             <Routes>
                               <Route path="/login" element={<LoginPage />} />
+
+                              {/* Routes protected by authentication */}
                               <Route element={<ProtectedRoute />}>
+                                
+                                {/* === GROUP 1: Routes WITH Sidebar === */}
                                 <Route path="/" element={<Layout />}>
                                   <Route index element={<Dashboard />} />
                                   <Route path="/products" element={<Products />} />
@@ -59,14 +63,17 @@ const App = () => (
                                   <Route path="/categories" element={<Categories />} />
                                   <Route path="/service-categories" element={<ServiceCategories />} />
                                   <Route path="/tipos-servicos" element={<TiposServicos />} />
-                                  <Route path="/sales" element={<Sales />} />
                                   <Route path="/dashboard-sales" element={<SalesDashboard />} />
                                   <Route path="/clientes" element={<Clientes />} />
                                   <Route path="/vendedores" element={<Vendedores />} />
                                   <Route path="/settings" element={<Settings />} />
                                 </Route>
+
+                                {/* === GROUP 2: Route WITHOUT Sidebar (PDV) === */}
+                                <Route path="/sales" element={<Sales />} />
+
                               </Route>
-                              {/* Catch-all route for 404 */}
+
                               <Route path="*" element={<NotFound />} />
                             </Routes>
                           </TipoServicoProvider>

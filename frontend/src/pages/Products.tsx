@@ -28,6 +28,7 @@ import {
   PlusCircle,
   LayoutGrid,
   Eye,
+  Trash,
 } from "lucide-react";
 import {
   Table as ShadcnTable,
@@ -386,7 +387,7 @@ const CreateProdutoDialog: React.FC<{
   onCreate: (p: Omit<Produto, "id">) => void;
 }> = ({ open, onOpenChange, onCreate }) => {
   // CORREÇÃO: Adicionado `precoCusto` ao estado inicial do formulário.
-  const initialState: Omit<Produto, "id"> = {
+  const initialState: Omit<Produto, "id", "codigoBarras"> = {
     nome: "",
     descricao: "",
     precoVenda: "",
@@ -448,24 +449,45 @@ const CreateProdutoDialog: React.FC<{
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-2xl">Criar novo produto</DialogTitle>
-        </DialogHeader>
+      <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto ">
+<DialogHeader>
+  <div className="flex items-center gap-2 max-w-lg justify-between">
+    <DialogTitle className="text-2xl font-semibold text-black ">
+      Criar novo produto
+    </DialogTitle>
+
+    {/* Tooltip opcional para o ícone */}
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Trash
+            onClick={()=> {setForm(initialState)}}
+            id="nome-create"
+            className="w-5 h-5 text-black cursor-pointer hover:text-red-300 transition-colors"
+          />
+        </TooltipTrigger>
+      </Tooltip>
+    </TooltipProvider>
+  </div>
+</DialogHeader>
+
         <div className="space-y-6 py-2">
           {/* CORREÇÃO: Layout de grid corrigido e input de Preço de Custo adicionado. */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label htmlFor="nome-create">Nome</Label>
               <Input
+              className="border-slate-900"
                 id="nome-create"
                 value={form.nome}
                 onChange={(e) => handleChange("nome", e.target.value)}
               />
             </div>
+
             <div className="space-y-2">
               <Label htmlFor="preco-venda-create">Preço de Venda (R$)</Label>
               <Input
+                className="border-slate-900"
                 id="preco-venda-create"
                 value={form.precoVenda}
                 onChange={(e) => handlePriceInput("precoVenda", e.target.value)}
@@ -477,6 +499,7 @@ const CreateProdutoDialog: React.FC<{
           <div className="space-y-2">
             <Label htmlFor="image-create">URL da imagem</Label>
             <Input
+              className="border-slate-900"
               id="image-create"
               value={form.image ?? ""}
               onChange={(e) => handleChange("image", e.target.value)}
@@ -486,17 +509,18 @@ const CreateProdutoDialog: React.FC<{
           <div className="space-y-2">
             <Label htmlFor="descricao-create">Descrição</Label>
             <Textarea
+              
               id="descricao-create"
               value={form.descricao}
               onChange={(e) => handleChange("descricao", e.target.value)}
-              className="min-h-28"
+              className="min-h-28 border-slate-500"
             />
           </div>
 
-          <Separator />
+          <Separator /> 
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
+            <div className="space-y-2 ">
               <Label
                 htmlFor="categoriaNome-create"
                 className="flex items-center gap-2"
@@ -504,6 +528,7 @@ const CreateProdutoDialog: React.FC<{
                 <TagIcon className="w-4 h-4" /> Categoria
               </Label>
               <Select
+                
                 value={form.categoria.id}
                 onValueChange={(id) => handleSelectChange("categoria", id)}
               >
@@ -525,6 +550,7 @@ const CreateProdutoDialog: React.FC<{
             <div className="space-y-2">
               <Label htmlFor="estoqueMinimo-create">Estoque Mínimo</Label>
               <Input
+                className="border-slate-500"
                 id="estoqueMinimo-create"
                 type="number"
                 value={String(form.estoqueMinimo)}
@@ -579,6 +605,7 @@ export const Products: React.FC = () => {
     try {
       const { id, ...dados } = produtoAtualizado;
       await updateProduto(id, dados);
+
       toast({ title: "✅ Produto atualizado com sucesso!" });
     } catch (error) {
       toast({
@@ -763,7 +790,7 @@ export const Products: React.FC = () => {
                       : "—"}
                   </TableCell>
                   <TableCell>
-                    {produto.lote.reduce(
+                    {produto.lote?.reduce(
                       (total, lote) => total + Number(lote.quantidadeAtual),
                       0
                     )}
@@ -772,20 +799,16 @@ export const Products: React.FC = () => {
                   <TableCell>
                     R${" "}
                     {(
-                      produto.lote.reduce(
+                      produto.lote?.reduce(
                         (acumulador, item) =>
                           acumulador + Number(item.precoCusto),
                         0
-                      ) / produto.lote.length
+                      ) / produto.lote?.length
                     ).toFixed(2)}
                   </TableCell>
 
                   <TableCell>
-                    {produto.precoVenda ? (
-                      `R$ ${produto.precoVenda}`
-                    ) : (
-                      "—"
-                    )}
+                    {produto.precoVenda ? `R$ ${produto.precoVenda}` : "—"}
                   </TableCell>
                   {/* CORREÇÃO: Bloco de ações com Tooltip corrigido. */}
                   <TableCell className="flex justify-end gap-2">

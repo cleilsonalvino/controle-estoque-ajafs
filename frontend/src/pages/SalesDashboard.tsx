@@ -14,9 +14,8 @@ import { useProdutos, Produto } from "@/contexts/ProdutoContext";
 import { useCategories, Category } from "@/contexts/CategoryContext";
 import { Badge } from "@/components/ui/badge";
 import { useEffect, useMemo, useState } from "react";
-import SaleDetails from '@/components/SaleDetails';
 import NotaFiscalModal from '@/components/NotaFiscalModal';
-import { Sale, SaleItem, Product } from '@/contexts/SalesContext';
+import { Sale, SaleData } from '@/contexts/SalesContext';
 
 // ========================
 // Utils
@@ -469,9 +468,8 @@ const SalesDashboard = () => { // eslint-disable-next-line @typescript-eslint/no
   // ========================
   // Render
   // ========================
-  return (
-    <div className="p-6 bg-gray-50 min-h-screen">
-      {selectedSale && <SaleDetails sale={selectedSale} onClose={() => setSelectedSale(null)} />}
+  return ( 
+    <div className="p-6 bg-gray-50 min-h-screen"> 
       {saleForNotaFiscal && <NotaFiscalModal sale={saleForNotaFiscal} onClose={() => setSaleForNotaFiscal(null)} onConfirm={confirmIssueNotaFiscal} />}
       <h1 className="text-3xl font-bold text-gray-800 mb-6">Dashboard de Vendas</h1>
 

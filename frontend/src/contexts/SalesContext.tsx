@@ -7,10 +7,11 @@ import {
   useEffect,
 } from "react";
 import axios from "@/lib/api"; // seu axios configurado
+import { Produto } from "./ProdutoContext";
 
 export interface SaleItem {
   id: string;
-  produto: Product;
+  produto: Produto;
   precoVenda: number;
   precoCusto: number;
   quantity: number;
@@ -19,13 +20,6 @@ export interface SaleItem {
   servicoId?: string;
   quantidade?: string;
   precoUnitario?: string;
-}
-
-export interface Product {
-  id: string;
-  nome: string;
-  precoVenda: number;
-  precoCusto: number;
 }
 
 export interface Sale {
@@ -41,12 +35,12 @@ export interface Sale {
   vendedor: {
     nome: string
   }
-  produto: Product[];
+  produto: Produto[];
   itens: SaleItem[];
   criadoEm?: string;
 }
 
-interface SaleData {
+export interface SaleData {
   clienteId: string;
   vendedorId: string;
   desconto: number;
@@ -60,7 +54,7 @@ interface SaleData {
 
 interface SalesContextProps {
   sales: Sale[];
-  products: Product[];
+  products: Produto[];
   loading: boolean;
   fetchSales: () => Promise<void>;
   createSale: (saleData: SaleData) => Promise<Sale>;
@@ -83,7 +77,7 @@ interface SalesProviderProps {
 export const SalesProvider = ({ children }: SalesProviderProps) => {
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(false);
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<Produto[]>([]);
 
   const fetchSales = async () => {
     setLoading(true);

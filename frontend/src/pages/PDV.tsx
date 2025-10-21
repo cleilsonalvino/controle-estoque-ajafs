@@ -1,277 +1,386 @@
+// src/pages/PDV.tsx
 
-import { useState } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
+import {
+  X,
+  Search,
+  User,
+  Tag,
+  DollarSign,
+  Trash2,
+  Maximize,
+  Minimize,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Product, SaleItem } from "@/contexts/SalesContext";
-import { useSales } from "@/contexts/SalesContext";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { PlusCircle, MinusCircle, XCircle, ArrowLeft } from "lucide-react";
-import { useClientes } from "@/contexts/ClienteContext";
-import { useVendedores } from "@/contexts/VendedorContext";
+import { Separator } from "@/components/ui/separator";
+import { SaleItem } from "@/contexts/SalesContext";
+import { Produto } from "@/contexts/ProdutoContext";
+import { Cliente } from "@/contexts/ClienteContext";
+import { Vendedor } from "@/contexts/VendedorContext";
 
 interface PDVProps {
-  saleItems: SaleItem[];
-  setSaleItems: React.Dispatch<React.SetStateAction<SaleItem[]>>;
-  products: Product[];
-  handleFinalizeSale: () => void;
-  setIsPdvMode: (isPdvMode: boolean) => void;
-  selectedCliente: string | undefined;
-  setSelectedCliente: (clienteId: string | undefined) => void;
-  selectedVendedor: string | undefined;
-  setSelectedVendedor: (vendedorId: string | undefined) => void;
-  discount: string;
-  setDiscount: (discount: string) => void;
-  paymentMethod: string | undefined;
-  setPaymentMethod: (paymentMethod: string | undefined) => void;
+  produtos: Produto[];
+  clientes: Cliente[];
+  vendedores: Vendedor[];
+  onFinalizeSale: (saleData: any) => Promise<boolean>;
+  onExit: () => void;
 }
 
-const PDV = ({ 
-  saleItems, 
-  setSaleItems, 
-  products, 
-  handleFinalizeSale, 
-  setIsPdvMode,
-  selectedCliente,
-  setSelectedCliente,
-  selectedVendedor,
-  setSelectedVendedor,
-  discount,
-  setDiscount,
-  paymentMethod,
-  setPaymentMethod
+const PDV = ({
+  produtos,
+  clientes,
+  vendedores,
+  onFinalizeSale,
+  onExit,
 }: PDVProps) => {
-  const [searchTerm, setSearchTerm] = useState("");
-  const { clientes } = useClientes();
-  const { vendedores } = useVendedores();
+  // Estados da Venda
+  const [saleItems, setSaleItems] = useState<SaleItem[]>([]);
+  const [selectedCliente, setSelectedCliente] = useState<string | undefined>();
+  const [selectedVendedor, setSelectedVendedor] = useState<string | undefined>();
+  const [discount, setDiscount] = useState<number>(0);
+  const [paymentMethod, setPaymentMethod] = useState<string | undefined>();
 
-  const filteredProducts = products.filter((product) =>
-    product.nome.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Estados da UI
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
-  const handleAddItem = (product: Product) => {
-    const existingItem = saleItems.find((item) => item.id === product.id);
-    if (existingItem) {
-      setSaleItems(
-        saleItems.map((item) =>
-          item.id === product.id
+  // Refs para focar nos inputs
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const clienteSelectRef = useRef<HTMLButtonElement>(null);
+
+  // Lógica de busca de produtos
+  const filteredProducts = useMemo(() => {
+    if (!searchQuery) return [];
+    return produtos.filter((p) =>
+      p.codigoBarras.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [searchQuery, produtos]);
+
+  // Funções de manipulação do carrinho
+  const addItemToSale = (produto: Produto) => {
+    setSaleItems((prevItems) => {
+      const existingItem = prevItems.find((item) => item.id === produto.id);
+      if (existingItem) {
+        return prevItems.map((item) =>
+          item.id === produto.id
             ? { ...item, quantity: item.quantity + 1 }
             : item
-        )
-      );
-    } else {
-      setSaleItems([
-        ...saleItems,
+        );
+      }
+      return [
+        ...prevItems,
         {
-          id: product.id,
-          produto: product,
-          precoVenda: product.precoVenda,
-          precoCusto: product.precoCusto,
+          id: produto.id,
+          produto: produto,
+          precoVenda: parseFloat(produto.precoVenda),
+          precoCusto: produto.lote?.[0]?.precoCusto || 0,
           quantity: 1,
           type: "produto",
         },
-      ]);
-    }
+      ];
+    });
+    setSearchQuery("");
   };
 
-  const handleUpdateQuantity = (id: string, quantity: number) => {
-    if (quantity <= 0) {
-      setSaleItems(saleItems.filter((item) => item.id !== id));
+  const updateItemQuantity = (id: string, newQuantity: number) => {
+    if (newQuantity <= 0) {
+      setSaleItems((prev) => prev.filter((item) => item.id !== id));
     } else {
-      setSaleItems(
-        saleItems.map((item) => (item.id === id ? { ...item, quantity } : item))
+      setSaleItems((prev) =>
+        prev.map((item) =>
+          item.id === id ? { ...item, quantity: newQuantity } : item
+        )
       );
     }
   };
 
-  const subtotal = saleItems.reduce(
-    (acc, item) => acc + item.precoVenda * item.quantity,
-    0
+  // Cálculos de total
+  const subtotal = useMemo(
+    () =>
+      saleItems.reduce(
+        (acc, item) => acc + (item.precoVenda || 0) * item.quantity,
+        0
+      ),
+    [saleItems]
   );
-  const discountAmount = (subtotal * parseFloat(discount)) / 100;
-  const total = subtotal - discountAmount;
+  const total = useMemo(
+    () => subtotal - (subtotal * discount) / 100,
+    [subtotal, discount]
+  );
+
+  // Efeito para atalhos de teclado
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "F1") {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+      if (e.key === "F2") {
+        e.preventDefault();
+        clienteSelectRef.current?.click();
+      }
+      if (e.key === "F4" && saleItems.length > 0) {
+        e.preventDefault();
+        setIsPaymentDialogOpen(true);
+      }
+      if (e.key === "Escape") {
+        setIsPaymentDialogOpen(false);
+        setSearchQuery("");
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [saleItems]);
+
+  // Lógica de Tela Cheia
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen();
+      setIsFullscreen(true);
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+        setIsFullscreen(false);
+      }
+    }
+  };
+  
+  useEffect(() => {
+    const onFullscreenChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', onFullscreenChange);
+  }, []);
+
+  const handleFinalize = async () => {
+    if (!selectedVendedor || !paymentMethod) {
+        alert("Vendedor e Forma de Pagamento são obrigatórios.");
+        return;
+    }
+
+    const success = await onFinalizeSale({
+        saleItems,
+        clienteId: selectedCliente,
+        vendedorId: selectedVendedor,
+        desconto: discount,
+        formaPagamento: paymentMethod,
+    });
+    
+    if (success) {
+        // Limpa o estado para a próxima venda
+        setSaleItems([]);
+        setSelectedCliente(undefined);
+        setSelectedVendedor(undefined);
+        setDiscount(0);
+        setPaymentMethod(undefined);
+        setIsPaymentDialogOpen(false);
+    }
+  };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 p-4">
-      {/* Product Selection */}
-      <div className="lg:col-span-2">
-        <Card>
+    <div className="flex h-screen w-screen bg-muted/40">
+      {/* Coluna Esquerda: Itens e Total */}
+      <div className="flex flex-1 flex-col p-4 gap-4">
+        <Card className="flex-1 flex flex-col">
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>Produtos</CardTitle>
-              <Button onClick={() => setIsPdvMode(false)} variant="outline">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Voltar
-              </Button>
-            </div>
-            <Input
-              placeholder="Buscar produto..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+            <CardTitle>Itens da Venda</CardTitle>
           </CardHeader>
-          <CardContent>
-            <ScrollArea className="h-[70vh]">
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {filteredProducts.map((product) => (
-                  <Card
-                    key={product.id}
-                    className="cursor-pointer hover:shadow-lg transition-shadow"
-                    onClick={() => handleAddItem(product)}
-                  >
-                    <CardContent className="p-4 flex flex-col items-center justify-center">
-                      <img src="/placeholder.svg" alt={product.nome} className="w-24 h-24 mb-2" />
-                      <p className="text-center font-semibold">{product.nome}</p>
-                      <p className="text-center text-muted-foreground">
-                        {product.precoVenda.toLocaleString("pt-BR", {
-                          style: "currency",
-                          currency: "BRL",
-                        })}
-                      </p>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </ScrollArea>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Sale Details */}
-      <div className="lg:col-span-1">
-        <Card>
-          <CardHeader>
-            <CardTitle>Resumo da Venda</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ScrollArea className="h-[60vh] mb-4">
+          <CardContent className="flex-1 p-0">
+            <ScrollArea className="h-[calc(100vh-250px)]">
               {saleItems.length === 0 ? (
-                <p className="text-center text-muted-foreground">
-                  Nenhum item na venda.
-                </p>
+                <div className="text-center p-10 text-muted-foreground">
+                  <p>Nenhum item adicionado.</p>
+                  <p className="text-sm">Use a busca (F1) para começar.</p>
+                </div>
               ) : (
                 saleItems.map((item) => (
-                  <div
-                    key={item.id}
-                    className="flex items-center justify-between mb-2"
-                  >
-                    <div>
+                  <div key={item.id} className="flex items-center p-4 border-b gap-4">
+                    <div className="flex-1">
                       <p className="font-semibold">{item.produto.nome}</p>
                       <p className="text-sm text-muted-foreground">
-                        {item.precoVenda.toLocaleString("pt-BR", {
-                          style: "currency",
-                          currency: "BRL",
-                        })}
+                        R$ {item.precoVenda.toFixed(2)}
                       </p>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() =>
-                          handleUpdateQuantity(item.id, item.quantity - 1)
-                        }
-                      >
-                        <MinusCircle className="h-4 w-4" />
-                      </Button>
-                      <span>{item.quantity}</span>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() =>
-                          handleUpdateQuantity(item.id, item.quantity + 1)
-                        }
-                      >
-                        <PlusCircle className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleUpdateQuantity(item.id, 0)}
-                      >
-                        <XCircle className="h-4 w-4 text-red-500" />
-                      </Button>
-                    </div>
+                    <Input
+                      type="number"
+                      className="w-20"
+                      value={item.quantity}
+                      onChange={(e) => updateItemQuantity(item.id, parseInt(e.target.value) || 1)}
+                    />
+                    <p className="w-24 text-right font-medium">
+                      R$ {(item.precoVenda * item.quantity).toFixed(2)}
+                    </p>
+                    <Button variant="ghost" size="icon" onClick={() => updateItemQuantity(item.id, 0)}>
+                      <Trash2 className="h-4 w-4 text-red-500" />
+                    </Button>
                   </div>
                 ))
               )}
             </ScrollArea>
-            <div className="border-t pt-4 space-y-4">
-              <div className="space-y-2">
-                <Label>Cliente</Label>
-                <Select value={selectedCliente} onValueChange={setSelectedCliente}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione um cliente" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {clientes.map((cliente) => (
-                      <SelectItem key={cliente.id} value={cliente.id}>
-                        {cliente.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Vendedor</Label>
-                <Select value={selectedVendedor} onValueChange={setSelectedVendedor}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione um vendedor" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {vendedores.map((vendedor) => (
-                      <SelectItem key={vendedor.id} value={vendedor.id}>
-                        {vendedor.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="discount">Desconto (%)</Label>
-                  <Input
-                    id="discount"
-                    type="number"
-                    value={discount}
-                    onChange={(e) => setDiscount(e.target.value)}
-                    onBlur={(e) =>
-                      setDiscount(String(parseFloat(e.target.value) || 0))
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="payment-method">Forma de Pagamento</Label>
-                  <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pix">Pix</SelectItem>
-                      <SelectItem value="cartao">Cartão de Crédito</SelectItem>
-                      <SelectItem value="dinheiro">Dinheiro</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="flex justify-between font-bold text-lg">
-                <p>Total</p>
-                <p>
-                  {total.toLocaleString("pt-BR", {
-                    style: "currency",
-                    currency: "BRL",
-                  })}
-                </p>
-              </div>
-              <Button className="w-full" size="lg" onClick={handleFinalizeSale}>
-                Finalizar Venda
-              </Button>
-            </div>
           </CardContent>
         </Card>
+        <Card>
+            <CardContent className="p-4 flex justify-between items-center">
+                <div>
+                    <p className="text-muted-foreground">Subtotal</p>
+                    <p className="text-2xl font-bold">R$ {subtotal.toFixed(2)}</p>
+                </div>
+                <div>
+                    <p className="text-muted-foreground">Desconto</p>
+                    <p className="text-2xl font-bold">{discount}%</p>
+                </div>
+                 <div>
+                    <p className="text-muted-foreground text-green-600">Total a Pagar</p>
+                    <p className="text-4xl font-extrabold text-green-600">R$ {total.toFixed(2)}</p>
+                </div>
+            </CardContent>
+        </Card>
       </div>
+
+      {/* Coluna Direita: Controles */}
+      <div className="w-[380px] bg-background p-4 flex flex-col gap-4 border-l">
+        <div className="flex justify-between items-center">
+            <h2 className="text-2xl font-bold">Caixa</h2>
+            <div className="flex gap-2">
+                 <Button onClick={toggleFullscreen} variant="outline" size="icon">
+                    {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
+                </Button>
+                <Button onClick={onExit} variant="destructive" size="icon">
+                    <X className="h-4 w-4" />
+                </Button>
+            </div>
+        </div>
+        
+        {/* Busca de Produto */}
+        <div className="relative">
+          <Label htmlFor="search">Buscar Produto (F1)</Label>
+          <Search className="absolute left-2.5 top-9 h-4 w-4 text-muted-foreground" />
+          <Input
+            ref={searchInputRef}
+            id="search"
+            placeholder="Digite o nome do produto..."
+            className="pl-8"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          {filteredProducts.length > 0 && (
+            <Card className="absolute top-full w-full mt-1 z-10">
+              <ScrollArea className="h-auto max-h-60">
+                {filteredProducts.map((p) => (
+                  <div
+                    key={p.id}
+                    className="p-3 hover:bg-muted cursor-pointer"
+                    onClick={() => addItemToSale(p)}
+                  >
+                    {p.nome} - R$ {parseFloat(p.precoVenda).toFixed(2)}
+                  </div>
+                ))}
+              </ScrollArea>
+            </Card>
+          )}
+        </div>
+        
+        <Separator/>
+
+        {/* Cliente e Vendedor */}
+        <div className="space-y-4">
+            <div>
+                <Label>Cliente (F2)</Label>
+                <Select value={selectedCliente} onValueChange={setSelectedCliente}>
+                    <SelectTrigger ref={clienteSelectRef}>
+                        <User className="h-4 w-4 mr-2 text-muted-foreground" />
+                        <SelectValue placeholder="Consumidor Final" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {clientes.map(c => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
+                    </SelectContent>
+                </Select>
+            </div>
+             <div>
+                <Label>Vendedor</Label>
+                <Select value={selectedVendedor} onValueChange={setSelectedVendedor}>
+                    <SelectTrigger>
+                        <Tag className="h-4 w-4 mr-2 text-muted-foreground" />
+                        <SelectValue placeholder="Selecione um vendedor" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {vendedores.map(v => <SelectItem key={v.id} value={v.id}>{v.nome}</SelectItem>)}
+                    </SelectContent>
+                </Select>
+            </div>
+        </div>
+        
+        <Separator/>
+
+        <div className="flex-1" /> {/* Espaçador */}
+
+        <Button 
+            onClick={() => setIsPaymentDialogOpen(true)} 
+            disabled={saleItems.length === 0} 
+            size="lg" 
+            className="w-full py-8 text-xl"
+        >
+            <DollarSign className="h-6 w-6 mr-2" /> Finalizar Venda (F4)
+        </Button>
+      </div>
+      
+      {/* Modal de Pagamento */}
+      <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
+          <DialogContent>
+              <DialogHeader>
+                  <DialogTitle className="text-2xl">Finalizar Venda</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                  <div className="text-center">
+                      <p className="text-muted-foreground">Total</p>
+                      <p className="text-5xl font-bold">R$ {total.toFixed(2)}</p>
+                  </div>
+                  <div>
+                      <Label>Desconto (%)</Label>
+                      <Input 
+                        type="number"
+                        value={discount}
+                        onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
+                      />
+                  </div>
+                  <div>
+                      <Label>Forma de Pagamento</Label>
+                       <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Selecione..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="pix">Pix</SelectItem>
+                            <SelectItem value="cartao">Cartão de Crédito</SelectItem>
+                            <SelectItem value="dinheiro">Dinheiro</SelectItem>
+                        </SelectContent>
+                    </Select>
+                  </div>
+              </div>
+              <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsPaymentDialogOpen(false)}>Cancelar</Button>
+                  <Button onClick={handleFinalize} disabled={!paymentMethod || !selectedVendedor}>Confirmar Pagamento</Button>
+              </DialogFooter>
+          </DialogContent>
+      </Dialog>
     </div>
   );
 };

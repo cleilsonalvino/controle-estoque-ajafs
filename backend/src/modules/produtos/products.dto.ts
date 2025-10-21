@@ -9,7 +9,7 @@ export const createProductSchema = z.object({
 }).strict();
 
 export const updateProductSchema = z.object({
-  nome: z.string(),
+  nome: z.string().optional(),
   descricao: z.string().optional(),
   precoVenda: z.number().nonnegative(),
   estoqueMinimo: z.number().optional(),
