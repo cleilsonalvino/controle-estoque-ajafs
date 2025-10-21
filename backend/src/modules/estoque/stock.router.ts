@@ -1,15 +1,15 @@
 import { Router } from 'express';
 import { StockController } from './stock.controller.ts';
-import { validate } from '../../shared/zod.ts';
+import { validateBody } from '../../shared/zod.ts';
 import { createMovimentacaoSchema } from './stock.dto.ts';
 
 const router = Router();
 const stockController = new StockController();
 
 router.post(
-  '/saida',
-  validate(createMovimentacaoSchema),
-  stockController.createSaida
+  '/movimentacao',
+  validateBody(createMovimentacaoSchema),
+  stockController.createMovimentacao
 );
 
 router.get(
@@ -21,5 +21,7 @@ router.get(
   '/movimentacoes',
   stockController.getMovimentacoes
 );
+
+router.get('/valor-estoque', stockController.getValorEstoque);
 
 export default router;

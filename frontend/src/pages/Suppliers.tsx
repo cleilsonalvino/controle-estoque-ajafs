@@ -28,13 +28,13 @@ const Suppliers = () => {
   );
 
   const handleAddSupplier = () => {
-    if (!formData.nome || !formData.contato) return;
+    if (!formData.nome) return;
     createSupplier(formData);
     resetForm();
   };
 
   const handleUpdateSupplier = () => {
-    if (!editingSupplier || !formData.nome || !formData.contato) return;
+    if (!editingSupplier || !formData.nome) return;
     updateSupplier(editingSupplier.id, formData);
     resetForm();
   };

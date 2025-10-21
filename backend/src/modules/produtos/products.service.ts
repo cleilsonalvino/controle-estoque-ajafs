@@ -14,10 +14,13 @@ export const createProductService = async (data: any) => {
   }
 
   const createProduct = await prisma.produto.create({
-    data: {
-      ...data,
-      estoqueAtual: 0, // Estoque inicial é sempre 0
-    },
+    data:{
+      nome: data.nome,
+      descricao: data.descricao,
+      precoVenda: data.preco,
+      estoqueMinimo: data.estoqueMinimo,
+      categoriaId: data.categoriaId,
+    }
   });
 
   return createProduct;
@@ -27,13 +30,18 @@ export const getProductsService = async () => {
   const products = await prisma.produto.findMany({
     include: {
       categoria: true,
-      fornecedor: true,
-      Lote: true,
-
+      fornecedor: true, // fornecedor direto do produto
+      lote: {
+        include: {
+          fornecedor: true, // fornecedor do lote
+        },
+      },
     },
   });
+
   return products;
 };
+
 
 export const getProductByIdService = async (id: string) => {
   const product = await prisma.produto.findUnique({

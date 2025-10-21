@@ -33,12 +33,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-
 import { Badge } from "@/components/ui/badge";
 
 interface Movement {
   id: string;
-  type: "ENTRADA" | "SAIDA";
+  type: "ENTRADA" | "SAIDA" | "AJUSTE";
   product: string;
   quantity: number;
   reason: string;
@@ -55,12 +54,18 @@ const Movements = () => {
   const [searchTerm, setSearchTerm] = useState("");
 
   const [newMovement, setNewMovement] = useState({
-    type: "ENTRADA" as "ENTRADA" | "SAIDA",
+    type: "ENTRADA" as "ENTRADA" | "AJUSTE" | "SAIDA",
     product: "",
     quantity: "",
     reason: "",
     notes: "",
+    fornecedorId: "",
+    precoCusto: "",
+    validade: "",
   });
+
+  const [products, setProducts] = useState<any[]>([]);
+  const [suppliers, setSuppliers] = useState<any[]>([]);
 
   // =============================
   // 🔹 Buscar movimentações reais
@@ -70,22 +75,19 @@ const Movements = () => {
       try {
         setLoading(true);
         const response = await api.get("/estoque/movimentacoes");
-
         const data = response.data;
 
-        // adapta os campos do back para o formato do front
         const formatted: Movement[] = data.map((item: any) => ({
           id: item.id,
           type: item.tipo,
-          product: item.produto?.nome || "Produto não encontrado", // Assuming item.produto.nome exists
+          product: item.produto?.nome || "Produto não encontrado",
           quantity: Number(item.quantidade),
           reason: item.tipo || "Sem motivo",
           date: item.criadoEm,
-          user: "Usuário do sistema", // se o backend enviar, substitua por item.usuario.nome
+          user: item.usuario?.nome || "Usuário do sistema",
           notes: item.observacao || "",
         }));
 
-        // ordena por data (mais recente primeiro)
         formatted.sort(
           (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
         );
@@ -113,25 +115,29 @@ const Movements = () => {
   });
 
   // =============================
-  // 🔹 Adicionar movimentação (apenas local)
+  // 🔹 Carrega produtos e fornecedores ao abrir o modal
   // =============================
-  const [products, setProducts] = useState([]);
-
-  // Carrega produtos ao abrir o modal
   useEffect(() => {
     if (!showAddDialog) return;
-    const fetchProducts = async () => {
+    const fetchData = async () => {
       try {
-        const response = await api.get("/produtos");
-        setProducts(response.data);
+        const [prodResp, fornResp] = await Promise.all([
+          api.get("/produtos"),
+          api.get("/fornecedores"),
+        ]);
+        setProducts(prodResp.data);
+        setSuppliers(fornResp.data);
       } catch (error) {
-        console.error("Erro ao carregar produtos:", error);
-        toast.error("Erro ao carregar lista de produtos");
+        console.error("Erro ao carregar produtos/fornecedores:", error);
+        toast.error("Erro ao carregar dados de produtos e fornecedores");
       }
     };
-    fetchProducts();
+    fetchData();
   }, [showAddDialog]);
 
+  // =============================
+  // 🔹 Adicionar movimentação + criação de lote (entrada)
+  // =============================
   const handleAddMovement = async () => {
     if (!newMovement.product || !newMovement.quantity) {
       toast.warning("Preencha todos os campos obrigatórios!");
@@ -139,14 +145,31 @@ const Movements = () => {
     }
 
     try {
-      await api.post("/estoque/movimentacao", {
+      const payload = {
         produtoId: newMovement.product,
-        tipo: newMovement.type.toUpperCase(), // "ENTRADA" | "SAIDA"
+        tipo: newMovement.type.toUpperCase(),
         quantidade: Number(newMovement.quantity),
         observacao: newMovement.notes || "Movimentação manual",
-      });
+        fornecedorId:
+          newMovement.type === "ENTRADA" ? newMovement.fornecedorId || null : null,
+        precoCusto:
+          newMovement.type === "ENTRADA" && newMovement.precoCusto
+            ? Number(newMovement.precoCusto)
+            : null,
+        validade:
+          newMovement.type === "ENTRADA" && newMovement.validade
+            ? newMovement.validade
+            : null,
+      };
+      console.log(payload);
 
-      toast.success("Movimentação registrada com sucesso!");
+      await api.post("/estoque/movimentacao", payload);
+
+      toast.success(
+        newMovement.type === "ENTRADA"
+          ? "Entrada registrada e lote criado!"
+          : "Movimentação registrada com sucesso!"
+      );
       setShowAddDialog(false);
       setNewMovement({
         type: "ENTRADA",
@@ -154,9 +177,11 @@ const Movements = () => {
         quantity: "",
         notes: "",
         reason: "",
+        fornecedorId: "",
+        precoCusto: "",
+        validade: "",
       });
-
-      // Atualiza a lista de movimentações na tela principal
+      // Atualiza lista local
       onMovementAdded();
     } catch (error) {
       console.error(error);
@@ -164,36 +189,36 @@ const Movements = () => {
     }
   };
 
+  const onMovementAdded = async () => {
+    const response = await api.get("/estoque/movimentacoes");
+    setMovements(response.data);
+  };
+
   // =============================
   // 🔹 Utilitários visuais
   // =============================
-  const getMovementIcon = (type: "ENTRADA" | "SAIDA") => {
-    return type === "ENTRADA" ? (
+  const getMovementIcon = (type: "ENTRADA" | "SAIDA" | "AJUSTE") =>
+    type === "ENTRADA" ? (
       <ArrowUp className="h-4 w-4 text-green-600" />
     ) : (
       <ArrowDown className="h-4 w-4 text-red-600" />
     );
+
+  const getMovementBadge = (type: "ENTRADA" | "SAIDA" | "AJUSTE") => {
+    const map = {
+      ENTRADA: "bg-green-600",
+      SAIDA: "bg-red-600",
+      AJUSTE: "bg-yellow-600",
+    };
+    return (
+      <Badge className={`text-xs text-white ${map[type] || "bg-gray-600"}`}>
+        {type.charAt(0) + type.slice(1).toLowerCase()}
+      </Badge>
+    );
   };
 
-const getMovementBadge = (type: "ENTRADA" | "SAIDA" | "AJUSTE") => {
-  if (type === "ENTRADA") {
-    return <Badge className="text-xs bg-green-600 text-white">Entrada</Badge>;
-  } else if (type === "SAIDA") {
-    return <Badge className="text-xs bg-red-600 text-white">Saída</Badge>;
-  } else if (type === "AJUSTE") {
-    return <Badge className="text-xs bg-yellow-600 text-white">Ajuste</Badge>;
-  }
-
-  // fallback opcional, caso venha um tipo inesperado
-  return <Badge className="text-xs bg-gray-600 text-white">Desconhecido</Badge>;
-};
-
-
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleString("pt-BR");
-  };
+  const formatDate = (dateString: string) =>
+    new Date(dateString).toLocaleString("pt-BR");
 
   // =============================
   // 🔹 Renderização
@@ -201,61 +226,53 @@ const getMovementBadge = (type: "ENTRADA" | "SAIDA" | "AJUSTE") => {
   return (
     <div className="p-6">
       {/* Header */}
-      <div className="mb-8">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-gradient-primary rounded-lg">
-              <ArrowUpDown className="h-6 w-6 text-primary-foreground" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">
-                Movimentações
-              </h1>
-              <p className="text-muted-foreground">
-                Histórico de entradas e saídas de produtos
-              </p>
-            </div>
+      <div className="mb-8 flex justify-between items-center">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-gradient-primary rounded-lg">
+            <ArrowUpDown className="h-6 w-6 text-primary-foreground" />
           </div>
-          <Button
-            onClick={() => setShowAddDialog(true)}
-            className="bg-gradient-primary hover:opacity-90 shadow-md"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Nova Movimentação
-          </Button>
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Movimentações</h1>
+            <p className="text-muted-foreground">
+              Entradas, saídas e criação de lotes
+            </p>
+          </div>
         </div>
+        <Button
+          onClick={() => setShowAddDialog(true)}
+          className="bg-gradient-primary hover:opacity-90 shadow-md"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Nova Movimentação
+        </Button>
       </div>
 
       {/* Filtros */}
       <Card className="mb-6 bg-gradient-card border-0 shadow-md">
-        <CardContent className="pt-6">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar por produto ou motivo..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-            </div>
-            <Select value={filterType} onValueChange={setFilterType}>
-              <SelectTrigger className="w-full sm:w-48">
-                <SelectValue placeholder="Tipo" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os tipos</SelectItem>
-                <SelectItem value="ENTRADA">Apenas entradas</SelectItem>
-                <SelectItem value="SAIDA">Apenas saídas</SelectItem>
-              </SelectContent>
-            </Select>
+        <CardContent className="pt-6 flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por produto ou motivo..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9"
+            />
           </div>
+          <Select value={filterType} onValueChange={setFilterType}>
+            <SelectTrigger className="w-full sm:w-48">
+              <SelectValue placeholder="Tipo" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              <SelectItem value="ENTRADA">Entradas</SelectItem>
+              <SelectItem value="SAIDA">Saídas</SelectItem>
+            </SelectContent>
+          </Select>
         </CardContent>
       </Card>
 
-      {/* Lista de movimentações */}
+      {/* Lista */}
       <Card className="bg-gradient-card border-0 shadow-md">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -263,7 +280,7 @@ const getMovementBadge = (type: "ENTRADA" | "SAIDA" | "AJUSTE") => {
             Histórico de Movimentações ({filteredMovements.length})
           </CardTitle>
           <CardDescription>
-            Registro detalhado de todas as movimentações de estoque
+            Registro de entradas, saídas e lotes criados
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -273,91 +290,70 @@ const getMovementBadge = (type: "ENTRADA" | "SAIDA" | "AJUSTE") => {
             </p>
           ) : filteredMovements.length > 0 ? (
             <div className="space-y-4">
-              {filteredMovements.map((movement) => (
+              {filteredMovements.map((m) => (
                 <div
-                  key={movement.id}
+                  key={m.id}
                   className="flex items-center justify-between p-4 bg-card rounded-lg border hover:shadow-sm transition-shadow"
                 >
                   <div className="flex items-center space-x-4">
                     <div className="flex items-center justify-center w-10 h-10 rounded-full bg-muted">
-                      {getMovementIcon(movement.type)}
+                      {getMovementIcon(m.type)}
                     </div>
-                    <div className="flex-1">
+                    <div>
                       <div className="flex items-center gap-2 mb-1">
-                        <h4 className="font-semibold text-foreground">
-                          {movement.product}
-                        </h4>
-                        {getMovementBadge(movement.type)}
+                        <h4 className="font-semibold">{m.product}</h4>
+                        {getMovementBadge(m.type)}
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        <span className="font-medium">Motivo:</span>{" "}
-                        {movement.reason}
-                        {movement.notes && (
-                          <>
-                            <br />
-                            <span className="font-medium">Obs:</span>{" "}
-                            {movement.notes}
-                          </>
-                        )}
+                        {m.reason} — {m.notes}
                       </div>
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-lg font-bold text-foreground">
-                      {movement.type === "ENTRADA" ? "+" : "-"}
-                      {movement.quantity}
+                    <div className="text-lg font-bold">
+                      {m.type === "ENTRADA" ? "+" : "-"}
+                      {m.quantity}
                     </div>
                     <div className="text-xs text-muted-foreground">
-                      {formatDate(movement.date)}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      por {movement.user}
+                      {formatDate(m.date)} <br /> {m.user}
                     </div>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="text-center py-12">
-              <ArrowUpDown className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">
-                Nenhuma movimentação encontrada
-              </h3>
-              <p className="text-muted-foreground">
-                {searchTerm || filterType !== "all"
-                  ? "Tente ajustar os filtros de pesquisa."
-                  : "Registre sua primeira movimentação para começar."}
-              </p>
-            </div>
+            <p className="text-center py-12 text-muted-foreground">
+              Nenhuma movimentação encontrada.
+            </p>
           )}
         </CardContent>
       </Card>
 
-      {/* Modal de nova movimentação */}
+      {/* Modal */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Nova Movimentação</DialogTitle>
             <DialogDescription>
-              Registre uma nova entrada ou saída manual de produto.
+              Registre uma entrada (cria lote) ou saída manual.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
             {/* Tipo */}
             <div className="space-y-2">
-              <Label>Tipo de Movimentação</Label>
-              <Select // Changed from "entrada" | "saida" to "ENTRADA" | "SAIDA"
-                value={newMovement.type} // Changed from "entrada" | "saida" to "ENTRADA" | "SAIDA"
+              <Label>Tipo</Label>
+              <Select
+                value={newMovement.type}
                 onValueChange={(value: "ENTRADA" | "SAIDA") =>
-                  setNewMovement((prev) => ({ ...prev, type: value }))
+                  setNewMovement((p) => ({ ...p, type: value }))
                 }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o tipo" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ENTRADA">Entrada</SelectItem>
+                  <SelectItem value="ENTRADA">Entrada (cria lote)</SelectItem>
                   <SelectItem value="SAIDA">Saída</SelectItem>
                 </SelectContent>
               </Select>
@@ -369,7 +365,7 @@ const getMovementBadge = (type: "ENTRADA" | "SAIDA" | "AJUSTE") => {
               <Select
                 value={newMovement.product}
                 onValueChange={(value) =>
-                  setNewMovement((prev) => ({ ...prev, product: value }))
+                  setNewMovement((p) => ({ ...p, product: value }))
                 }
               >
                 <SelectTrigger>
@@ -385,70 +381,98 @@ const getMovementBadge = (type: "ENTRADA" | "SAIDA" | "AJUSTE") => {
               </Select>
             </div>
 
+            {/* Fornecedor e Preço de Custo (apenas se ENTRADA) */}
+            {newMovement.type === "ENTRADA" && (
+              <>
+                <div className="space-y-2">
+                  <Label>Fornecedor</Label>
+                  <Select
+                    value={newMovement.fornecedorId}
+                    onValueChange={(value) =>
+                      setNewMovement((p) => ({ ...p, fornecedorId: value }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o fornecedor" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {suppliers.map((f) => (
+                        <SelectItem key={f.id} value={f.id}>
+                          {f.nome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Preço de Custo (R$)</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    value={newMovement.precoCusto}
+                    onChange={(e) =>
+                      setNewMovement((p) => ({
+                        ...p,
+                        precoCusto: e.target.value,
+                      }))
+                    }
+                    placeholder="Ex: 12.50"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Validade (opcional)</Label>
+                  <Input
+                    type="date"
+                    value={newMovement.validade}
+                    onChange={(e) =>
+                      setNewMovement((p) => ({
+                        ...p,
+                        validade: e.target.value,
+                      }))
+                    }
+                  />
+                </div>
+              </>
+            )}
+
             {/* Quantidade */}
             <div className="space-y-2">
               <Label>Quantidade</Label>
               <Input
                 type="number"
                 min="1"
-                placeholder="Quantidade"
                 value={newMovement.quantity}
                 onChange={(e) =>
-                  setNewMovement((prev) => ({
-                    ...prev,
-                    quantity: e.target.value,
-                  }))
+                  setNewMovement((p) => ({ ...p, quantity: e.target.value }))
                 }
+                placeholder="Informe a quantidade"
               />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Tipo de Movimentação</Label>
-              <Select
-                value={newMovement.type} // Changed from "entrada" | "saida" to "ENTRADA" | "SAIDA"
-                onValueChange={(value: "ENTRADA" | "SAIDA") =>
-                  setNewMovement((prev) => ({ ...prev, type: value }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ENTRADA">Entrada</SelectItem>
-                  <SelectItem value="SAIDA">Saída</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            </div> 
 
             {/* Observação */}
             <div className="space-y-2">
               <Label>Observação (opcional)</Label>
               <Input
-                placeholder="Ex: ajuste, devolução..."
+                placeholder="Ex: devolução, ajuste..."
                 value={newMovement.notes}
                 onChange={(e) =>
-                  setNewMovement((prev) => ({
-                    ...prev,
-                    notes: e.target.value,
-                  }))
+                  setNewMovement((p) => ({ ...p, notes: e.target.value }))
                 }
               />
             </div>
           </div>
 
           <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setShowAddDialog(false)}
-            >
+            <Button variant="outline" onClick={() => setShowAddDialog(false)}>
               Cancelar
             </Button>
             <Button
               onClick={handleAddMovement}
               className="bg-gradient-primary hover:opacity-90"
             >
-              Registrar Movimentação
+              Registrar
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -458,6 +482,3 @@ const getMovementBadge = (type: "ENTRADA" | "SAIDA" | "AJUSTE") => {
 };
 
 export default Movements;
-function onMovementAdded() {
-  throw new Error("Function not implemented.");
-}

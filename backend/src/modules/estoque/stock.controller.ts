@@ -5,9 +5,11 @@ import { createMovimentacaoSchema } from './stock.dto.ts';
 const stockService = new StockService();
 
 export class StockController {
-  public async createSaida(req: Request, res: Response) {
+
+  public async createMovimentacao(req: Request, res: Response) {
+    console.log('Creating movimentacao with data:', req.body);
     const data = createMovimentacaoSchema.parse(req.body);
-    const result = await stockService.createSaida(data);
+    const result = await stockService.createMovimentacao(data);
     res.status(201).json(result);
   }
 
@@ -21,4 +23,11 @@ export class StockController {
     const movimentacoes = await stockService.getMovimentacoes();
     res.status(200).json(movimentacoes);
   }
+
+  public async getValorEstoque(req: Request, res: Response) {
+    const valorEstoque = await stockService.getValorEstoque();
+    res.status(200).json({ valorEstoque });
+  }
+
+
 }

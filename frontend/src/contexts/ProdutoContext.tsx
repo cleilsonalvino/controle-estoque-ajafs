@@ -5,9 +5,13 @@ import { toast } from "sonner"; // opcional, se quiser mostrar notificações
 
 export interface Lote {
   id: string;
-  lote: string;
-  validade: string;
-  quantidade: number;
+  precoCusto: number,
+  dataCompra: Date,
+  fornecedor:{
+    nome: string
+  },
+  validade: string | null;
+  quantidadeAtual: number;
 }
 
 // types.ts ou dentro do contexto mesmo
@@ -15,20 +19,15 @@ export interface Produto {
   id: string;
   nome: string;
   descricao: string;
-  precoCusto: string;
   precoVenda: string;
-  estoqueAtual: string;
   estoqueMinimo: string;
   categoria: {
     id: string;
     nome: string;
   };
-  fornecedor: {
-    id: string;
-    nome: string;
-  };
   image?: string;
-  lotes: Lote[];
+  criadoEm: Date;
+  lote: Lote[];
 }
 
 interface ProdutoContextType {
@@ -87,12 +86,9 @@ export const ProdutoProvider = ({ children }: ProdutoProviderProps) => {
         const produtoParaEnviar = {
           nome: novoProduto.nome,
           descricao: novoProduto.descricao,
-          precoCusto: Number(novoProduto.precoCusto),
           precoVenda: Number(novoProduto.precoVenda),
-          estoqueAtual: Number(novoProduto.estoqueAtual),
           estoqueMinimo: Number(novoProduto.estoqueMinimo),
           categoriaId: novoProduto.categoria.id,
-          fornecedorId: novoProduto.fornecedor.id,
         };
 
         console.log("Produto para enviar:", produtoParaEnviar);
@@ -113,12 +109,9 @@ export const ProdutoProvider = ({ children }: ProdutoProviderProps) => {
       const produtoParaEnviar = {
         nome: produtoAtualizado.nome,
         descricao: produtoAtualizado.descricao,
-        precoCusto: Number(produtoAtualizado.precoCusto),
         precoVenda: Number(produtoAtualizado.precoVenda),
-        estoqueAtual: Number(produtoAtualizado.estoqueAtual),
         estoqueMinimo: Number(produtoAtualizado.estoqueMinimo),
         categoriaId: produtoAtualizado.categoria.id || "categoria_padrao",
-        fornecedorId: produtoAtualizado.fornecedor.id || "fornecedor_padrao",
       };
 
       const { data } = await api.patch<Produto>(`/produtos/${id}`, produtoParaEnviar);

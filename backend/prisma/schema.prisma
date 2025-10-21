@@ -36,9 +36,7 @@ model Produto {
   id            String   @id @default(uuid())
   nome          String   @unique
   descricao     String?
-  precoCusto    Decimal  @db.Decimal(14, 2) @default(0)
   precoVenda    Decimal  @db.Decimal(14, 2) @default(0)
-  estoqueAtual  Decimal  @default(0) @db.Decimal(14, 3)
   estoqueMinimo Decimal? @db.Decimal(14, 3)
   categoriaId   String?  
   fornecedorId  String? 
@@ -50,7 +48,7 @@ model Produto {
   movimentacoes Movimentacao[]
   itensVenda    ItemVenda[]
 
-  Lote Lote[]
+  lote Lote[]
 }
 
 model CategoriaProduto {
@@ -96,7 +94,7 @@ model Fornecedor {
 
   produtos Produto[]
 
-  Lote Lote[]
+  lote Lote[]
 }
 
 // ================================
@@ -215,7 +213,6 @@ model Lote {
   produtoId       String
   fornecedorId    String?
   precoCusto      Decimal  @db.Decimal(14, 2)
-  quantidadeTotal Decimal  @db.Decimal(14, 3)
   quantidadeAtual Decimal  @db.Decimal(14, 3)
   dataCompra      DateTime @default(now())
   validade        DateTime?

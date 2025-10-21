@@ -1,26 +1,28 @@
-import { type Request, type Response, type NextFunction } from 'express';
-import { ZodError, z } from 'zod';
+// shared/zod.ts
+import { ZodError, type ZodTypeAny } from "zod";
+import { type Request, type Response, type NextFunction } from "express";
 
-export const validate = (schema: z.AnyZodObject) => {
+export const validateBody = (schema: ZodTypeAny) => {
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
-      await schema.parseAsync({
-        body: req.body,
-        query: req.query,
-        params: req.params,
-      });
-      return next();
+      req.body = await schema.parseAsync(req.body);
+      next();
     } catch (error) {
       if (error instanceof ZodError) {
-        return res.status(400).json(
-          error.issues.map((issue) => ({
-            path: issue.path.join('.'),
+        console.error("❌ Erro de validação Zod:", error.issues);
+        return res.status(400).json({
+          status: "error",
+          message: "Erro de validação nos dados enviados.",
+          errors: error.issues.map((issue) => ({
+            path: issue.path.join("."),
             message: issue.message,
-          }))
-        );
+          })),
+        });
       }
-      // Pode-se adicionar um tratamento para outros tipos de erro aqui
-      return res.status(500).json({ message: 'Internal server error' });
+      return res.status(500).json({
+        status: "error",
+        message: "Erro interno do servidor.",
+      });
     }
   };
 };

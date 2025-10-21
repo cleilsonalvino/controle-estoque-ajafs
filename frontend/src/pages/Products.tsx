@@ -1,7 +1,6 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { useProdutos, Produto } from "@/contexts/ProdutoContext";
 import { motion, AnimatePresence, Variants } from "framer-motion";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -13,7 +12,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
   Select,
@@ -26,25 +24,35 @@ import {
   Edit3,
   Trash2,
   TagIcon,
-  Package,
-  DollarSign,
-  Boxes,
   Search,
   PlusCircle,
   LayoutGrid,
-  XCircle,
   Eye,
-  Table
 } from "lucide-react";
-import { Table as ShadcnTable, TableHeader, TableBody, TableRow, TableHead, TableCell, } from "@/components/ui/table";
+import {
+  Table as ShadcnTable,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
 import { Category as Categoria } from "@/contexts/CategoryContext";
 import { Supplier as Fornecedor } from "@/contexts/SupplierContext";
 import api from "@/lib/api";
+// CORREÇÃO: Removida a importação de 'RechartsTooltip' e importado o 'Tooltip' padrão.
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { useToast } from "@/hooks/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
+import { DialogDescription } from "@radix-ui/react-dialog";
 
-
-// Renomeado para evitar conflito
 /**
- * Modal de Detalhes do Produto (Componente 1)
+ * Modal de Detalhes do Produto
  */
 const ProdutoDetalhesDialog: React.FC<{
   open: boolean;
@@ -58,13 +66,19 @@ const ProdutoDetalhesDialog: React.FC<{
       <DialogContent className="sm:max-w-3xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl">Detalhes do Produto</DialogTitle>
+          <DialogDescription id="dialog-description">
+            Preencha os dados do novo produto
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6 py-2">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div>
               <img
-                src={produto.image || "https://placehold.co/600x400?text=Foto+Produto"}
+                src={
+                  produto.image ||
+                  "https://placehold.co/600x400?text=Foto+Produto"
+                }
                 alt={produto.nome}
                 className="w-full h-auto object-cover rounded-lg shadow-md"
               />
@@ -76,16 +90,13 @@ const ProdutoDetalhesDialog: React.FC<{
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label>Preço de Custo</Label>
-                  <p className="font-semibold">R$ {Number(produto.precoCusto).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                </div>
-                <div>
                   <Label>Preço de Venda</Label>
-                  <p className="font-semibold">R$ {Number(produto.precoVenda).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                </div>
-                <div>
-                  <Label>Estoque Atual</Label>
-                  <p className="font-semibold">{produto.estoqueAtual}</p>
+                  <p className="font-semibold">
+                    R${" "}
+                    {Number(produto.precoVenda).toLocaleString("pt-BR", {
+                      minimumFractionDigits: 2,
+                    })}
+                  </p>
                 </div>
                 <div>
                   <Label>Estoque Mínimo</Label>
@@ -93,11 +104,9 @@ const ProdutoDetalhesDialog: React.FC<{
                 </div>
                 <div>
                   <Label>Categoria</Label>
-                  <p className="font-semibold">{produto.categoria?.nome || "Sem categoria"}</p>
-                </div>
-                <div>
-                  <Label>Fornecedor</Label>
-                  <p className="font-semibold">{produto.fornecedor?.nome || "Sem fornecedor"}</p>
+                  <p className="font-semibold">
+                    {produto.categoria?.nome || "Sem categoria"}
+                  </p>
                 </div>
               </div>
             </div>
@@ -110,21 +119,42 @@ const ProdutoDetalhesDialog: React.FC<{
                 <TableRow>
                   <TableHead>Lote</TableHead>
                   <TableHead>Validade</TableHead>
-                  <TableHead className="text-right">Quantidade</TableHead>
+                  <TableHead>Quantidade</TableHead>
+                  <TableHead>Preço de Custo</TableHead>
+                  <TableHead>Fornecedor</TableHead>
+                  <TableHead>Data de Compra</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {produto.lotes?.map((lote) => (
+                {produto.lote?.map((lote) => (
                   <TableRow key={lote.id}>
-                    <TableCell>{lote.lote}</TableCell>
-                    <TableCell>{new Date(lote.validade).toLocaleDateString('pt-BR')}</TableCell>
-                    <TableCell className="text-right">{lote.quantidade}</TableCell>
+                    <TableCell>{lote.id}</TableCell>
+                    <TableCell>
+                      {new Date(lote.validade).toLocaleDateString("pt-BR")}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {lote.quantidadeAtual}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      R${" "}
+                      {Number(lote.precoCusto).toLocaleString("pt-BR", {
+                        minimumFractionDigits: 2,
+                      })}
+                    </TableCell>
+                    <TableCell>
+                      {lote.fornecedor?.nome || "Sem fornecedor"}
+                    </TableCell>
+                    <TableCell>
+                      {new Date(lote.dataCompra).toLocaleDateString("pt-BR")}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </ShadcnTable>
-            {(!produto.lotes || produto.lotes.length === 0) && (
-              <p className="text-center text-muted-foreground py-4">Nenhum lote cadastrado para este produto.</p>
+            {(!produto.lote || produto.lote.length === 0) && (
+              <p className="text-center text-muted-foreground py-4">
+                Nenhum lote cadastrado para este produto.
+              </p>
             )}
           </div>
         </div>
@@ -139,14 +169,13 @@ const ProdutoDetalhesDialog: React.FC<{
   );
 };
 
-// ALTERADO: As funções agora fazem chamadas de API reais
 const fetchCategorias = async (): Promise<Categoria[]> => {
   try {
     const response = await api.get<Categoria[]>("/categorias");
-    return response.data; // Axios já devolve os dados aqui
+    return response.data;
   } catch (error: any) {
     console.error("Falha ao buscar categorias:", error.message || error);
-    return []; // Retorna array vazio em caso de erro
+    return [];
   }
 };
 
@@ -161,10 +190,6 @@ const fetchFornecedores = async (): Promise<Fornecedor[]> => {
 };
 
 /**
- * Modal de Detalhes do Produto (Componente 2)
- */
-
-/**
  * Modal de Edição de Produto
  */
 const EditProdutoDialog: React.FC<{
@@ -177,23 +202,20 @@ const EditProdutoDialog: React.FC<{
   const [saving, setSaving] = useState(false);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
-  const [precoCustoInput, setPrecoCustoInput] = useState("");
   const [precoVendaInput, setPrecoVendaInput] = useState("");
 
   const { fetchProdutos } = useProdutos();
 
-  // Atualiza form quando troca de produto
   useEffect(() => {
     setForm(produto ?? null);
   }, [produto]);
 
-  // Atualiza input de preço quando muda o produto
   useEffect(() => {
-    setPrecoCustoInput(produto ? produto.precoCusto.toString().replace(".", ",") : "");
-    setPrecoVendaInput(produto ? produto.precoVenda.toString().replace(".", ",") : "");
+    setPrecoVendaInput(
+      produto ? produto.precoVenda.toString().replace(".", ",") : ""
+    );
   }, [produto]);
 
-  // Busca categorias e fornecedores ao abrir
   useEffect(() => {
     if (open) {
       fetchCategorias().then(setCategorias);
@@ -213,43 +235,36 @@ const EditProdutoDialog: React.FC<{
     if (selected) setForm({ ...form, [path]: selected });
   };
 
-  // ===== Preço =====
-  const handlePriceInput = (field: 'precoCusto' | 'precoVenda', v: string) => {
-    const cleaned = v.replace(/[^0-9,]/g, ""); // só números e vírgula
-    if (field === 'precoCusto') {
-      setPrecoCustoInput(cleaned);
-    } else {
-      setPrecoVendaInput(cleaned);
-    }
+  const handlePriceInput = (v: string) => {
+    const cleaned = v.replace(/[^0-9,]/g, "");
+    setPrecoVendaInput(cleaned);
   };
 
-  const formatPrecoOnBlur = (field: 'precoCusto' | 'precoVenda') => {
-    const value = field === 'precoCusto' ? precoCustoInput : precoVendaInput;
-    const setter = field === 'precoCusto' ? setPrecoCustoInput : setPrecoVendaInput;
-
-    if (!value) return setter("0,00");
+  const formatPrecoOnBlur = () => {
+    const value = precoVendaInput;
+    if (!value) return setPrecoVendaInput("0,00");
 
     let [reais, centavos] = value.split(",");
     if (!centavos) centavos = "00";
     else if (centavos.length === 1) centavos += "0";
     else if (centavos.length > 2) centavos = centavos.slice(0, 2);
 
-    setter(`${reais},${centavos}`);
+    setPrecoVendaInput(`${reais || 0},${centavos}`);
   };
 
   const canSave = useMemo(() => {
     if (!form) return false;
-    return (form.nome?.trim()?.length ?? 0) > 0 && precoCustoInput.length > 0 && precoVendaInput.length > 0;
-  }, [form, precoCustoInput, precoVendaInput]);
+    return (form.nome?.trim()?.length ?? 0) > 0 && precoVendaInput.length > 0;
+  }, [form, precoVendaInput]);
 
   const onSubmit = async () => {
     if (!form || !canSave) return;
     try {
       setSaving(true);
-      // Converte para decimal antes de salvar
-      const precoCustoNumber = String(Number(precoCustoInput.replace(",", ".")));
-      const precoVendaNumber = String(Number(precoVendaInput.replace(",", ".")));
-      onSave({ ...form, precoCusto: precoCustoNumber, precoVenda: precoVendaNumber });
+      const precoVendaNumber = String(
+        Number(precoVendaInput.replace(",", "."))
+      );
+      onSave({ ...form, precoVenda: precoVendaNumber });
       onOpenChange(false);
       fetchProdutos();
     } catch (error) {
@@ -267,11 +282,10 @@ const EditProdutoDialog: React.FC<{
         <DialogHeader>
           <DialogTitle className="text-2xl">Editar produto</DialogTitle>
         </DialogHeader>
-
         <div className="space-y-6 py-2">
-          {/* Nome, Preço de Custo e Preço de Venda */}
+          {/* CORREÇÃO: Layout ajustado e campo de Preço de Custo removido. */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="md:col-span-1 space-y-2">
+            <div className="md:col-span-2 space-y-2">
               <Label htmlFor="nome">Nome</Label>
               <Input
                 id="nome"
@@ -280,26 +294,16 @@ const EditProdutoDialog: React.FC<{
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="precoCusto">Preço de Custo (R$)</Label>
-              <Input
-                id="precoCusto"
-                value={precoCustoInput}
-                onChange={(e) => handlePriceInput('precoCusto', e.target.value)}
-                onBlur={() => formatPrecoOnBlur('precoCusto')}
-              />
-            </div>
-            <div className="space-y-2">
               <Label htmlFor="precoVenda">Preço de Venda (R$)</Label>
               <Input
                 id="precoVenda"
                 value={precoVendaInput}
-                onChange={(e) => handlePriceInput('precoVenda', e.target.value)}
-                onBlur={() => formatPrecoOnBlur('precoVenda')}
+                onChange={(e) => handlePriceInput(e.target.value)}
+                onBlur={() => formatPrecoOnBlur()}
               />
             </div>
           </div>
 
-          {/* Descrição */}
           <div className="space-y-2">
             <Label htmlFor="descricao">Descrição</Label>
             <Textarea
@@ -312,10 +316,12 @@ const EditProdutoDialog: React.FC<{
 
           <Separator />
 
-          {/* Categoria e Fornecedor */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="categoriaNome" className="flex items-center gap-2">
+              <Label
+                htmlFor="categoriaNome"
+                className="flex items-center gap-2"
+              >
                 <TagIcon className="w-4 h-4" /> Categoria
               </Label>
               <Select
@@ -334,50 +340,20 @@ const EditProdutoDialog: React.FC<{
                 </SelectContent>
               </Select>
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="fornecedorNome" className="flex items-center gap-2">
-                <Package className="w-4 h-4" /> Fornecedor
-              </Label>
-              <Select
-                value={form.fornecedor?.id}
-                onValueChange={(id) => handleSelectChange("fornecedor", id)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione um fornecedor" />
-                </SelectTrigger>
-                <SelectContent>
-                  {fornecedores.map((forn) => (
-                    <SelectItem key={forn.id} value={forn.id}>
-                      {forn.nome}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
           </div>
 
-          {/* Estoque */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="estoqueAtual" className="flex items-center gap-2">
-                <Boxes className="w-4 h-4" /> Estoque Atual
-              </Label>
-              <Input
-                id="estoqueAtual"
-                value={String(form.estoqueAtual ?? "")}
-                onChange={(e) =>
-                  handleChange("estoqueAtual", e.target.value.replace(/[^0-9-]/g, ""))
-                }
-              />
-            </div>
             <div className="space-y-2">
               <Label htmlFor="estoqueMinimo">Estoque Mínimo</Label>
               <Input
                 id="estoqueMinimo"
+                type="number"
                 value={String(form.estoqueMinimo ?? "")}
                 onChange={(e) =>
-                  handleChange("estoqueMinimo", e.target.value.replace(/[^0-9-]/g, ""))
+                  handleChange(
+                    "estoqueMinimo",
+                    e.target.value.replace(/[^0-9]/g, "")
+                  )
                 }
               />
             </div>
@@ -385,7 +361,11 @@ const EditProdutoDialog: React.FC<{
         </div>
 
         <DialogFooter className="gap-2 sm:gap-4">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={saving}
+          >
             Cancelar
           </Button>
           <Button onClick={onSubmit} disabled={!canSave || saving}>
@@ -397,8 +377,6 @@ const EditProdutoDialog: React.FC<{
   );
 };
 
-
-
 /**
  * Modal de Criação de Produto
  */
@@ -407,25 +385,23 @@ const CreateProdutoDialog: React.FC<{
   onOpenChange: (v: boolean) => void;
   onCreate: (p: Omit<Produto, "id">) => void;
 }> = ({ open, onOpenChange, onCreate }) => {
-  const [form, setForm] = useState<Omit<Produto, "id">>({
+  // CORREÇÃO: Adicionado `precoCusto` ao estado inicial do formulário.
+  const initialState: Omit<Produto, "id"> = {
     nome: "",
     descricao: "",
-    precoCusto: "",
     precoVenda: "",
     image: "",
     categoria: { id: "", nome: "" },
-    fornecedor: { id: "", nome: "" },
-    estoqueAtual: "0",
     estoqueMinimo: "0",
-    lotes: [],
-  });
+    lote: [],
+    criadoEm: undefined,
+  };
 
+  const [form, setForm] = useState(initialState);
   const [saving, setSaving] = useState(false);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
-
-    const { fetchProdutos } =
-    useProdutos();
+  const { fetchProdutos } = useProdutos();
 
   useEffect(() => {
     if (open) {
@@ -434,7 +410,7 @@ const CreateProdutoDialog: React.FC<{
     }
   }, [open]);
 
-  const handleChange = (key: keyof Produto, value: any) =>
+  const handleChange = (key: keyof typeof form, value: any) =>
     setForm({ ...form, [key]: value });
 
   const handleSelectChange = (path: "categoria" | "fornecedor", id: string) => {
@@ -443,40 +419,27 @@ const CreateProdutoDialog: React.FC<{
     if (selected) setForm({ ...form, [path]: selected });
   };
 
-  // Atualiza o estado com apenas os dígitos
-  const handlePriceInput = (field: 'precoCusto' | 'precoVenda', v: string) => {
+  const handlePriceInput = (field: "precoCusto" | "precoVenda", v: string) => {
     const digits = v.replace(/\D/g, "");
     setForm({ ...form, [field]: digits });
   };
 
   const canSave = useMemo(() => {
-    return (
-      (form.nome?.trim()?.length ?? 0) > 0 &&
-      (form.precoCusto?.length ?? 0) > 0
-    );
+    return (form.nome?.trim()?.length ?? 0) > 0 && form.precoVenda.length > 0;
   }, [form]);
 
   const onSubmit = async () => {
     if (!canSave) return;
     setSaving(true);
     try {
-      const precoCustoNumber = (Number(form.precoCusto) / 100).toFixed(2); // converte centavos para reais
-      const precoVendaNumber = (Number(form.precoVenda) / 100).toFixed(2); // converte centavos para reais
-      onCreate({ ...form, precoCusto: precoCustoNumber, precoVenda: precoVendaNumber });
-      onOpenChange(false);
-      setForm({
-        nome: "",
-        descricao: "",
-        precoCusto: "",
-        precoVenda: "",
-        image: "",
-        categoria: { id: "", nome: "" },
-        fornecedor: { id: "", nome: "" },
-        estoqueAtual: "0",
-        estoqueMinimo: "0",
-        lotes: [],
+      // CORREÇÃO: `precoCusto` é incluído ao criar o produto.
+      const precoVendaNumber = (Number(form.precoVenda) / 100).toFixed(2);
+      onCreate({
+        ...form,
+        precoVenda: precoVendaNumber,
       });
-
+      onOpenChange(false);
+      setForm(initialState);
       fetchProdutos();
     } finally {
       setSaving(false);
@@ -490,22 +453,14 @@ const CreateProdutoDialog: React.FC<{
           <DialogTitle className="text-2xl">Criar novo produto</DialogTitle>
         </DialogHeader>
         <div className="space-y-6 py-2">
+          {/* CORREÇÃO: Layout de grid corrigido e input de Preço de Custo adicionado. */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="md:col-span-2 space-y-2">
+            <div className="space-y-2">
               <Label htmlFor="nome-create">Nome</Label>
               <Input
                 id="nome-create"
                 value={form.nome}
                 onChange={(e) => handleChange("nome", e.target.value)}
-              />
-            </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="preco-custo-create">Preço de Custo (R$)</Label>
-              <Input
-                id="preco-custo-create"
-                value={form.precoCusto}
-                onChange={(e) => handlePriceInput("precoCusto", e.target.value)}
               />
             </div>
             <div className="space-y-2">
@@ -514,9 +469,9 @@ const CreateProdutoDialog: React.FC<{
                 id="preco-venda-create"
                 value={form.precoVenda}
                 onChange={(e) => handlePriceInput("precoVenda", e.target.value)}
+                placeholder="Ex: 2999 para R$ 29,99"
               />
             </div>
-          </div>
           </div>
 
           <div className="space-y-2">
@@ -540,10 +495,12 @@ const CreateProdutoDialog: React.FC<{
 
           <Separator />
 
-          {/* Categoria e Fornecedor */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="categoriaNome-create" className="flex items-center gap-2">
+              <Label
+                htmlFor="categoriaNome-create"
+                className="flex items-center gap-2"
+              >
                 <TagIcon className="w-4 h-4" /> Categoria
               </Label>
               <Select
@@ -562,58 +519,31 @@ const CreateProdutoDialog: React.FC<{
                 </SelectContent>
               </Select>
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="fornecedorNome-create" className="flex items-center gap-2">
-                <Package className="w-4 h-4" /> Fornecedor
-              </Label>
-              <Select
-                value={form.fornecedor.id}
-                onValueChange={(id) => handleSelectChange("fornecedor", id)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione um fornecedor" />
-                </SelectTrigger>
-                <SelectContent>
-                  {fornecedores.map((forn) => (
-                    <SelectItem key={forn.id} value={forn.id}>
-                      {forn.nome}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
           </div>
 
-          {/* Estoque */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="estoqueAtual-create" className="flex items-center gap-2">
-                <Boxes className="w-4 h-4" /> Estoque Atual
-              </Label>
-              <Input
-                id="estoqueAtual-create"
-                value={String(form.estoqueAtual)}
-                onChange={(e) =>
-                  handleChange("estoqueAtual", e.target.value.replace(/[^0-9-]/g, ""))
-                }
-              />
-            </div>
             <div className="space-y-2">
               <Label htmlFor="estoqueMinimo-create">Estoque Mínimo</Label>
               <Input
                 id="estoqueMinimo-create"
+                type="number"
                 value={String(form.estoqueMinimo)}
                 onChange={(e) =>
-                  handleChange("estoqueMinimo", e.target.value.replace(/[^0-9-]/g, ""))
+                  handleChange(
+                    "estoqueMinimo",
+                    e.target.value.replace(/[^0-9]/g, "")
+                  )
                 }
               />
             </div>
           </div>
         </div>
-
         <DialogFooter className="gap-2 sm:gap-4">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={saving}
+          >
             Cancelar
           </Button>
           <Button onClick={onSubmit} disabled={!canSave || saving}>
@@ -626,10 +556,10 @@ const CreateProdutoDialog: React.FC<{
 };
 
 /**
- * Tela principal de produtos (sem alterações nesta parte)
+ * Tela principal de produtos
  */
-const Products: React.FC = () => {
-  // CORREÇÃO 1: Usar as funções e estados corretos do contexto e remover "as any"
+export const Products: React.FC = () => {
+  const { toast } = useToast();
   const { produtos, loading, createProduto, updateProduto, deleteProduto } =
     useProdutos();
 
@@ -645,45 +575,45 @@ const Products: React.FC = () => {
     setOpenEdit(true);
   };
 
-  // CORREÇÃO 2: Ajustar o handleSave para enviar os dados no formato correto para o contexto
-  const handleSave = (produtoAtualizado: Produto) => {
-    if (typeof updateProduto === "function") {
-      const { id, ...dadosParaAtualizar } = produtoAtualizado;
-      updateProduto(id, dadosParaAtualizar);
+  const handleSave = async (produtoAtualizado: Produto) => {
+    try {
+      const { id, ...dados } = produtoAtualizado;
+      await updateProduto(id, dados);
+      toast({ title: "✅ Produto atualizado com sucesso!" });
+    } catch (error) {
+      toast({
+        title: "Erro ao atualizar produto",
+        description: String(error),
+        variant: "destructive",
+      });
     }
   };
 
-  // CORREÇÃO 3: Ajustar o handleCreate para chamar a função correta e enviar os dados sem o ID temporário
-  const handleCreate = (novoProduto: Omit<Produto, "id">) => {
-    if (typeof createProduto === "function") {
-      createProduto(novoProduto);
+  const handleCreate = async (novoProduto: Omit<Produto, "id">) => {
+    try {
+      await createProduto(novoProduto);
+      toast({ title: "✅ Produto criado com sucesso!" });
+      setOpenCreate(false);
+    } catch (error) {
+      toast({
+        title: "Erro ao criar produto",
+        description: String(error),
+        variant: "destructive",
+      });
     }
   };
 
-  const estoqueBadge = (atual?: string | number, minimo?: string | number) => {
-    const a = Number(atual ?? 0);
-    const m = Number(minimo ?? 0);
-    if (Number.isNaN(a) || Number.isNaN(m)) return null;
-    if (a <= 0)
-      return (
-        <Badge variant="destructive" className="font-semibold">
-          Esgotado
-        </Badge>
-      );
-    if (a <= m)
-      return (
-        <Badge className="bg-amber-500 hover:bg-amber-600 text-white font-semibold">
-          Estoque Baixo
-        </Badge>
-      );
-    return (
-      <Badge
-        variant="secondary"
-        className="border-green-500/50 border text-green-700"
-      >
-        Em Estoque
-      </Badge>
-    );
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteProduto(id);
+      toast({ title: "🗑️ Produto removido com sucesso!" });
+    } catch (error) {
+      toast({
+        title: "Erro ao remover produto",
+        description: String(error),
+        variant: "destructive",
+      });
+    }
   };
 
   const produtosFiltrados = useMemo(() => {
@@ -691,11 +621,10 @@ const Products: React.FC = () => {
     const termoBusca = filtro.toLowerCase().trim();
     if (!termoBusca) return produtos;
     return produtos.filter(
-      (p: Produto) =>
+      (p) =>
         p.nome.toLowerCase().includes(termoBusca) ||
-        p.descricao.toLowerCase().includes(termoBusca) ||
-        p.categoria?.nome?.toLowerCase().includes(termoBusca) ||
-        p.fornecedor?.nome?.toLowerCase().includes(termoBusca)
+        p.descricao?.toLowerCase().includes(termoBusca) ||
+        p.categoria?.nome?.toLowerCase().includes(termoBusca)
     );
   }, [produtos, filtro]);
 
@@ -718,11 +647,6 @@ const Products: React.FC = () => {
     return copia;
   }, [produtosFiltrados, ordenacao]);
 
-  // CORREÇÃO 4: Usar o estado de 'loading' do contexto para um feedback melhor
-  if (loading && produtos.length === 0) {
-    return <p className="text-center py-12">Carregando produtos...</p>;
-  }
-
   const cardVariants: Variants = {
     hidden: { opacity: 0, y: 20 },
     visible: (i: number) => ({
@@ -732,17 +656,32 @@ const Products: React.FC = () => {
     }),
   };
 
+  if (loading && produtos.length === 0) {
+    return (
+      <div className="space-y-4 p-6">
+        {[...Array(6)].map((_, i) => (
+          <Skeleton key={i} className="h-20 w-full rounded-md" />
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-3xl md:text-4xl font-bold tracking-tighter">
-          Gerenciamento de Produtos
-        </h1>
-        <p className="text-muted-foreground text-lg">
-          Visualize, adicione, edite e organize seus produtos com facilidade.
-        </p>
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Produtos</h1>
+          <p className="text-sm text-muted-foreground">
+            Gerencie produtos, fornecedores e lotes de forma inteligente.
+          </p>
+        </div>
+        <Button onClick={() => setOpenCreate(true)} className="h-10 gap-2">
+          <PlusCircle className="w-5 h-5" />
+          Adicionar Produto
+        </Button>
       </div>
-      <div className="flex flex-col md:flex-row items-center justify-between gap-4 p-4 bg-muted/50 rounded-lg border">
+
+      <div className="flex flex-col md:flex-row items-center justify-between gap-4 p-4 bg-muted/40 rounded-lg border">
         <div className="relative w-full md:flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <Input
@@ -753,26 +692,21 @@ const Products: React.FC = () => {
             onChange={(e) => setFiltro(e.target.value)}
           />
         </div>
-        <div className="flex items-center gap-2 w-full md:w-auto">
-          <Select value={ordenacao} onValueChange={setOrdenacao}>
-            <SelectTrigger className="w-full md:w-[180px] h-10">
-              <SelectValue placeholder="Ordenar por" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="nome-asc">Nome (A-Z)</SelectItem>
-              <SelectItem value="nome-desc">Nome (Z-A)</SelectItem>
-              <SelectItem value="precoVenda-asc">Preço (Menor)</SelectItem>
-              <SelectItem value="precoVenda-desc">Preço (Maior)</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button onClick={() => setOpenCreate(true)} className="h-10 gap-2">
-            <PlusCircle className="w-5 h-5" />
-            <span className="hidden sm:inline">Adicionar Produto</span>
-          </Button>
-        </div>
+        <Select value={ordenacao} onValueChange={setOrdenacao}>
+          <SelectTrigger className="w-full md:w-[180px] h-10">
+            <SelectValue placeholder="Ordenar por" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="nome-asc">Nome (A-Z)</SelectItem>
+            <SelectItem value="nome-desc">Nome (Z-A)</SelectItem>
+            <SelectItem value="precoVenda-asc">Preço (Menor)</SelectItem>
+            <SelectItem value="precoVenda-desc">Preço (Maior)</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
+
       <AnimatePresence>
-        {!loading && produtos.length === 0 ? (
+        {!loading && produtosOrdenados.length === 0 ? (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -782,82 +716,131 @@ const Products: React.FC = () => {
             <h3 className="mt-4 text-xl font-semibold">
               Nenhum produto cadastrado
             </h3>
-            <p className="mt-1 text-muted-foreground">
+            <p className="text-muted-foreground">
               Clique em "Adicionar Produto" para começar.
             </p>
-          </motion.div>
-        ) : produtosOrdenados.filter((p) => p.nome !== "Produto Excluido")
-            .length === 0 ? (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-center py-20"
-          >
-            <XCircle className="mx-auto h-16 w-16 text-muted-foreground/50" />
-            <h3 className="mt-4 text-xl font-semibold">
-              Nenhum resultado encontrado
-            </h3>
-            <p className="mt-1 text-muted-foreground">
-              Tente uma busca diferente ou limpe o filtro.
-            </p>
-            <Button variant="link" onClick={() => setFiltro("")}>
-              Limpar busca
-            </Button>
           </motion.div>
         ) : (
           <ShadcnTable>
             <TableHeader>
               <TableRow>
-                <TableHead>Imagem</TableHead>
                 <TableHead>Produto</TableHead>
                 <TableHead>Categoria</TableHead>
                 <TableHead>Fornecedor</TableHead>
-                <TableHead>Estoque</TableHead>
-                <TableHead>Preço de Venda</TableHead>
-                <TableHead>Ações</TableHead>
+                <TableHead>Quantidade em estoque</TableHead>
+                <TableHead>Preço Custo(média)</TableHead>
+                <TableHead>Preço Venda</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {produtosOrdenados.filter((p: Produto) => p.nome !== "Produto Excluido").map((produto: Produto) => (
-                <TableRow key={produto.id}>
+              {produtosOrdenados.map((produto, i) => (
+                <motion.tr
+                  key={`${produto.id}-${produto.criadoEm}`}
+                  variants={cardVariants}
+                  initial="hidden"
+                  animate="visible"
+                  custom={i}
+                  className="hover:bg-muted/30 transition-colors"
+                >
+                  <TableCell
+                    className="font-medium cursor-pointer hover:text-primary"
+                    onClick={() => {
+                      setSelectedProduct(produto);
+                      setOpenDetalhes(true);
+                    }}
+                  >
+                    {produto.nome}
+                  </TableCell>
                   <TableCell>
-                    <img
-                      src={produto.image || "https://placehold.co/40x40?text=Foto"}
-                      alt={produto.nome}
-                      className="w-10 h-10 object-cover rounded-md"
-                    />
+                    {produto.categoria?.nome || "Sem categoria"}
                   </TableCell>
-                  <TableCell className="font-medium">{produto.nome}</TableCell>
-                  <TableCell>{produto.categoria?.nome || "Sem categoria"}</TableCell>
-                  <TableCell>{produto.fornecedor?.nome || "Sem fornecedor"}</TableCell>
-                  <TableCell>{produto.estoqueAtual}</TableCell>
-                  <TableCell>R$ {Number(produto.precoVenda).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</TableCell>
-                  <TableCell className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        setSelectedProduct(produto);
-                        setOpenDetalhes(true);
-                      }}
-                    >
-                      <Eye className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      onClick={() => handleOpenEdit(produto)}
-                    >
-                      <Edit3 className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => deleteProduto(produto.id)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                  <TableCell>
+                    {produto.lote?.[0]
+                      ? new Date(produto.lote[0].dataCompra).toLocaleDateString(
+                          "pt-BR"
+                        )
+                      : "—"}
                   </TableCell>
-                </TableRow>
+                  <TableCell>
+                    {produto.lote.reduce(
+                      (total, lote) => total + Number(lote.quantidadeAtual),
+                      0
+                    )}
+                  </TableCell>
+
+                  <TableCell>
+                    R${" "}
+                    {(
+                      produto.lote.reduce(
+                        (acumulador, item) =>
+                          acumulador + Number(item.precoCusto),
+                        0
+                      ) / produto.lote.length
+                    ).toFixed(2)}
+                  </TableCell>
+
+                  <TableCell>
+                    {produto.precoVenda ? (
+                      `R$ ${produto.precoVenda}`
+                    ) : (
+                      "—"
+                    )}
+                  </TableCell>
+                  {/* CORREÇÃO: Bloco de ações com Tooltip corrigido. */}
+                  <TableCell className="flex justify-end gap-2">
+                    <TooltipProvider>
+                      <Tooltip delayDuration={300}>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="icon"
+                            variant="outline"
+                            className="h-8 w-8"
+                            onClick={() => {
+                              setSelectedProduct(produto);
+                              setOpenDetalhes(true);
+                            }}
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Ver detalhes</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+
+                    <TooltipProvider>
+                      <Tooltip delayDuration={300}>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="icon"
+                            variant="outline"
+                            className="h-8 w-8"
+                            onClick={() => handleOpenEdit(produto)}
+                          >
+                            <Edit3 className="w-4 h-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Editar</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+
+                    <TooltipProvider>
+                      <Tooltip delayDuration={300}>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="icon"
+                            variant="destructive"
+                            className="h-8 w-8"
+                            onClick={() => handleDelete(produto.id)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Excluir</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </TableCell>
+                </motion.tr>
               ))}
             </TableBody>
           </ShadcnTable>
