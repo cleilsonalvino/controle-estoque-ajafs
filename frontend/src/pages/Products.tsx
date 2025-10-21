@@ -387,7 +387,7 @@ const CreateProdutoDialog: React.FC<{
   onCreate: (p: Omit<Produto, "id">) => void;
 }> = ({ open, onOpenChange, onCreate }) => {
   // CORREÇÃO: Adicionado `precoCusto` ao estado inicial do formulário.
-  const initialState: Omit<Produto, "id", "codigoBarras"> = {
+  const initialState: Omit<Produto, "id" | "codigoBarras"> = {
     nome: "",
     descricao: "",
     precoVenda: "",
@@ -438,6 +438,7 @@ const CreateProdutoDialog: React.FC<{
       onCreate({
         ...form,
         precoVenda: precoVendaNumber,
+        codigoBarras: ""
       });
       onOpenChange(false);
       setForm(initialState);
