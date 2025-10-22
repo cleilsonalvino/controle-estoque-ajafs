@@ -5,6 +5,7 @@ import {
   getVendaByIdController,
   updateVendaController,
   deleteVendaController,
+  cancelarVendaController,
 } from "./sales.controller.ts";
 
 const salesRouter = Router();
@@ -15,5 +16,6 @@ salesRouter.get("/", getVendasController);
 salesRouter.get("/:id", getVendaByIdController);
 salesRouter.put("/:id", updateVendaController);
 salesRouter.delete("/:id", deleteVendaController);
+salesRouter.patch("/cancelar/:id", cancelarVendaController);
 
 export default salesRouter;

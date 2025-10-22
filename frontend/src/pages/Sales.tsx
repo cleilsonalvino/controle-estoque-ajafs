@@ -30,10 +30,9 @@ const Sales = () => {
             desconto: saleData.desconto,
             forma_pagamento: saleData.formaPagamento,
             itens: saleData.saleItems.map((item) => ({
-                produtoId: item.type === "produto" ? item.id : undefined,
-                servicoId: item.type === "servico" ? item.id : undefined,
+                produtoId: item.id,
                 quantidade: item.quantity,
-                precoUnitario: item.type === "produto" ? item.precoVenda : item.precoCusto,
+                precoUnitario: item.precoVenda,
             })),
         };
 
@@ -43,7 +42,7 @@ const Sales = () => {
             const clientName = clientes.find((c) => c.id === saleData.clienteId)?.nome || "Não informado";
             const vendedorName = vendedores.find((v) => v.id === saleData.vendedorId)?.nome || "";
             const subtotal = saleData.saleItems.reduce(
-                (acc, item) => acc + (item.precoVenda || item.precoCusto || 0) * item.quantity,
+                (acc, item) => acc + (item.precoVenda || 0) * item.quantity,
                 0
             );
             const total = subtotal - (subtotal * saleData.desconto) / 100;
@@ -74,7 +73,6 @@ const Sales = () => {
                 <CupomFiscal {...lastSale} onClose={() => setShowCupom(false)} />
             )}
             <PDV
-                produtos={produtos}
                 clientes={clientes}
                 vendedores={vendedores}
                 onFinalizeSale={handleFinalizeSale}

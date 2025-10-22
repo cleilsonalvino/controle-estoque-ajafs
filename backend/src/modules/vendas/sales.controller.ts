@@ -5,6 +5,7 @@ import {
   getVendaByIdService,
   updateVendaService,
   deleteVendaService,
+  cancelVendaService,
 } from "./sales.service.ts";
 
 // Venda Controllers
@@ -35,4 +36,15 @@ export const deleteVendaController = async (req: Request, res: Response) => {
   const { id } = req.params;
   await deleteVendaService(id as string);
   res.status(204).send();
+};
+
+export const cancelarVendaController = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    console.log("Cancelando venda com ID:", id);
+    const result = await cancelVendaService(id as string);
+    return res.status(200).json(result);
+  } catch (error: any) {
+    return res.status(error.status || 500).json({ message: error.message });
+  }
 };

@@ -1,7 +1,19 @@
-
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Cliente, useClientes } from "@/contexts/ClienteContext";
 import {
@@ -15,14 +27,15 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Link } from "lucide-react";
 
 const Clientes = () => {
-  const { clientes, createCliente, updateCliente, deleteCliente } = useClientes();
+  const { clientes, createCliente, updateCliente, deleteCliente } =
+    useClientes();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null);
-
 
   return (
     <div className="p-6">
@@ -35,10 +48,25 @@ const Clientes = () => {
         </CardHeader>
         <CardContent>
           <div className="flex justify-end mb-4">
-            <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-              <DialogTrigger asChild>
-                <Button>Adicionar Cliente</Button>
-              </DialogTrigger>
+            <Dialog
+              open={isCreateModalOpen}
+              onOpenChange={setIsCreateModalOpen}
+            >
+              <div className="flex gap-2">
+                <DialogTrigger asChild>
+                  <Button>Adicionar Cliente</Button>
+                </DialogTrigger>
+
+                <Button
+                  variant="outline"
+                  onClick={() =>
+                    window.open("https://feedtrack.site/home", "_blank")
+                  }
+                >
+                  Importar Cliente
+                </Button>
+              </div>
+
               <DialogContent>
                 <DialogHeader>
                   <DialogTitle>Adicionar Cliente</DialogTitle>
@@ -60,17 +88,28 @@ const Clientes = () => {
                     <Label htmlFor="endereco">Endereço</Label>
                     <Input id="endereco" />
                   </div>
-                  
                 </div>
                 <DialogFooter>
-                  <Button onClick={() => {
-                    const nome = (document.getElementById('nome') as HTMLInputElement).value;
-                    const email = (document.getElementById('email') as HTMLInputElement).value;
-                    const telefone = (document.getElementById('telefone') as HTMLInputElement).value;
-                    const endereco = (document.getElementById('endereco') as HTMLInputElement).value;
-                    createCliente({ nome, email, telefone, endereco });
-                    setIsCreateModalOpen(false);
-                  }}>Salvar</Button>
+                  <Button
+                    onClick={() => {
+                      const nome = (
+                        document.getElementById("nome") as HTMLInputElement
+                      ).value;
+                      const email = (
+                        document.getElementById("email") as HTMLInputElement
+                      ).value;
+                      const telefone = (
+                        document.getElementById("telefone") as HTMLInputElement
+                      ).value;
+                      const endereco = (
+                        document.getElementById("endereco") as HTMLInputElement
+                      ).value;
+                      createCliente({ nome, email, telefone, endereco });
+                      setIsCreateModalOpen(false);
+                    }}
+                  >
+                    Salvar
+                  </Button>
                   <DialogClose asChild>
                     <Button variant="outline">Cancelar</Button>
                   </DialogClose>
@@ -95,8 +134,27 @@ const Clientes = () => {
                   <TableCell>{cliente.telefone}</TableCell>
                   <TableCell>{cliente.endereco}</TableCell>
                   <TableCell className="text-right">
-                    <Button variant="outline" size="sm" onClick={() => { setSelectedCliente(cliente); setIsEditModalOpen(true); }}>Editar</Button>
-                    <Button variant="destructive" size="sm" className="ml-2" onClick={() => { setSelectedCliente(cliente); setIsDeleteModalOpen(true); }}>Excluir</Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedCliente(cliente);
+                        setIsEditModalOpen(true);
+                      }}
+                    >
+                      Editar
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="ml-2"
+                      onClick={() => {
+                        setSelectedCliente(cliente);
+                        setIsDeleteModalOpen(true);
+                      }}
+                    >
+                      Excluir
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}
@@ -118,29 +176,56 @@ const Clientes = () => {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="edit-email">Email</Label>
-                <Input id="edit-email" type="email" defaultValue={selectedCliente.email} />
+                <Input
+                  id="edit-email"
+                  type="email"
+                  defaultValue={selectedCliente.email}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="edit-telefone">Telefone</Label>
-                <Input id="edit-telefone" defaultValue={selectedCliente.telefone} />
+                <Input
+                  id="edit-telefone"
+                  defaultValue={selectedCliente.telefone}
+                />
               </div>
-                            <div className="space-y-2">
+              <div className="space-y-2">
                 <Label htmlFor="edit-endereco">Endereço</Label>
-                <Input id="edit-endereco" defaultValue={selectedCliente.endereco} />
+                <Input
+                  id="edit-endereco"
+                  defaultValue={selectedCliente.endereco}
+                />
               </div>
             </div>
           )}
           <DialogFooter>
-            <Button onClick={() => {
-              if (selectedCliente) {
-                const nome = (document.getElementById('edit-nome') as HTMLInputElement).value;
-                const email = (document.getElementById('edit-email') as HTMLInputElement).value;
-                const telefone = (document.getElementById('edit-telefone') as HTMLInputElement).value;
-                const endereco = (document.getElementById('edit-endereco') as HTMLInputElement).value;
-                updateCliente(selectedCliente.id, { nome, email, telefone, endereco });
-                setIsEditModalOpen(false);
-              }
-            }}>Salvar</Button>
+            <Button
+              onClick={() => {
+                if (selectedCliente) {
+                  const nome = (
+                    document.getElementById("edit-nome") as HTMLInputElement
+                  ).value;
+                  const email = (
+                    document.getElementById("edit-email") as HTMLInputElement
+                  ).value;
+                  const telefone = (
+                    document.getElementById("edit-telefone") as HTMLInputElement
+                  ).value;
+                  const endereco = (
+                    document.getElementById("edit-endereco") as HTMLInputElement
+                  ).value;
+                  updateCliente(selectedCliente.id, {
+                    nome,
+                    email,
+                    telefone,
+                    endereco,
+                  });
+                  setIsEditModalOpen(false);
+                }
+              }}
+            >
+              Salvar
+            </Button>
             <DialogClose asChild>
               <Button variant="outline">Cancelar</Button>
             </DialogClose>
@@ -154,15 +239,23 @@ const Clientes = () => {
             <DialogTitle>Excluir Cliente</DialogTitle>
           </DialogHeader>
           {selectedCliente && (
-            <p>Você tem certeza que deseja excluir o cliente {selectedCliente.nome}?</p>
+            <p>
+              Você tem certeza que deseja excluir o cliente{" "}
+              {selectedCliente.nome}?
+            </p>
           )}
           <DialogFooter>
-            <Button variant="destructive" onClick={() => {
-              if (selectedCliente) {
-                deleteCliente(selectedCliente.id);
-                setIsDeleteModalOpen(false);
-              }
-            }}>Excluir</Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (selectedCliente) {
+                  deleteCliente(selectedCliente.id);
+                  setIsDeleteModalOpen(false);
+                }
+              }}
+            >
+              Excluir
+            </Button>
             <DialogClose asChild>
               <Button variant="outline">Cancelar</Button>
             </DialogClose>

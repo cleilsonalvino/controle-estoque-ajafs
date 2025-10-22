@@ -39,6 +39,7 @@ model Produto {
   descricao     String?
   precoVenda    Decimal  @db.Decimal(14, 2) @default(0)
   estoqueMinimo Decimal? @db.Decimal(14, 3)
+  urlImage      String?
   categoriaId   String?  
   fornecedorId  String? 
   criadoEm      DateTime @default(now())

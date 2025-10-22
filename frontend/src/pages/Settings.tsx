@@ -254,6 +254,28 @@ const Settings = () => {
         </Card>
 
         <Card>
+         <CardHeader>
+          <CardTitle>Cadastrar novo usuário</CardTitle>
+         </CardHeader>
+         <CardContent>
+          <Label>Nome usuario</Label>
+          <Input />
+          <Label>Email</Label>
+          <Input />
+          <Label>Senha</Label>
+          <Input />
+          <Label>Confirmar senha</Label>
+          <Input />
+          
+         </CardContent>
+         <CardFooter>
+          <Button>Cadastrar</Button>
+         </CardFooter>
+
+          
+        </Card>
+
+        <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Bell className="h-5 w-5" />

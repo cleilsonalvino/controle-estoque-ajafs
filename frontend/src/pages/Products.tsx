@@ -77,7 +77,7 @@ const ProdutoDetalhesDialog: React.FC<{
             <div>
               <img
                 src={
-                  produto.image ||
+                  produto.urlImage ||
                   "https://placehold.co/600x400?text=Foto+Produto"
                 }
                 alt={produto.nome}
@@ -391,7 +391,7 @@ const CreateProdutoDialog: React.FC<{
     nome: "",
     descricao: "",
     precoVenda: "",
-    image: "",
+    urlImage: "",
     categoria: { id: "", nome: "" },
     estoqueMinimo: "0",
     lote: [],
@@ -502,8 +502,8 @@ const CreateProdutoDialog: React.FC<{
             <Input
               className="border-slate-900"
               id="image-create"
-              value={form.image ?? ""}
-              onChange={(e) => handleChange("image", e.target.value)}
+              value={form.urlImage ?? ""}
+              onChange={(e) => handleChange("urlImage", e.target.value)}
             />
           </div>
 

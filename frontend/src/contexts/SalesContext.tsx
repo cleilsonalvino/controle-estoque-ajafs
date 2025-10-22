@@ -15,11 +15,7 @@ export interface SaleItem {
   precoVenda: number;
   precoCusto: number;
   quantity: number;
-  type: "produto" | "servico";
   produtoId?: string;
-  servicoId?: string;
-  quantidade?: string;
-  precoUnitario?: string;
 }
 
 export interface Sale {
@@ -60,6 +56,7 @@ interface SalesContextProps {
   createSale: (saleData: SaleData) => Promise<Sale>;
   updateSale: (id: string, cliente: string, itens: SaleItem[]) => Promise<Sale>;
   deleteSale: (id: string) => Promise<void>;
+  cancelSale: (id: string) => Promise<void>;
 }
 
 const SalesContext = createContext<SalesContextProps | undefined>(undefined);
@@ -118,6 +115,12 @@ export const SalesProvider = ({ children }: SalesProviderProps) => {
     setSales((prev) => prev.filter((s) => s.id !== id));
   };
 
+  const cancelSale = async (id: string) => {
+    await axios.patch(`/vendas/cancelar/${id}`);
+    setSales((prev) => prev.map((s) => (s.id === id ? { ...s, status: "Cancelada" } : s)));
+  };
+
+
   // Carrega as vendas ao montar o provider
   useEffect(() => {
     fetchSales();
@@ -126,7 +129,7 @@ export const SalesProvider = ({ children }: SalesProviderProps) => {
 
   return (
     <SalesContext.Provider
-      value={{ sales, loading, products, fetchSales, createSale, updateSale, deleteSale }}
+      value={{ sales, loading, products, fetchSales, createSale, updateSale, deleteSale, cancelSale }}
     >
       {children}
     </SalesContext.Provider>

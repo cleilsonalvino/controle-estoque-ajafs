@@ -26,7 +26,7 @@ export interface Produto {
     id: string;
     nome: string;
   };
-  image?: string;
+  urlImage?: string;
   criadoEm: Date;
   lote: Lote[];
 }
@@ -39,6 +39,7 @@ interface ProdutoContextType {
   createProduto: (novoProduto: Omit<Produto, "id" | "codigoBarras">) => Promise<Produto | undefined>;
   updateProduto: (id: string, produtoAtualizado: Omit<Produto, "id">) => Promise<Produto | undefined>;
   deleteProduto: (id: string) => Promise<void>;
+  darBaixaEstoquePorVenda: (produtoId: string, quantidade: Number) => Promise<void>;
 }
 
 const ProdutoContext = createContext<ProdutoContextType>({
@@ -49,6 +50,7 @@ const ProdutoContext = createContext<ProdutoContextType>({
   createProduto: async () => undefined,
   updateProduto: async () => undefined,
   deleteProduto: async () => {},
+  darBaixaEstoquePorVenda: async () => {}
 });
 
 interface ProdutoProviderProps {
@@ -137,6 +139,19 @@ export const ProdutoProvider = ({ children }: ProdutoProviderProps) => {
     }
   };
 
+
+  const darBaixaEstoquePorVenda = async (productId: string, quantity: number) => {
+    try {
+      await api.patch(`/produtos/movimentacao`, { productId, quantidade: quantity, tipo: 'SAIDA', observacao: "Venda de produto"});
+      toast.success(`Estoque atualizado com sucesso para o produto ${productId}!`);
+      fetchProdutos(); // Refresh product list to reflect stock changes
+    } catch (error) {
+      console.error("Erro ao atualizar estoque:", error);
+      toast.error("Erro ao atualizar estoque");
+    }
+  };
+
+
   useEffect(() => {
     fetchProdutos();
   }, []);
@@ -151,6 +166,7 @@ export const ProdutoProvider = ({ children }: ProdutoProviderProps) => {
         createProduto,
         updateProduto,
         deleteProduto,
+        darBaixaEstoquePorVenda
       }}
     >
       {children}
