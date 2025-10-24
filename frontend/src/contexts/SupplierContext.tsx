@@ -6,9 +6,11 @@ export interface Supplier {
   id: string;
   nome: string;
   contato: string;
-  email: string;
+  email: string | null;
   telefone: string;
-  localizacao: string;
+  endereco: string;
+  criadoEm: Date;
+  atualizadoEm: Date;
 }
 
 interface SupplierContextType {

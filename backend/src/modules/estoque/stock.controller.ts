@@ -29,5 +29,11 @@ export class StockController {
     res.status(200).json({ valorEstoque });
   }
 
+  public async getEstoqueProdutoId(req: Request, res: Response) {
+    const { produtoId } = req.params;
+    const estoque = await stockService.getEstoqueProdutoId(produtoId as string);
+    res.status(200).json({ estoque });
+  }
+
 
 }

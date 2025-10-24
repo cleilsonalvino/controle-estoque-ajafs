@@ -1,69 +1,131 @@
 import { useState } from "react";
-import { Users, Plus, Mail, Phone, MapPin, Edit, Trash2 } from "lucide-react";
+import {
+  Users,
+  Plus,
+  Mail,
+  Phone,
+  MapPin,
+  Edit,
+  Trash2,
+  Search,
+  Filter,
+  FileDown,
+  Building2,
+  Loader2,
+} from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useSuppliers, Supplier } from "@/contexts/SupplierContext";
+import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 const Suppliers = () => {
   const { suppliers, loading, createSupplier, updateSupplier, deleteSupplier } = useSuppliers();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [sortOption, setSortOption] = useState<"A-Z" | "Z-A" | "recentes">("recentes");
 
   const [formData, setFormData] = useState({
     nome: "",
     contato: "",
     email: "",
     telefone: "",
-    localizacao: "",
+    endereco: "",
   });
 
-  const filteredSuppliers = suppliers.filter(supplier =>
-    supplier.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    supplier.contato.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    supplier.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // === Filtros e ordenação ===
+  const filteredSuppliers = suppliers
+    .filter(
+      (s) =>
+        s.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (s.contato && s.contato.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (s.email && s.email.toLowerCase().includes(searchTerm.toLowerCase()))
+    )
+    .sort((a, b) => {
+      if (sortOption === "A-Z") return a.nome.localeCompare(b.nome);
+      if (sortOption === "Z-A") return b.nome.localeCompare(a.nome);
+      return 0;
+    });
 
-  const handleAddSupplier = () => {
+  // === Exportações ===
+  const exportExcel = () => {
+    const ws = XLSX.utils.json_to_sheet(
+      filteredSuppliers.map((s) => ({
+        Empresa: s.nome,
+        Contato: s.contato,
+        Email: s.email,
+        Telefone: s.telefone,
+        Endereço: s.endereco,
+      }))
+    );
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Fornecedores");
+    XLSX.writeFile(wb, "fornecedores.xlsx");
+  };
+
+  const exportPDF = () => {
+    const doc = new jsPDF();
+    doc.text(`Relatório de Fornecedores - ${new Date().toLocaleString("pt-BR")}`, 14, 15);
+    autoTable(doc, {
+      head: [["Empresa", "Contato", "Email", "Telefone", "Endereço"]],
+      body: filteredSuppliers.map((s) => [s.nome, s.contato, s.email, s.telefone, s.endereco]),
+      startY: 20,
+    });
+    doc.save("fornecedores.pdf");
+  };
+
+  // === CRUD ===
+  const handleAdd = () => {
     if (!formData.nome) return;
-    createSupplier(formData);
+    createSupplier({
+      ...formData,
+      // Adicionando valores padrão para 'criadoEm' e 'atualizadoEm'
+      criadoEm: new Date(),
+      atualizadoEm: new Date(),
+    });
     resetForm();
   };
 
-  const handleUpdateSupplier = () => {
-    if (!editingSupplier || !formData.nome) return;
-    updateSupplier(editingSupplier.id, formData);
+  const handleUpdate = () => {
+    if (!editingSupplier) return;
+    updateSupplier(editingSupplier.id, {
+      ...formData,
+      criadoEm: editingSupplier.criadoEm, // Manter a data de criação original
+      atualizadoEm: new Date(), // Atualizar a data de atualização
+    });
     resetForm();
   };
 
-  const handleDeleteSupplier = (id: string, nome: string) => {
-    if(nome === 'Sem Fornecedor'){
-      alert('Não é possível excluir este fornecedor');
+  const handleDelete = (id: string, nome: string) => {
+    if (nome === "Sem Fornecedor") {
+      alert("Este fornecedor não pode ser excluído.");
       return;
     }
     deleteSupplier(id);
   };
 
   const resetForm = () => {
-    setFormData({
-      nome: "",
-      contato: "",
-      email: "",
-      telefone: "",
-      localizacao: "",
-    });
-    setShowAddDialog(false);
+    setFormData({ nome: "", contato: "", email: "", telefone: "", endereco: "" });
     setEditingSupplier(null);
+    setShowAddDialog(false);
   };
 
   const openEditDialog = (supplier: Supplier) => {
-    if(supplier.nome === 'Sem Fornecedor'){
-       alert('Não é possível editar este fornecedor');
-       setShowAddDialog(false);
-       return;
+    if (supplier.nome === "Sem Fornecedor") {
+      alert("Este fornecedor não pode ser editado.");
+      return;
     }
     setEditingSupplier(supplier);
     setFormData({
@@ -71,195 +133,208 @@ const Suppliers = () => {
       contato: supplier.contato,
       email: supplier.email,
       telefone: supplier.telefone,
-      localizacao: supplier.localizacao,
+      endereco: supplier.endereco,
     });
     setShowAddDialog(true);
   };
 
+  // === Métricas rápidas ===
+  const total = suppliers.length;
+  const totalEmails = suppliers.filter((s) => s.email).length;
+  const totalContatos = suppliers.filter((s) => s.contato).length;
+
   return (
-    <div className="p-6">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-gradient-primary rounded-lg">
-              <Users className="h-6 w-6 text-primary-foreground" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">Fornecedores</h1>
-              <p className="text-muted-foreground">Gerencie seus fornecedores e parceiros</p>
-            </div>
-          </div>
-          <Button 
-            onClick={() => setShowAddDialog(true)}
-            className="bg-gradient-primary hover:opacity-90 shadow-md"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Novo Fornecedor
+    <div className="p-6 space-y-6">
+      {/* === Header e ações === */}
+      <div className="flex flex-wrap justify-between items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold">Fornecedores</h1>
+          <p className="text-muted-foreground">Gerencie seus parceiros e contatos comerciais.</p>
+        </div>
+        <div className="flex gap-2 flex-wrap">
+          <Button variant="outline" onClick={exportExcel}>
+            <FileDown className="h-4 w-4 mr-2" /> Excel
+          </Button>
+          <Button variant="outline" onClick={exportPDF}>
+            <FileDown className="h-4 w-4 mr-2" /> PDF
+          </Button>
+          <Button onClick={() => setShowAddDialog(true)} className="bg-gradient-to-r from-blue-600 to-purple-600 text-white">
+            <Plus className="h-4 w-4 mr-2" /> Novo Fornecedor
           </Button>
         </div>
       </div>
 
-      {/* Search */}
-      <Card className="mb-6 bg-gradient-card border-0 shadow-md">
-        <CardContent className="pt-6">
-          <Input
-            placeholder="Buscar fornecedores..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full"
-          />
+      {/* === Cards de estatísticas === */}
+      <div className="grid md:grid-cols-4 gap-4">
+        <Card className="bg-gradient-to-r from-green-50 to-green-100 border-none shadow-sm">
+          <CardContent className="flex justify-between items-center p-4">
+            <div>
+              <p className="text-sm text-green-800">Total de Fornecedores</p>
+              <h2 className="text-2xl font-bold">{total}</h2>
+            </div>
+            <Users className="text-green-600 w-8 h-8" />
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-r from-sky-50 to-sky-100 border-none shadow-sm">
+          <CardContent className="flex justify-between items-center p-4">
+            <div>
+              <p className="text-sm text-sky-800">Com Contato</p>
+              <h2 className="text-2xl font-bold">{totalContatos}</h2>
+            </div>
+            <Phone className="text-sky-600 w-8 h-8" />
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-r from-purple-50 to-purple-100 border-none shadow-sm">
+          <CardContent className="flex justify-between items-center p-4">
+            <div>
+              <p className="text-sm text-purple-800">Com E-mail</p>
+              <h2 className="text-2xl font-bold">{totalEmails}</h2>
+            </div>
+            <Mail className="text-purple-600 w-8 h-8" />
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-r from-orange-50 to-orange-100 border-none shadow-sm">
+          <CardContent className="flex justify-between items-center p-4">
+            <div>
+              <p className="text-sm text-orange-800">Última Atualização</p>
+              <h2 className="text-lg font-bold">
+                {suppliers[0]?.criadoEm ? new Date(suppliers[0].atualizadoEm).toLocaleDateString("pt-BR") : "—"}
+              </h2>
+            </div>
+            <Building2 className="text-orange-600 w-8 h-8" />
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* === Busca e ordenação === */}
+      <Card className="bg-gradient-card border-none shadow-md">
+        <CardContent className="pt-6 flex flex-col sm:flex-row items-center gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar fornecedores..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <Filter className="h-4 w-4 text-muted-foreground" />
+            <select
+              value={sortOption}
+              onChange={(e) => setSortOption(e.target.value as any)}
+              className="border rounded-md text-sm p-2 focus:outline-none"
+            >
+              <option value="recentes">Mais recentes</option>
+              <option value="A-Z">Ordem A-Z</option>
+              <option value="Z-A">Ordem Z-A</option>
+            </select>
+          </div>
         </CardContent>
       </Card>
 
-      {/* Suppliers Grid */}
+      {/* === Lista de Fornecedores === */}
       {loading ? (
-        <p>Carregando...</p>
-      ) : (
+        <div className="flex justify-center items-center py-20">
+          <Loader2 className="animate-spin h-8 w-8 text-muted-foreground" />
+        </div>
+      ) : filteredSuppliers.length > 0 ? (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {filteredSuppliers.map((supplier) => (
-            <Card key={supplier.id} className="group hover:shadow-lg transition-all duration-300 border bg-gradient-card">
-              <CardHeader className="pb-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <CardTitle className="text-lg font-semibold line-clamp-1">
-                      {supplier.nome}
-                    </CardTitle>
-                    <CardDescription className="text-sm">
-                      Contato: {supplier.contato}
-                    </CardDescription>
+            <Card
+              key={supplier.id}
+              className="border bg-white/70 backdrop-blur-lg hover:shadow-lg transition-all duration-300"
+            >
+              <CardHeader className="pb-2">
+                <div className="flex justify-between items-center">
+                  <CardTitle className="text-lg font-semibold truncate">
+                    {supplier.nome}
+                  </CardTitle>
+                  <div className="flex gap-2">
+                    <Button variant="ghost" size="icon" onClick={() => openEditDialog(supplier)}>
+                      <Edit className="h-4 w-4 text-blue-600" />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => handleDelete(supplier.id, supplier.nome)}>
+                      <Trash2 className="h-4 w-4 text-red-600" />
+                    </Button>
                   </div>
                 </div>
+                <CardDescription className="text-sm text-muted-foreground">
+                  {supplier.contato || "—"} 
+                </CardDescription>
               </CardHeader>
-              
-              <CardContent className="space-y-4">
-                <div className="space-y-3 text-sm">
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Mail className="h-4 w-4" />
-                    <span className="line-clamp-1">{supplier.email}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Phone className="h-4 w-4" />
-                    <span>{supplier.telefone}</span>
-                  </div>
-                  <div className="flex items-start gap-2 text-muted-foreground">
-                    <MapPin className="h-4 w-4 mt-0.5 shrink-0" />
-                    <span className="line-clamp-2">{supplier.localizacao}</span>
-                  </div>
+              <CardContent className="space-y-3 text-sm text-muted-foreground">
+                <div className="flex items-center gap-2">
+                  <Mail className="h-4 w-4" />
+                  <span>{supplier.email || "—"}</span>
                 </div>
-
-                <div className="flex gap-2 pt-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => openEditDialog(supplier)}
-                    className="flex-1"
-                  >
-                    <Edit className="h-4 w-4 mr-1" />
-                    Editar
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDeleteSupplier(supplier.id, supplier.nome)}
-                    className="text-destructive hover:text-destructive-foreground hover:bg-destructive"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                <div className="flex items-center gap-2">
+                  <Phone className="h-4 w-4" />
+                  <span>{supplier.telefone || "—"}</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <MapPin className="h-4 w-4 mt-0.5" />
+                  <span>{supplier.endereco || "Endereço não informado"}</span>
                 </div>
               </CardContent>
             </Card>
           ))}
         </div>
-      )}
-
-      {filteredSuppliers.length === 0 && !loading && (
-        <Card className="bg-gradient-card border-0 shadow-md">
-          <CardContent className="text-center py-12">
-            <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Nenhum fornecedor encontrado</h3>
-            <p className="text-muted-foreground">
-              {searchTerm 
-                ? "Tente ajustar os termos de pesquisa."
-                : "Adicione seu primeiro fornecedor para começar."}
-            </p>
-          </CardContent>
+      ) : (
+        <Card className="border bg-white/70 backdrop-blur-md text-center py-10">
+          <Users className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
+          <h3 className="text-lg font-semibold">Nenhum fornecedor encontrado</h3>
+          <p className="text-muted-foreground text-sm">
+            {searchTerm
+              ? "Tente ajustar os termos de busca."
+              : "Cadastre seu primeiro fornecedor."}
+          </p>
         </Card>
       )}
 
-      {/* Add/Edit Supplier Dialog */}
+      {/* === Modal de Adicionar/Editar === */}
       <Dialog open={showAddDialog} onOpenChange={resetForm}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>
-              {editingSupplier ? "Editar Fornecedor" : "Novo Fornecedor"}
-            </DialogTitle>
+            <DialogTitle>{editingSupplier ? "Editar Fornecedor" : "Novo Fornecedor"}</DialogTitle>
             <DialogDescription>
-              {editingSupplier 
-                ? "Faça as alterações necessárias no fornecedor."
-                : "Preencha as informações do novo fornecedor."}
+              {editingSupplier
+                ? "Atualize as informações do fornecedor."
+                : "Preencha os dados do novo fornecedor."}
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Nome da Empresa</Label>
-                <Input
-                  placeholder="Ex: TechStore Ltda"
-                  value={formData.nome}
-                  onChange={(e) => setFormData(prev => ({ ...prev, nome: e.target.value }))}
-                />
+                <Label>Empresa</Label>
+                <Input value={formData.nome} onChange={(e) => setFormData((p) => ({ ...p, nome: e.target.value }))} />
               </div>
               <div className="space-y-2">
-                <Label>Pessoa de Contato</Label>
-                <Input
-                  placeholder="Ex: João Silva"
-                  value={formData.contato}
-                  onChange={(e) => setFormData(prev => ({ ...prev, contato: e.target.value }))}
-                />
+                <Label>Contato</Label>
+                <Input value={formData.contato} onChange={(e) => setFormData((p) => ({ ...p, contato: e.target.value }))} />
               </div>
             </div>
-
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Email</Label>
-                <Input
-                  type="email"
-                  placeholder="contato@empresa.com"
-                  value={formData.email}
-                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                />
+                <Input value={formData.email} onChange={(e) => setFormData((p) => ({ ...p, email: e.target.value }))} />
               </div>
               <div className="space-y-2">
                 <Label>Telefone</Label>
-                <Input
-                  placeholder="(11) 99999-9999"
-                  value={formData.telefone}
-                  onChange={(e) => setFormData(prev => ({ ...prev, telefone: e.target.value }))}
-                />
+                <Input value={formData.telefone} onChange={(e) => setFormData((p) => ({ ...p, telefone: e.target.value }))} />
               </div>
             </div>
-
             <div className="space-y-2">
               <Label>Endereço</Label>
-              <Input
-                placeholder="Rua, número, cidade/estado"
-                value={formData.localizacao}
-                onChange={(e) => setFormData(prev => ({ ...prev, localizacao: e.target.value }))}
-              />
+              <Input value={formData.endereco} onChange={(e) => setFormData((p) => ({ ...p, endereco: e.target.value }))} />
             </div>
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={resetForm}>
-              Cancelar
-            </Button>
-            <Button 
-              onClick={editingSupplier ? handleUpdateSupplier : handleAddSupplier}
-              className="bg-gradient-primary hover:opacity-90"
-            >
-              {editingSupplier ? "Salvar Alterações" : "Adicionar Fornecedor"}
+            <Button variant="outline" onClick={resetForm}>Cancelar</Button>
+            <Button onClick={editingSupplier ? handleUpdate : handleAdd} className="bg-gradient-to-r from-blue-600 to-purple-600 text-white">
+              {editingSupplier ? "Salvar Alterações" : "Adicionar"}
             </Button>
           </DialogFooter>
         </DialogContent>

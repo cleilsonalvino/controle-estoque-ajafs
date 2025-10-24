@@ -1,18 +1,5 @@
-import {
-  BarChart,
-  Bar,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-} from "recharts";
+import ExcelJS from "exceljs";
+import { saveAs } from "file-saver";
 import {
   Card,
   CardContent,
@@ -45,6 +32,8 @@ import {
   Eye,
   FileText,
   XCircle,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
@@ -535,36 +524,89 @@ const SalesDashboard = () => {
   // ========================
   // Exportações
   // ========================
-  const exportToPDF = () => {
-    const doc = new jsPDF();
-    (doc as any).autoTable({
-      head: [["Número", "Data", "Cliente", "Status", "Valor"]],
-      body: filteredSales.map((s) => [
-        s.numero,
-        new Date(s.criadoEm).toLocaleDateString("pt-BR"),
-        getClienteDisplay(s),
-        s.status,
-        fmtBRL(toNumber(s.total)),
-      ]),
-      styles: { fontSize: 9 },
-      theme: "striped",
+const exportToPDF = () => {
+  const doc = new jsPDF();
+
+  (doc as any).autoTable({
+    head: [["Número", "Data", "Cliente", "Status", "Valor"]],
+    body: filteredSales.map((s) => [
+      s.numero,
+      new Date(s.criadoEm).toLocaleDateString("pt-BR"),
+      getClienteDisplay(s),
+      s.status,
+      fmtBRL(toNumber(s.total)),
+    ]),
+    styles: { fontSize: 9 },
+    theme: "striped",
+    headStyles: { fillColor: [50, 50, 50], textColor: [255, 255, 255] },
+    alternateRowStyles: { fillColor: [240, 240, 240] },
+  });
+
+  doc.save("relatorio_vendas.pdf");
+};
+
+const exportToExcel = async () => {
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet("Vendas");
+
+  // Cabeçalhos
+  worksheet.columns = [
+    { header: "Número", key: "numero", width: 15 },
+    { header: "Data", key: "data", width: 15 },
+    { header: "Cliente", key: "cliente", width: 30 },
+    { header: "Status", key: "status", width: 15 },
+    { header: "Valor (R$)", key: "valor", width: 15 },
+    { header: "Tipo de Pagamento", key: "formaPagamento", width: 20 }
+  ];
+
+  // Dados
+  filteredSales.forEach((s) => {
+    worksheet.addRow({
+      numero: s.numero,
+      data: new Date(s.criadoEm).toLocaleDateString("pt-BR"),
+      cliente: getClienteDisplay(s),
+      status: s.status,
+      valor: toNumber(s.total),
     });
-    doc.save("relatorio_vendas.pdf");
+  });
+
+  // Estilo de cabeçalho
+  worksheet.getRow(1).eachCell((cell) => {
+    cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
+    cell.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FF333333" },
+    };
+    cell.alignment = { horizontal: "center" };
+  });
+
+  // Cria o arquivo
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
+  saveAs(blob, "relatorio_vendas.xlsx");
+};
+   const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5; // quantidade de vendas por página
+  const totalPages = Math.ceil(filteredSales.length / itemsPerPage);
+
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentItems = [...filteredSales]
+    .sort(
+      (a, b) =>
+        new Date(b.criadoEm).getTime() - new Date(a.criadoEm).getTime()
+    )
+    .slice(startIndex, endIndex);
+
+  const handlePrevPage = () => {
+    if (currentPage > 1) setCurrentPage((p) => p - 1);
   };
 
-  const exportToExcel = () => {
-    const ws = XLSX.utils.json_to_sheet(
-      filteredSales.map((s) => ({
-        Número: s.numero,
-        Data: new Date(s.criadoEm).toLocaleDateString("pt-BR"),
-        Cliente: getClienteDisplay(s),
-        Status: s.status,
-        Valor: toNumber(s.total),
-      }))
-    );
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Vendas");
-    XLSX.writeFile(wb, "relatorio_vendas.xlsx");
+  const handleNextPage = () => {
+    if (currentPage < totalPages) setCurrentPage((p) => p + 1);
   };
 
   // ========================
@@ -747,106 +789,131 @@ const SalesDashboard = () => {
         <SalesByCategory />
       </div>
 
-      {/* Tabela detalhada e filtros */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Relatório Detalhado de Vendas</CardTitle>
-          <CardDescription>
-            Filtre e exporte os dados de vendas.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-4">
-              {/* Coloque aqui seu DatePicker e faça setDateRange({from, to}) */}
-              <Input
-                placeholder="Cliente"
-                className="w-48"
-                value={customerFilter}
-                onChange={(e) => setCustomerFilter(e.target.value)}
-              />
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todos">Todos</SelectItem>
-                  <SelectItem value="Concluída">Concluída</SelectItem>
-                  <SelectItem value="Pendente">Pendente</SelectItem>
-                  <SelectItem value="Cancelada">Cancelada</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" onClick={exportToPDF}>
-                <Download className="h-4 w-4 mr-2" />
-                Exportar PDF
-              </Button>
-              <Button variant="outline" onClick={exportToExcel}>
-                <Download className="h-4 w-4 mr-2" />
-                Exportar Excel
-              </Button>
-            </div>
+<Card>
+      <CardHeader>
+        <CardTitle>Relatório Detalhado de Vendas</CardTitle>
+        <CardDescription>Filtre e exporte os dados de vendas.</CardDescription>
+      </CardHeader>
+
+      <CardContent>
+        {/* Filtros */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-4">
+            <Input
+              placeholder="Cliente"
+              className="w-48"
+              value={customerFilter}
+              onChange={(e) => setCustomerFilter(e.target.value)}
+            />
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos</SelectItem>
+                <SelectItem value="Concluída">Concluída</SelectItem>
+                <SelectItem value="Pendente">Pendente</SelectItem>
+                <SelectItem value="Cancelada">Cancelada</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Número</TableHead>
-                <TableHead>Data</TableHead>
-                <TableHead>Cliente</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Valor</TableHead>
-                <TableHead className="text-center">Ações</TableHead>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={exportToPDF}>
+              <Download className="h-4 w-4 mr-2" />
+              Exportar PDF
+            </Button>
+            <Button variant="outline" onClick={exportToExcel}>
+              <Download className="h-4 w-4 mr-2" />
+              Exportar Excel
+            </Button>
+          </div>
+        </div>
+
+        {/* Tabela */}
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Número</TableHead>
+              <TableHead>Data</TableHead>
+              <TableHead>Cliente</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Forma de Pagamento</TableHead>
+              <TableHead className="text-right">Valor</TableHead>
+              <TableHead className="text-center">Ações</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {currentItems.map((s) => (
+              <TableRow key={s.id}>
+                <TableCell>{s.numero}</TableCell>
+                <TableCell>
+                  {new Date(s.criadoEm).toLocaleDateString("pt-BR")}
+                </TableCell>
+                <TableCell>{getClienteDisplay(s)}</TableCell>
+                <TableCell>{s.status}</TableCell>
+                <TableCell className="text-right">
+                  {s.formaPagamento}
+                </TableCell>
+                <TableCell className="text-right">
+                  {fmtBRL(toNumber(s.total))}
+                </TableCell>
+                <TableCell className="text-center">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setSelectedSale(s)}
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleIssueNotaFiscal(s)}
+                  >
+                    <FileText className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleCancelSale(s.id)}
+                  >
+                    <XCircle className="h-4 w-4 text-red-500" />
+                  </Button>
+                </TableCell>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {[...filteredSales]
-                .sort(
-                  (a, b) =>
-                    new Date(b.criadoEm).getTime() -
-                    new Date(a.criadoEm).getTime()
-                )
-                .map((s) => (
-                  <TableRow key={s.id}>
-                    <TableCell>{s.numero}</TableCell>
-                    <TableCell>
-                      {new Date(s.criadoEm).toLocaleDateString("pt-BR")}
-                    </TableCell>
-                    <TableCell>{getClienteDisplay(s)}</TableCell>
-                    <TableCell>{s.status}</TableCell>
-                    <TableCell className="text-right">
-                      {fmtBRL(toNumber(s.total))}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setSelectedSale(s)}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleIssueNotaFiscal(s)}
-                      >
-                        <FileText className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleCancelSale(s.id)}
-                      >
-                        <XCircle className="h-4 w-4 text-red-500" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+            ))}
+          </TableBody>
+        </Table>
+
+        {/* PAGINAÇÃO */}
+        <div className="flex justify-between items-center mt-4">
+          <p className="text-sm text-muted-foreground">
+            Página {currentPage} de {totalPages}
+          </p>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handlePrevPage}
+              disabled={currentPage === 1}
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Anterior
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleNextPage}
+              disabled={currentPage === totalPages}
+            >
+              Próxima
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
 
       {/* Insights */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">

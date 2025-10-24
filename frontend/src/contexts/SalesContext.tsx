@@ -22,25 +22,27 @@ export interface Sale {
   id: string;
   numero: string;
   cliente: {
-    nome: string
-  }
+    id: string;
+    nome: string;
+  };
   total: string;
   status: string;
   formaPagamento: string;
   desconto: number;
   vendedor: {
-    nome: string
-  }
+    id: string;
+    nome: string;
+  };
   produto: Produto[];
   itens: SaleItem[];
   criadoEm?: string;
 }
 
 export interface SaleData {
-  clienteId: string;
+  clienteId: string | null;
   vendedorId: string;
   desconto: number;
-  forma_pagamento: string;
+  formaPagamento: string;
   itens: {
     produtoId: string;
     quantidade: number;
@@ -88,7 +90,7 @@ export const SalesProvider = ({ children }: SalesProviderProps) => {
     }
   };
 
-   const fetchProducts = async () => {
+  const fetchProducts = async () => {
     try {
       const response = await axios.get("/produtos");
       setProducts(response.data);
@@ -98,10 +100,14 @@ export const SalesProvider = ({ children }: SalesProviderProps) => {
   };
 
   const createSale = async (saleData: SaleData) => {
-    console.log(saleData);
-    const response = await axios.post("/vendas/create", saleData);
-    setSales((prev) => [response.data, ...prev]);
-    return response.data;
+    try {
+      const response = await axios.post("/vendas/create", saleData);
+      setSales((prev) => [response.data, ...prev]);
+      return response.data;
+    } catch (err) {
+      console.error(err.response?.data.message);
+      throw err; 
+    }
   };
 
   const updateSale = async (id: string, cliente: string, itens: SaleItem[]) => {
@@ -117,9 +123,10 @@ export const SalesProvider = ({ children }: SalesProviderProps) => {
 
   const cancelSale = async (id: string) => {
     await axios.patch(`/vendas/cancelar/${id}`);
-    setSales((prev) => prev.map((s) => (s.id === id ? { ...s, status: "Cancelada" } : s)));
+    setSales((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, status: "Cancelada" } : s))
+    );
   };
-
 
   // Carrega as vendas ao montar o provider
   useEffect(() => {
@@ -129,7 +136,16 @@ export const SalesProvider = ({ children }: SalesProviderProps) => {
 
   return (
     <SalesContext.Provider
-      value={{ sales, loading, products, fetchSales, createSale, updateSale, deleteSale, cancelSale }}
+      value={{
+        sales,
+        loading,
+        products,
+        fetchSales,
+        createSale,
+        updateSale,
+        deleteSale,
+        cancelSale,
+      }}
     >
       {children}
     </SalesContext.Provider>

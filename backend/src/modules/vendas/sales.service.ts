@@ -16,6 +16,14 @@ export const createVendaService = async (data: any) => {
   // ==================================================
   for (const item of data.itens) {
     const produtoId = item.produtoId;
+
+    const nomeProduto = await prisma.produto.findUnique({
+      where: { id: produtoId },
+      select: { nome: true },
+    });
+
+
+
     const quantidadeSolicitada = Number(item.quantidade);
 
     const lotes = await prisma.lote.findMany({
@@ -29,7 +37,7 @@ export const createVendaService = async (data: any) => {
 
     if (estoqueTotal < quantidadeSolicitada) {
       throw new CustomError(
-        `Estoque insuficiente para o produto "${produtoId}". Quantidade disponível: ${estoqueTotal}, solicitada: ${quantidadeSolicitada}.`,
+        `Estoque insuficiente para o produto "${nomeProduto?.nome}". Quantidade disponível: ${estoqueTotal}, solicitada: ${quantidadeSolicitada}.`,
         400
       );
     }
@@ -45,6 +53,7 @@ export const createVendaService = async (data: any) => {
         sum + Number(item.precoUnitario) * Number(item.quantidade),
       0
     );
+    
 
     // Cria venda
     const novaVenda = await tx.venda.create({
@@ -56,8 +65,7 @@ export const createVendaService = async (data: any) => {
         status: "Concluída",
         formaPagamento: data.formaPagamento || "Dinheiro",
         desconto: data.desconto || 0,
-        lucroEstimado: data.lucroEstimado || 0,
-        observacoes: data.observacoes || null,
+
       },
     });
 

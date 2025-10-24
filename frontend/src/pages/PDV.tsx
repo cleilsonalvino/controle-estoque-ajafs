@@ -1,6 +1,8 @@
 // src/pages/PDV.tsx
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+// ✅ NOVO: Importar useNavigate para a navegação
+import { useNavigate } from "react-router-dom";
 import {
   X,
   Search,
@@ -13,6 +15,7 @@ import {
   Coins,
   PlusCircle,
   Loader2,
+  FileWarning, // ✅ NOVO: Ícone para o modal
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -41,6 +44,7 @@ import { Produto, useProdutos } from "@/contexts/ProdutoContext";
 import { Cliente, useClientes } from "@/contexts/ClienteContext";
 import { Vendedor } from "@/contexts/VendedorContext";
 
+// ... (Tipos FinalizeSaleData e PDVProps permanecem os mesmos)
 type FinalizeSaleData = {
   saleItems: SaleItem[];
   clienteId?: string;
@@ -58,26 +62,27 @@ interface PDVProps {
 }
 
 const PAYMENT_METHODS = [
-  { value: "dinheiro", label: "Dinheiro" },
-  { value: "pix", label: "Pix" },
-  { value: "debito", label: "Cartão de Débito" },
-  { value: "credito", label: "Cartão de Crédito" },
+  { value: "Dinheiro", label: "Dinheiro" },
+  { value: "Pix", label: "Pix" },
+  { value: "Debito", label: "Cartão de Débito" },
+  { value: "Credito", label: "Cartão de Crédito" },
 ];
 
 // ============================================================================
 // 🦁 Custom Hook: usePdv
 // ============================================================================
-const usePdv = (onFinalizeSale: PDVProps["onFinalizeSale"]) => {
-  // ♻️ ALTERADO: Importando a função correta do contexto de produtos
-  const {
-    produtos,
-    darBaixaEstoquePorVenda,
-    loading: loadingProdutos,
-  } = useProdutos();
+// 🔄 ALTERADO: Hook agora recebe um callback para quando o estoque for zero
+const usePdv = (
+  onFinalizeSale: PDVProps["onFinalizeSale"],
+  estoques: Record<string, number>,
+  onZeroStock: (produto: Produto) => void
+) => {
+  const { produtos, loading: loadingProdutos } = useProdutos();
   const { createCliente } = useClientes();
 
   const [saleItems, setSaleItems] = useState<SaleItem[]>([]);
-  const [selectedCliente, setSelectedCliente] = useState<string | undefined>();
+  // ... (outros estados do hook permanecem os mesmos)
+  const [selectedCliente, setSelectedCliente] = useState<string | null>();
   const [selectedVendedor, setSelectedVendedor] = useState<
     string | undefined
   >();
@@ -106,11 +111,28 @@ const usePdv = (onFinalizeSale: PDVProps["onFinalizeSale"]) => {
   );
   const change = useMemo(
     () =>
-      paymentMethod === "dinheiro" && amountPaid > total
+      paymentMethod === "Dinheiro" && amountPaid > total
         ? amountPaid - total
         : 0,
     [amountPaid, total, paymentMethod]
   );
+
+  // ... (useEffect de carregar e salvar no localStorage permanece o mesmo)
+  useEffect(() => {
+    const saved = localStorage.getItem("pdv_cart");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) setSaleItems(parsed);
+      } catch (err) {
+        console.error("Erro ao restaurar carrinho:", err);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("pdv_cart", JSON.stringify(saleItems));
+  }, [saleItems]);
 
   const filteredProducts = useMemo(() => {
     if (!searchQuery) return [];
@@ -122,43 +144,83 @@ const usePdv = (onFinalizeSale: PDVProps["onFinalizeSale"]) => {
     );
   }, [searchQuery, produtos]);
 
-  const addItemToSale = useCallback((produto: Produto) => {
-    setSaleItems((prevItems) => {
-      const existingItem = prevItems.find((item) => item.id === produto.id);
-      if (existingItem) {
-        return prevItems.map((item) =>
-          item.id === produto.id
-            ? { ...item, quantity: item.quantity + 1 }
-            : item
-        );
-      }
-      return [
-        ...prevItems,
-        {
-          id: produto.id,
-          produto,
-          precoVenda: parseFloat(produto.precoVenda),
-          precoCusto: produto.lote?.[0]?.precoCusto || 0,
-          quantity: 1,
-          type: "SAIDA", // Definido como SAIDA para produtos vendidos
-        },
-      ];
-    });
-    setLastAddedProduct(produto);
-    setSearchQuery("");
-    setHighlightedItemId(produto.id);
-    setTimeout(() => setHighlightedItemId(null), 600);
-  }, []);
+  // 🔄 ALTERADO: Adiciona a verificação de estoque antes de qualquer ação
+  const addItemToSale = useCallback(
+    (produto: Produto) => {
+      const estoqueDisponivel = estoques[produto.id];
 
-  const updateItemQuantity = useCallback((id: string, newQuantity: number) => {
-    setSaleItems((prev) =>
-      newQuantity <= 0
-        ? prev.filter((item) => item.id !== id)
-        : prev.map((item) =>
-            item.id === id ? { ...item, quantity: newQuantity } : item
-          )
-    );
-  }, []);
+      // Se o estoque é zero, não faz nada e chama o callback para abrir o modal
+      if (estoqueDisponivel === 0) {
+        onZeroStock(produto);
+        return;
+      }
+
+      setSaleItems((prevItems) => {
+        const existingItem = prevItems.find((item) => item.id === produto.id);
+
+        if (existingItem) {
+          // Impede de adicionar mais que o estoque
+          if (
+            estoqueDisponivel !== undefined &&
+            existingItem.quantity >= estoqueDisponivel
+          ) {
+            toast.error(`Estoque máximo atingido para ${produto.nome}.`);
+            return prevItems; // Retorna o estado anterior sem alteração
+          }
+          return prevItems.map((item) =>
+            item.id === produto.id
+              ? { ...item, quantity: item.quantity + 1 }
+              : item
+          );
+        }
+
+        // Se é um item novo
+        return [
+          ...prevItems,
+          {
+            id: produto.id,
+            produto,
+            precoVenda: parseFloat(produto.precoVenda),
+            precoCusto: produto.lote?.[0]?.precoCusto || 0,
+            quantity: 1,
+            type: "SAIDA",
+          },
+        ];
+      });
+
+      setLastAddedProduct(produto);
+      setSearchQuery("");
+      setHighlightedItemId(produto.id);
+      setTimeout(() => setHighlightedItemId(null), 600);
+    },
+    [estoques, onZeroStock] // Adicionadas as novas dependências
+  );
+
+  // ... (O resto do hook permanece o mesmo: updateItemQuantity, resetSale, clearCart, handleFinalize, etc.)
+  const updateItemQuantity = useCallback(
+    (id: string, newQuantity: number) => {
+      const itemToUpdate = saleItems.find((item) => item.id === id);
+      if (!itemToUpdate) return;
+
+      const estoqueDisponivel = estoques[itemToUpdate.produto.id];
+
+      if (estoqueDisponivel !== undefined && newQuantity > estoqueDisponivel) {
+        toast.error(
+          `Estoque insuficiente. Apenas ${estoqueDisponivel} unidades disponíveis.`
+        );
+        return;
+      }
+
+      setSaleItems((prev) =>
+        newQuantity <= 0
+          ? prev.filter((item) => item.id !== id)
+          : prev.map((item) =>
+              item.id === id ? { ...item, quantity: newQuantity } : item
+            )
+      );
+    },
+    [saleItems, estoques]
+  );
 
   const resetSale = useCallback(() => {
     setSaleItems([]);
@@ -172,41 +234,37 @@ const usePdv = (onFinalizeSale: PDVProps["onFinalizeSale"]) => {
     setSearchQuery("");
   }, []);
 
+  const clearCart = useCallback(() => {
+    setSaleItems([]);
+    localStorage.removeItem("pdv_cart");
+    toast.info("Carrinho esvaziado com sucesso!");
+  }, []);
+
   const handleFinalize = async () => {
     if (!selectedVendedor || !paymentMethod) {
-      toast.error("Vendedor e Forma de Pagamento são obrigatórios.");
+      toast.error("Vendedor, Forma de Pagamento e Cliente são obrigatórios.");
       return;
     }
 
-    const success = await onFinalizeSale({
-      saleItems,
-      clienteId: selectedCliente,
-      vendedorId: selectedVendedor,
-      desconto: discount,
-      formaPagamento: paymentMethod,
-      total,
-    });
+    try {
+      const success = await onFinalizeSale({
+        saleItems,
+        clienteId: selectedCliente || null,
+        vendedorId: selectedVendedor,
+        desconto: discount,
+        formaPagamento: paymentMethod,
+        total,
+      });
 
-    if (success) {
-      toast.success("Venda finalizada com sucesso!");
-
-      try {
-        // ♻️ CORRIGIDO: Usando a nova função para registrar a saída no estoque
-        const stockUpdatePromises = saleItems.map((item) =>
-          darBaixaEstoquePorVenda(item.produto.id, item.quantity)
-        );
-        await Promise.all(stockUpdatePromises);
+      if (success) {
+        toast.success("Venda finalizada com sucesso!");
         toast.info("Estoque dos produtos foi atualizado.");
-      } catch (error) {
-        console.error("Falha ao atualizar estoque:", error);
-        toast.error(
-          "A venda foi salva, mas houve um erro ao atualizar o estoque."
-        );
-      }
 
-      resetSale();
-    } else {
-      toast.error("Erro ao finalizar a venda. Verifique sua conexão.");
+        resetSale();
+      }
+    } catch (err: any) {
+      console.error("Erro ao criar venda:", err);
+      toast.error(err.response?.data?.message || "Erro ao processar a venda.");
     }
   };
 
@@ -215,7 +273,6 @@ const usePdv = (onFinalizeSale: PDVProps["onFinalizeSale"]) => {
       toast.error("O nome do cliente é obrigatório.");
       return;
     }
-    // Ajuste o payload conforme a necessidade do seu contexto de cliente
     const promise = createCliente({ nome: newCustomerName.trim() });
     toast.promise(promise, {
       loading: "Salvando novo cliente...",
@@ -263,6 +320,7 @@ const usePdv = (onFinalizeSale: PDVProps["onFinalizeSale"]) => {
     updateItemQuantity,
     handleFinalize,
     handleSaveCustomer,
+    clearCart,
   };
 };
 
@@ -270,45 +328,106 @@ const usePdv = (onFinalizeSale: PDVProps["onFinalizeSale"]) => {
 // 🎨 Componente de UI: PDV
 // ============================================================================
 const PDV = ({ clientes, vendedores, onFinalizeSale, onExit }: PDVProps) => {
+  const navigate = useNavigate(); // ✅ NOVO: Hook para navegação
   const [isFullscreen, setIsFullscreen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const [estoques, setEstoques] = useState<Record<string, number>>({});
+
+  // ✅ NOVO: Estado para o modal de estoque zerado
+  const [isZeroStockDialogOpen, setIsZeroStockDialogOpen] = useState(false);
+  const [productWithZeroStock, setProductWithZeroStock] =
+    useState<Produto | null>(null);
+
+  const { getEstoqueProdutoId } = useProdutos();
+
+  const fetchEstoque = useCallback(
+    async (produtoId: string) => {
+      if (estoques[produtoId] !== undefined) return;
+      try {
+        const estoqueTotal = await getEstoqueProdutoId(produtoId);
+        setEstoques((prev) => ({ ...prev, [produtoId]: estoqueTotal }));
+      } catch (err) {
+        console.error("Erro ao buscar estoque:", err);
+        setEstoques((prev) => ({ ...prev, [produtoId]: 0 }));
+      }
+    },
+    [estoques, getEstoqueProdutoId]
+  );
+
+  // ✅ NOVO: Callback que será passado para o hook
+  const handleZeroStock = (produto: Produto) => {
+    setProductWithZeroStock(produto);
+    setIsZeroStockDialogOpen(true);
+  };
 
   const {
     saleItems,
-    selectedCliente,
-    setSelectedCliente,
-    selectedVendedor,
-    setSelectedVendedor,
-    discount,
-    setDiscount,
-    paymentMethod,
-    setPaymentMethod,
-    amountPaid,
-    setAmountPaid,
-    searchQuery,
-    setSearchQuery,
-    isPaymentDialogOpen,
-    setIsPaymentDialogOpen,
-    highlightedItemId,
-    lastAddedProduct,
+    // ...
+    // (outros estados e funções retornados do hook)
+    clearCart,
+    addItemToSale,
+    filteredProducts,
+    loadingProdutos,
+    handleSaveCustomer,
+    isNewCustomerDialogOpen,
+    newCustomerName,
+    setNewCustomerName,
+    setIsNewCustomerDialogOpen,
+    // ...
     subtotal,
     total,
     change,
-    filteredProducts,
-    addItemToSale,
+    lastAddedProduct,
+    highlightedItemId,
+    isPaymentDialogOpen,
+    setIsPaymentDialogOpen,
+    searchQuery,
+    setSearchQuery,
+    amountPaid,
+    setAmountPaid,
+    paymentMethod,
+    setPaymentMethod,
+    discount,
+    setDiscount,
+    selectedVendedor,
+    setSelectedVendedor,
+    selectedCliente,
+    setSelectedCliente,
     updateItemQuantity,
     handleFinalize,
-    isNewCustomerDialogOpen,
-    setIsNewCustomerDialogOpen,
-    newCustomerName,
-    setNewCustomerName,
-    handleSaveCustomer,
-    loadingProdutos,
-  } = usePdv(onFinalizeSale);
+  } = usePdv(onFinalizeSale, estoques, handleZeroStock); // 🔄 ALTERADO: Passando o callback
 
+  // Busca estoque para itens no carrinho
+  useEffect(() => {
+    saleItems.forEach((item) => {
+      fetchEstoque(item.produto.id);
+    });
+  }, [saleItems, fetchEstoque]);
+
+  // ✅ NOVO: Busca estoque para itens na lista de pesquisa
+  useEffect(() => {
+    if (filteredProducts.length > 0) {
+      filteredProducts.forEach((produto) => {
+        fetchEstoque(produto.id);
+      });
+    }
+  }, [filteredProducts, fetchEstoque]);
+
+  // ... (O resto do componente, incluindo useEffects e o JSX, segue abaixo)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (isPaymentDialogOpen || isNewCustomerDialogOpen) return;
+      if (
+        isPaymentDialogOpen ||
+        isNewCustomerDialogOpen ||
+        isZeroStockDialogOpen
+      )
+        return;
+
+      if (e.key === "Delete" && saleItems.length > 0) {
+        e.preventDefault();
+        clearCart();
+      }
+
       if (e.key === "F1") {
         e.preventDefault();
         searchInputRef.current?.focus();
@@ -321,14 +440,17 @@ const PDV = ({ clientes, vendedores, onFinalizeSale, onExit }: PDVProps) => {
         setSearchQuery("");
       }
     };
+
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [
     saleItems.length,
     isPaymentDialogOpen,
     isNewCustomerDialogOpen,
+    isZeroStockDialogOpen, // Adicionado
     setIsPaymentDialogOpen,
     setSearchQuery,
+    clearCart,
   ]);
 
   const toggleFullscreen = useCallback(() => {
@@ -341,6 +463,10 @@ const PDV = ({ clientes, vendedores, onFinalizeSale, onExit }: PDVProps) => {
     }
   }, []);
 
+  const handleGoToMovements = () => {
+    navigate("/movements");
+  };
+
   if (loadingProdutos) {
     return (
       <div className="flex h-screen w-screen flex-col items-center justify-center gap-4 bg-muted/40">
@@ -352,11 +478,24 @@ const PDV = ({ clientes, vendedores, onFinalizeSale, onExit }: PDVProps) => {
 
   return (
     <div className="flex h-screen w-screen bg-muted/40 font-sans">
+      {/* ... (Todo o JSX do PDV, painel esquerdo e direito, permanece o mesmo até o final) */}
       <div className="flex flex-1 flex-col p-4 gap-4">
         <div className="grid grid-rows-[1fr_auto] gap-4 h-full">
           <Card className="flex flex-col">
             <CardHeader>
-              <CardTitle>Itens da Venda ({saleItems.length})</CardTitle>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle>Itens da Venda ({saleItems.length})</CardTitle>
+                {saleItems.length > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    title="Esvaziar Carrinho (Del)"
+                    onClick={clearCart}
+                  >
+                    <Trash2 className="h-4 w-4 text-red-500" />
+                  </Button>
+                )}
+              </CardHeader>
             </CardHeader>
             <CardContent className="flex-1 p-0 overflow-hidden">
               <ScrollArea className="h-full">
@@ -384,7 +523,12 @@ const PDV = ({ clientes, vendedores, onFinalizeSale, onExit }: PDVProps) => {
                         alt={item.produto.nome}
                       />
                       <div className="flex-1">
-                        <p className="font-semibold">{item.produto.nome}</p>
+                        <p className="font-semibold">
+                          {item.produto.nome}
+                          <span className="ml-2 text-xs font-normal text-muted-foreground">
+                            (Estoque: {estoques[item.produto.id] ?? "--"})
+                          </span>
+                        </p>
                         <p className="text-sm text-muted-foreground">
                           R$ {item.precoVenda.toFixed(2)}
                         </p>
@@ -417,6 +561,7 @@ const PDV = ({ clientes, vendedores, onFinalizeSale, onExit }: PDVProps) => {
               </ScrollArea>
             </CardContent>
           </Card>
+
           <div className="grid grid-cols-2 gap-4">
             {lastAddedProduct ? (
               <Card className="flex flex-col items-center justify-center p-4 bg-secondary/30">
@@ -518,13 +663,14 @@ const PDV = ({ clientes, vendedores, onFinalizeSale, onExit }: PDVProps) => {
             </Card>
           )}
         </div>
+
         <Separator />
         <div className="space-y-4">
           <div>
             <Label>Cliente</Label>
             <div className="flex items-center gap-2">
               <Select
-                value={selectedCliente}
+                value={selectedCliente || ""}
                 onValueChange={setSelectedCliente}
               >
                 <SelectTrigger>
@@ -568,6 +714,16 @@ const PDV = ({ clientes, vendedores, onFinalizeSale, onExit }: PDVProps) => {
               </SelectContent>
             </Select>
           </div>
+          <span
+            onClick={() => {
+              setSelectedVendedor("");
+              setSelectedCliente("");
+              setSearchQuery("");
+            }}
+            className="text-sm text-red-500 cursor-pointer hover:underline"
+          >
+            Limpar seleção
+          </span>
         </div>
         <Separator />
         <div className="flex-1" />
@@ -580,8 +736,15 @@ const PDV = ({ clientes, vendedores, onFinalizeSale, onExit }: PDVProps) => {
           <DollarSign className="h-6 w-6 mr-2" /> Finalizar Venda (F4)
         </Button>
       </div>
+
+      {/* ✅ CORREÇÃO: Modais com o conteúdo restaurado */}
       <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
         <DialogContent className="sm:max-w-md">
+          {!selectedVendedor ? (
+            <div className="text-sm text-red-500 text-center p-4">
+              Selecione um Vendedor
+            </div>
+          ) : null}
           <DialogHeader>
             <DialogTitle className="text-2xl">Finalizar Venda</DialogTitle>
           </DialogHeader>
@@ -609,7 +772,7 @@ const PDV = ({ clientes, vendedores, onFinalizeSale, onExit }: PDVProps) => {
                   value={paymentMethod}
                   onValueChange={(value) => {
                     setPaymentMethod(value);
-                    if (value !== "dinheiro") setAmountPaid(0);
+                    if (value !== "Dinheiro") setAmountPaid(0);
                   }}
                 >
                   <SelectTrigger>
@@ -625,7 +788,7 @@ const PDV = ({ clientes, vendedores, onFinalizeSale, onExit }: PDVProps) => {
                 </Select>
               </div>
             </div>
-            {paymentMethod === "dinheiro" && (
+            {paymentMethod === "Dinheiro" && (
               <div className="space-y-2 p-4 border rounded-lg">
                 <h3 className="font-semibold flex items-center">
                   <Coins className="w-4 h-4 mr-2" /> Pagamento em Dinheiro
@@ -669,6 +832,7 @@ const PDV = ({ clientes, vendedores, onFinalizeSale, onExit }: PDVProps) => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
       <Dialog
         open={isNewCustomerDialogOpen}
         onOpenChange={setIsNewCustomerDialogOpen}
@@ -702,6 +866,73 @@ const PDV = ({ clientes, vendedores, onFinalizeSale, onExit }: PDVProps) => {
               Cancelar
             </Button>
             <Button onClick={handleSaveCustomer}>Salvar Cliente</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={isZeroStockDialogOpen}
+        onOpenChange={setIsZeroStockDialogOpen}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileWarning className="h-6 w-6 text-amber-500" />
+              Produto Sem Estoque
+            </DialogTitle>
+            <DialogDescription className="pt-2">
+              O produto "
+              <span className="font-semibold text-foreground">
+                {productWithZeroStock?.nome}
+              </span>
+              " está com o estoque zerado e não pode ser adicionado à venda.
+              <br />
+              Deseja ir para a tela de movimentações para adicionar mais
+              unidades?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsZeroStockDialogOpen(false)}
+            >
+              Cancelar
+            </Button>
+            <Button onClick={handleGoToMovements}>Ir para Movimentações</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ✅ NOVO: Modal para Estoque Zerado */}
+      <Dialog
+        open={isZeroStockDialogOpen}
+        onOpenChange={setIsZeroStockDialogOpen}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileWarning className="h-6 w-6 text-amber-500" />
+              Produto Sem Estoque
+            </DialogTitle>
+            <DialogDescription className="pt-2">
+              O produto "
+              <span className="font-semibold text-foreground">
+                {productWithZeroStock?.nome}
+              </span>
+              " está com o estoque zerado e não pode ser adicionado à venda.
+              <br />
+              Deseja ir para a tela de movimentações para adicionar mais
+              unidades?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsZeroStockDialogOpen(false)}
+            >
+              Cancelar
+            </Button>
+            <Button onClick={handleGoToMovements}>Ir para Movimentações</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

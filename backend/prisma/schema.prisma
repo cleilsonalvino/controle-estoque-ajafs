@@ -87,9 +87,9 @@ model Movimentacao {
 model Fornecedor {
   id           String   @id @default(uuid())
   nome         String
-  localizacao  String?
+  endereco     String?
   contato      String?
-  email        String?  @unique
+  email        String?  @unique 
   telefone     String?
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt

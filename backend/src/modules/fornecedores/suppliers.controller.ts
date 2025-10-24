@@ -10,6 +10,17 @@ import {
 import { createSupplierSchema, updateSupplierSchema } from "./suppliers.dto.ts";
 
 export const createSupplierController = async (req: Request, res: Response) => {
+  console.log("Requisição recebida para criar fornecedor:", req.body);
+
+  const validation = createSupplierSchema.safeParse(req.body);
+
+  if (!validation.success) {
+    return res.status(400).json({
+      message: "Erro de validação nos dados do fornecedor",
+      details: validation.error.format(), // mostra exatamente o campo errado
+    });
+  }
+
   const supplier = await createSupplierService(req.body);
   res.status(201).json(supplier);
 };

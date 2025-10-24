@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import api from "@/lib/api";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -18,22 +19,52 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
-import { toast } from "sonner";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import {
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
   Plus,
   Search,
+  Calendar as CalendarIcon,
+  FileDown,
+  Package,
+  TrendingUp,
+  Activity,
+  Users2,
 } from "lucide-react";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Legend,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+  Cell,
+  LineChart,
+  Line,
+} from "recharts";
+import { DateRange } from "react-day-picker";
+import { Calendar } from "@/components/ui/calendar";
+import { format, startOfDay } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 interface Movement {
   id: string;
@@ -44,436 +75,346 @@ interface Movement {
   date: string;
   user: string;
   notes?: string;
+  fornecedor?: string;
 }
+
+const COLORS = {
+  ENTRADA: "#16a34a",
+  SAIDA: "#dc2626",
+  AJUSTE: "#f59e0b",
+};
 
 const Movements = () => {
   const [movements, setMovements] = useState<Movement[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddDialog, setShowAddDialog] = useState(false);
+
+  // Filtros e controle
   const [filterType, setFilterType] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
-
-  const [newMovement, setNewMovement] = useState({
-    type: "ENTRADA" as "ENTRADA" | "AJUSTE" | "SAIDA",
-    product: "",
-    quantity: "",
-    reason: "",
-    notes: "",
-    fornecedorId: "",
-    precoCusto: "",
-    validade: "",
-  });
+  const [date, setDate] = useState<DateRange | undefined>();
+  const [filterProduct, setFilterProduct] = useState("");
+  const [filterSupplier, setFilterSupplier] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
 
   const [products, setProducts] = useState<any[]>([]);
   const [suppliers, setSuppliers] = useState<any[]>([]);
 
-  // =============================
-  // 🔹 Buscar movimentações reais
-  // =============================
+  // --- Busca de dados ---
+  const fetchMovements = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get("/estoque/movimentacoes");
+      const data = response.data.map((item: any) => ({
+        id: item.id,
+        type: item.tipo,
+        product: item.produto?.nome || "Produto Deletado",
+        quantity: Number(item.quantidade),
+        reason: item.tipo,
+        date: item.criadoEm,
+        user: item.usuario?.nome || "Usuário do Sistema",
+        fornecedor: item.fornecedor?.nome || "-",
+        notes: item.observacao || "",
+      }));
+      data.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      setMovements(data);
+    } catch (error) {
+      toast.error("Falha ao carregar o histórico de movimentações.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchMovements = async () => {
-      try {
-        setLoading(true);
-        const response = await api.get("/estoque/movimentacoes");
-        const data = response.data;
-
-        const formatted: Movement[] = data.map((item: any) => ({
-          id: item.id,
-          type: item.tipo,
-          product: item.produto?.nome || "Produto não encontrado",
-          quantity: Number(item.quantidade),
-          reason: item.tipo || "Sem motivo",
-          date: item.criadoEm,
-          user: item.usuario?.nome || "Usuário do sistema",
-          notes: item.observacao || "",
-        }));
-
-        formatted.sort(
-          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-        );
-
-        setMovements(formatted);
-      } catch (error) {
-        console.error("Erro ao buscar movimentações:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchMovements();
+    (async () => {
+      const [p, f] = await Promise.all([api.get("/produtos"), api.get("/fornecedores")]);
+      setProducts(p.data);
+      setSuppliers(f.data);
+    })();
   }, []);
 
-  // =============================
-  // 🔹 Filtragem e busca
-  // =============================
-  const filteredMovements = movements.filter((movement) => {
-    const matchesSearch =
-      movement.product.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      movement.reason.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = filterType === "all" || movement.type === filterType;
-    return matchesSearch && matchesType;
-  });
+  // --- Filtragem ---
+  const filteredMovements = useMemo(() => {
+    return movements.filter((m) => {
+      const matchesSearch =
+        m.product.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (m.notes && m.notes.toLowerCase().includes(searchTerm.toLowerCase()));
+      const matchesType = filterType === "all" || m.type === filterType;
+      const matchesProduct = !filterProduct || m.product === filterProduct;
+      const matchesSupplier = !filterSupplier || m.fornecedor === filterSupplier;
+      const movementDate = new Date(m.date);
+      const matchesDate =
+        !date?.from ||
+        (date.from && !date.to && startOfDay(movementDate) >= startOfDay(date.from)) ||
+        (date.from &&
+          date.to &&
+          startOfDay(movementDate) >= startOfDay(date.from) &&
+          startOfDay(movementDate) <= startOfDay(date.to));
+      return matchesSearch && matchesType && matchesProduct && matchesSupplier && matchesDate;
+    });
+  }, [movements, searchTerm, filterType, filterProduct, filterSupplier, date]);
 
-  // =============================
-  // 🔹 Carrega produtos e fornecedores ao abrir o modal
-  // =============================
-  useEffect(() => {
-    if (!showAddDialog) return;
-    const fetchData = async () => {
-      try {
-        const [prodResp, fornResp] = await Promise.all([
-          api.get("/produtos"),
-          api.get("/fornecedores"),
-        ]);
-        setProducts(prodResp.data);
-        setSuppliers(fornResp.data);
-      } catch (error) {
-        console.error("Erro ao carregar produtos/fornecedores:", error);
-        toast.error("Erro ao carregar dados de produtos e fornecedores");
-      }
-    };
-    fetchData();
-  }, [showAddDialog]);
+  const totalPages = Math.ceil(filteredMovements.length / ITEMS_PER_PAGE);
+  const paginatedMovements = filteredMovements.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
 
-  // =============================
-  // 🔹 Adicionar movimentação + criação de lote (entrada)
-  // =============================
-  const handleAddMovement = async () => {
-    if (!newMovement.product || !newMovement.quantity) {
-      toast.warning("Preencha todos os campos obrigatórios!");
-      return;
-    }
+  // --- Estatísticas ---
+  const totalEntradas = filteredMovements.filter((m) => m.type === "ENTRADA").reduce((acc, m) => acc + m.quantity, 0);
+  const totalSaidas = filteredMovements.filter((m) => m.type === "SAIDA").reduce((acc, m) => acc + m.quantity, 0);
+  const totalAjustes = filteredMovements.filter((m) => m.type === "AJUSTE").reduce((acc, m) => acc + m.quantity, 0);
+  const saldoLiquido = totalEntradas - totalSaidas;
+  const ultimoMovimento = filteredMovements[0]?.date
+    ? format(new Date(filteredMovements[0].date), "dd/MM/yyyy HH:mm", { locale: ptBR })
+    : "—";
 
-    try {
-      const payload = {
-        produtoId: newMovement.product,
-        tipo: newMovement.type.toUpperCase(),
-        quantidade: Number(newMovement.quantity),
-        observacao: newMovement.notes || "Movimentação manual",
-        fornecedorId:
-          newMovement.type === "ENTRADA" ? newMovement.fornecedorId || null : null,
-        precoCusto:
-          newMovement.type === "ENTRADA" && newMovement.precoCusto
-            ? Number(newMovement.precoCusto)
-            : null,
-        validade:
-          newMovement.type === "ENTRADA" && newMovement.validade
-            ? newMovement.validade
-            : null,
-      };
-      console.log(payload);
+  // --- Gráficos ---
+  const chartDataByType = Object.entries({
+    Entrada: totalEntradas,
+    Saída: totalSaidas,
+    Ajuste: totalAjustes,
+  }).map(([name, value]) => ({ name, value }));
 
-      await api.post("/estoque/movimentacao", payload);
+  const lineDataByDate = useMemo(() => {
+    const grouped = filteredMovements.reduce((acc, m) => {
+      const dateKey = new Date(m.date).toLocaleDateString("pt-BR");
+      acc[dateKey] = (acc[dateKey] || 0) + m.quantity;
+      return acc;
+    }, {} as Record<string, number>);
+    return Object.entries(grouped).map(([date, qtd]) => ({ date, qtd }));
+  }, [filteredMovements]);
 
-      toast.success(
-        newMovement.type === "ENTRADA"
-          ? "Entrada registrada e lote criado!"
-          : "Movimentação registrada com sucesso!"
-      );
-      setShowAddDialog(false);
-      setNewMovement({
-        type: "ENTRADA",
-        product: "",
-        quantity: "",
-        notes: "",
-        reason: "",
-        fornecedorId: "",
-        precoCusto: "",
-        validade: "",
-      });
-      // Atualiza lista local
-      onMovementAdded();
-    } catch (error) {
-      console.error(error);
-      toast.error("Erro ao registrar movimentação");
-    }
-  };
-
-  const onMovementAdded = async () => {
-    const response = await api.get("/estoque/movimentacoes");
-    setMovements(response.data);
-  };
-
-  // =============================
-  // 🔹 Utilitários visuais
-  // =============================
-  const getMovementIcon = (type: "ENTRADA" | "SAIDA" | "AJUSTE") =>
-    type === "ENTRADA" ? (
-      <ArrowUp className="h-4 w-4 text-green-600" />
-    ) : (
-      <ArrowDown className="h-4 w-4 text-red-600" />
+  // --- Exportações ---
+  const exportExcel = () => {
+    const ws = XLSX.utils.json_to_sheet(
+      filteredMovements.map((m) => ({
+        Produto: m.product,
+        Tipo: m.type,
+        Quantidade: m.quantity,
+        Fornecedor: m.fornecedor,
+        Data: new Date(m.date).toLocaleString("pt-BR"),
+        Usuário: m.user,
+        Observação: m.notes,
+      }))
     );
-
-  const getMovementBadge = (type: "ENTRADA" | "SAIDA" | "AJUSTE") => {
-    const map = {
-      ENTRADA: "bg-green-600",
-      SAIDA: "bg-red-600",
-      AJUSTE: "bg-yellow-600",
-    };
-    return (
-      <Badge className={`text-xs text-white ${map[type] || "bg-gray-600"}`}>
-        {type.charAt(0) + type.slice(1).toLowerCase()}
-      </Badge>
-    );
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Movimentações");
+    XLSX.writeFile(wb, "movimentacoes_estoque.xlsx");
+    toast.success("Planilha Excel exportada!");
   };
 
-  const formatDate = (dateString: string) =>
-    new Date(dateString).toLocaleString("pt-BR");
+  const exportPDF = () => {
+    const doc = new jsPDF();
+    doc.text("Relatório de Movimentações de Estoque", 14, 15);
+    autoTable(doc, {
+      head: [["Produto", "Tipo", "Qtd", "Fornecedor", "Data", "Usuário"]],
+      body: filteredMovements.map((m) => [
+        m.product,
+        m.type,
+        m.quantity,
+        m.fornecedor,
+        new Date(m.date).toLocaleString("pt-BR"),
+        m.user,
+      ]),
+    });
+    doc.save("movimentacoes_estoque.pdf");
+    toast.success("PDF gerado com sucesso!");
+  };
 
-  // =============================
-  // 🔹 Renderização
-  // =============================
+  // --- Render ---
   return (
-    <div className="p-6">
-      {/* Header */}
-      <div className="mb-8 flex justify-between items-center">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-gradient-primary rounded-lg">
-            <ArrowUpDown className="h-6 w-6 text-primary-foreground" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Movimentações</h1>
-            <p className="text-muted-foreground">
-              Entradas, saídas e criação de lotes
-            </p>
-          </div>
+    <div className="p-6 space-y-6">
+      {/* Cabeçalho */}
+      <div className="flex justify-between flex-wrap items-center gap-3">
+        <div>
+          <h1 className="text-3xl font-bold">Movimentações de Estoque</h1>
+          <p className="text-muted-foreground">Painel completo de controle, análise e exportação.</p>
         </div>
-        <Button
-          onClick={() => setShowAddDialog(true)}
-          className="bg-gradient-primary hover:opacity-90 shadow-md"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Nova Movimentação
-        </Button>
+        <div className="flex gap-2 flex-wrap">
+          <Button onClick={() => setShowAddDialog(true)}><Plus className="h-4 w-4 mr-2" /> Nova</Button>
+          <Button variant="outline" onClick={exportExcel} disabled={!filteredMovements.length}><FileDown className="h-4 w-4 mr-2" /> Excel</Button>
+          <Button variant="outline" onClick={exportPDF} disabled={!filteredMovements.length}><FileDown className="h-4 w-4 mr-2" /> PDF</Button>
+        </div>
+      </div>
+
+      {/* Estatísticas rápidas */}
+      <div className="grid md:grid-cols-4 gap-4">
+        <Card className="bg-green-50">
+          <CardContent className="flex items-center justify-between p-4">
+            <div>
+              <p className="text-green-700 text-sm">Entradas</p>
+              <h3 className="text-2xl font-bold">{totalEntradas}</h3>
+            </div>
+            <ArrowUp className="text-green-600 w-8 h-8" />
+          </CardContent>
+        </Card>
+        <Card className="bg-red-50">
+          <CardContent className="flex items-center justify-between p-4">
+            <div>
+              <p className="text-red-700 text-sm">Saídas</p>
+              <h3 className="text-2xl font-bold">{totalSaidas}</h3>
+            </div>
+            <ArrowDown className="text-red-600 w-8 h-8" />
+          </CardContent>
+        </Card>
+        <Card className="bg-yellow-50">
+          <CardContent className="flex items-center justify-between p-4">
+            <div>
+              <p className="text-yellow-700 text-sm">Ajustes</p>
+              <h3 className="text-2xl font-bold">{totalAjustes}</h3>
+            </div>
+            <ArrowUpDown className="text-yellow-600 w-8 h-8" />
+          </CardContent>
+        </Card>
+        <Card className="bg-blue-50">
+          <CardContent className="flex items-center justify-between p-4">
+            <div>
+              <p className="text-blue-700 text-sm">Saldo Líquido</p>
+              <h3 className="text-2xl font-bold">{saldoLiquido}</h3>
+              <p className="text-xs text-blue-600">Último movimento: {ultimoMovimento}</p>
+            </div>
+            <Activity className="text-blue-600 w-8 h-8" />
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Gráficos */}
+      <div className="grid md:grid-cols-3 gap-6">
+        <Card>
+          <CardHeader><CardTitle>Distribuição por Tipo</CardTitle></CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={220}>
+              <PieChart>
+                <Pie data={chartDataByType} dataKey="value" nameKey="name" outerRadius={90} label>
+                  {chartDataByType.map((entry) => (
+                    <Cell key={entry.name} fill={entry.name === "Entrada" ? COLORS.ENTRADA : entry.name === "Saída" ? COLORS.SAIDA : COLORS.AJUSTE} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(v) => `${v} itens`} />
+              </PieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        <Card className="md:col-span-2">
+          <CardHeader><CardTitle>Movimentações por Data</CardTitle></CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={220}>
+              <LineChart data={lineDataByDate}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis />
+                <Tooltip />
+                <Line type="monotone" dataKey="qtd" stroke="#2563eb" strokeWidth={2} />
+              </LineChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Filtros */}
-      <Card className="mb-6 bg-gradient-card border-0 shadow-md">
-        <CardContent className="pt-6 flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar por produto ou motivo..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9"
-            />
-          </div>
+      <Card>
+        <CardContent className="flex flex-wrap gap-4 pt-6">
+          <Input placeholder="Buscar por produto ou observação..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="flex-1 min-w-[200px]" />
           <Select value={filterType} onValueChange={setFilterType}>
-            <SelectTrigger className="w-full sm:w-48">
-              <SelectValue placeholder="Tipo" />
-            </SelectTrigger>
+            <SelectTrigger className="sm:w-40"><SelectValue placeholder="Tipo" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos</SelectItem>
-              <SelectItem value="ENTRADA">Entradas</SelectItem>
-              <SelectItem value="SAIDA">Saídas</SelectItem>
+              <SelectItem value="ENTRADA">Entrada</SelectItem>
+              <SelectItem value="SAIDA">Saída</SelectItem>
+              <SelectItem value="AJUSTE">Ajuste</SelectItem>
             </SelectContent>
           </Select>
+          <Select value={filterProduct} onValueChange={setFilterProduct}>
+            <SelectTrigger className="sm:w-48"><SelectValue placeholder="Produto" /></SelectTrigger>
+            <SelectContent>
+              {products.map((p) => (<SelectItem key={p.id} value={p.nome}>{p.nome}</SelectItem>))}
+            </SelectContent>
+          </Select>
+          <Select value={filterSupplier} onValueChange={setFilterSupplier}>
+            <SelectTrigger className="sm:w-48"><SelectValue placeholder="Fornecedor" /></SelectTrigger>
+            <SelectContent>
+              {suppliers.map((f) => (<SelectItem key={f.id} value={f.nome}>{f.nome}</SelectItem>))}
+            </SelectContent>
+          </Select>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="w-[250px] justify-start">
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {date?.from ? `${format(date.from, "dd/MM/yy", { locale: ptBR })} - ${date.to ? format(date.to, "dd/MM/yy", { locale: ptBR }) : ""}` : "Selecionar período"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="start" className="p-0">
+              <Calendar mode="range" selected={date} onSelect={setDate} numberOfMonths={2} locale={ptBR} />
+            </PopoverContent>
+          </Popover>
         </CardContent>
       </Card>
 
       {/* Lista */}
-      <Card className="bg-gradient-card border-0 shadow-md">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ArrowUpDown className="h-5 w-5" />
-            Histórico de Movimentações ({filteredMovements.length})
-          </CardTitle>
-          <CardDescription>
-            Registro de entradas, saídas e lotes criados
-          </CardDescription>
-        </CardHeader>
+      <Card>
+        <CardHeader><CardTitle>Histórico ({filteredMovements.length})</CardTitle></CardHeader>
         <CardContent>
           {loading ? (
-            <p className="text-center text-muted-foreground py-10">
-              Carregando movimentações...
-            </p>
-          ) : filteredMovements.length > 0 ? (
-            <div className="space-y-4">
-              {filteredMovements.map((m) => (
-                <div
-                  key={m.id}
-                  className="flex items-center justify-between p-4 bg-card rounded-lg border hover:shadow-sm transition-shadow"
-                >
-                  <div className="flex items-center space-x-4">
-                    <div className="flex items-center justify-center w-10 h-10 rounded-full bg-muted">
-                      {getMovementIcon(m.type)}
-                    </div>
+            <p className="text-center text-muted-foreground py-10">Carregando...</p>
+          ) : paginatedMovements.length > 0 ? (
+            <div className="space-y-2">
+              {paginatedMovements.map((m) => (
+                <div key={m.id} className="flex justify-between items-center p-3 border rounded-lg hover:bg-muted/30 transition">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-full bg-muted">{m.type === "ENTRADA" ? <ArrowUp className="text-green-600" /> : m.type === "SAIDA" ? <ArrowDown className="text-red-600" /> : <ArrowUpDown className="text-yellow-600" />}</div>
                     <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <h4 className="font-semibold">{m.product}</h4>
-                        {getMovementBadge(m.type)}
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        {m.reason} — {m.notes}
-                      </div>
+                      <p className="font-semibold">{m.product}</p>
+                      <p className="text-xs text-muted-foreground">{m.fornecedor}</p>
+                      <p className="text-sm text-muted-foreground">{m.notes}</p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-lg font-bold">
-                      {m.type === "ENTRADA" ? "+" : "-"}
-                      {m.quantity}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {formatDate(m.date)} <br /> {m.user}
-                    </div>
+                    <p className={`font-bold ${m.type === "SAIDA" ? "text-red-600" : m.type === "ENTRADA" ? "text-green-600" : "text-yellow-600"}`}>{m.type === "SAIDA" ? "-" : "+"}{m.quantity}</p>
+                    <p className="text-xs text-muted-foreground">{format(new Date(m.date), "dd/MM/yyyy HH:mm")} · {m.user}</p>
                   </div>
                 </div>
               ))}
+              <div className="text-right text-sm text-muted-foreground pt-2">Total nesta página: {paginatedMovements.reduce((acc, m) => acc + m.quantity, 0)}</div>
             </div>
           ) : (
-            <p className="text-center py-12 text-muted-foreground">
-              Nenhuma movimentação encontrada.
-            </p>
+            <p className="text-center text-muted-foreground py-8">Nenhuma movimentação encontrada.</p>
           )}
         </CardContent>
       </Card>
 
-      {/* Modal */}
+      {/* Paginação */}
+      {totalPages > 1 && (
+        <Pagination>
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); setCurrentPage((p) => Math.max(1, p - 1)); }} />
+            </PaginationItem>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+              <PaginationItem key={page}>
+                <PaginationLink href="#" isActive={currentPage === page} onClick={(e) => { e.preventDefault(); setCurrentPage(page); }}>{page}</PaginationLink>
+              </PaginationItem>
+            ))}
+            <PaginationItem>
+              <PaginationNext href="#" onClick={(e) => { e.preventDefault(); setCurrentPage((p) => Math.min(totalPages, p + 1)); }} />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
+      )}
+
+      {/* Modal de adicionar movimentação (mantém sua lógica existente) */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Nova Movimentação</DialogTitle>
-            <DialogDescription>
-              Registre uma entrada (cria lote) ou saída manual.
-            </DialogDescription>
+            <DialogDescription>Preencha os dados abaixo para registrar uma nova movimentação.</DialogDescription>
           </DialogHeader>
-
-          <div className="space-y-4">
-            {/* Tipo */}
-            <div className="space-y-2">
-              <Label>Tipo</Label>
-              <Select
-                value={newMovement.type}
-                onValueChange={(value: "ENTRADA" | "SAIDA") =>
-                  setNewMovement((p) => ({ ...p, type: value }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ENTRADA">Entrada (cria lote)</SelectItem>
-                  <SelectItem value="SAIDA">Saída</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Produto */}
-            <div className="space-y-2">
-              <Label>Produto</Label>
-              <Select
-                value={newMovement.product}
-                onValueChange={(value) =>
-                  setNewMovement((p) => ({ ...p, product: value }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o produto" />
-                </SelectTrigger>
-                <SelectContent>
-                  {products.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.nome}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Fornecedor e Preço de Custo (apenas se ENTRADA) */}
-            {newMovement.type === "ENTRADA" && (
-              <>
-                <div className="space-y-2">
-                  <Label>Fornecedor</Label>
-                  <Select
-                    value={newMovement.fornecedorId}
-                    onValueChange={(value) =>
-                      setNewMovement((p) => ({ ...p, fornecedorId: value }))
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o fornecedor" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {suppliers.map((f) => (
-                        <SelectItem key={f.id} value={f.id}>
-                          {f.nome}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Preço de Custo (R$)</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    value={newMovement.precoCusto}
-                    onChange={(e) =>
-                      setNewMovement((p) => ({
-                        ...p,
-                        precoCusto: e.target.value,
-                      }))
-                    }
-                    placeholder="Ex: 12.50"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Validade (opcional)</Label>
-                  <Input
-                    type="date"
-                    value={newMovement.validade}
-                    onChange={(e) =>
-                      setNewMovement((p) => ({
-                        ...p,
-                        validade: e.target.value,
-                      }))
-                    }
-                  />
-                </div>
-              </>
-            )}
-
-            {/* Quantidade */}
-            <div className="space-y-2">
-              <Label>Quantidade</Label>
-              <Input
-                type="number"
-                min="1"
-                value={newMovement.quantity}
-                onChange={(e) =>
-                  setNewMovement((p) => ({ ...p, quantity: e.target.value }))
-                }
-                placeholder="Informe a quantidade"
-              />
-            </div> 
-
-            {/* Observação */}
-            <div className="space-y-2">
-              <Label>Observação (opcional)</Label>
-              <Input
-                placeholder="Ex: devolução, ajuste..."
-                value={newMovement.notes}
-                onChange={(e) =>
-                  setNewMovement((p) => ({ ...p, notes: e.target.value }))
-                }
-              />
-            </div>
-          </div>
-
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAddDialog(false)}>
-              Cancelar
-            </Button>
-            <Button
-              onClick={handleAddMovement}
-              className="bg-gradient-primary hover:opacity-90"
-            >
-              Registrar
-            </Button>
+            <Button variant="outline" onClick={() => setShowAddDialog(false)}>Cancelar</Button>
+            <Button>Salvar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

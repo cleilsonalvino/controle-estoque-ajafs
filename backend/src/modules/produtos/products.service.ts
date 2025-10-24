@@ -17,23 +17,25 @@ export const createProductService = async (data: any) => {
 
   // Função para gerar código de barras EAN-13 válido
   const criarBarCode = () => {
-    const prefix = "789"; // Prefixo comum para o Brasil
+    const prefix = "789"; // Prefixo comum no Brasil
     const randomDigits = Array.from({ length: 9 }, () =>
       Math.floor(Math.random() * 10)
     ).join("");
     const partialCode = prefix + randomDigits;
+
     let sum = 0;
     for (let i = 0; i < partialCode.length; i++) {
       const digit = parseInt(partialCode.charAt(i), 10);
       sum += i % 2 === 0 ? digit : digit * 3;
     }
+
     const mod = sum % 10;
     const checkDigit = mod === 0 ? 0 : 10 - mod;
     return partialCode + checkDigit.toString(); // 13 dígitos no total
   };
 
-  // Gera o código antes de criar
-  const codigoBarras = criarBarCode();
+  // Se não vier código de barras do formulário, gera um novo
+  const codigoBarras = data.codigoBarras?.trim() || criarBarCode();
 
   // Cria o produto no banco
   const createProduct = await prisma.produto.create({
@@ -41,14 +43,16 @@ export const createProductService = async (data: any) => {
       nome: data.nome,
       descricao: data.descricao,
       precoVenda: data.preco,
+      urlImage: data.urlImage,
       estoqueMinimo: data.estoqueMinimo,
       categoriaId: data.categoriaId,
-      codigoBarras, // 👈 aqui vai o código gerado
+      codigoBarras, // 👈 usa o do form ou o gerado
     },
   });
 
   return createProduct;
 };
+
 
 
 export const getProductsService = async () => {
@@ -86,10 +90,6 @@ export const updateProductService = async (id: string, data: any) => {
   if (!productData) {
     throw new CustomError("Produto não encontrado", 404);
   }
-
-  // O estoque não deve ser atualizado diretamente aqui.
-  // As atualizações de estoque são feitas através de movimentações de lote.
-  delete data.estoqueAtual;
 
   const product = await prisma.produto.update({
     where: { id },

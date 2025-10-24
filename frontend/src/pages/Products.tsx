@@ -29,6 +29,9 @@ import {
   LayoutGrid,
   Eye,
   Trash,
+  Info,
+  ArrowDownNarrowWide,
+  Printer,
 } from "lucide-react";
 import {
   Table as ShadcnTable,
@@ -51,6 +54,19 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DialogDescription } from "@radix-ui/react-dialog";
+import {
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  Tooltip as RechartTooltip,
+  ResponsiveContainer,
+  Legend,
+} from "recharts";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 /**
  * Modal de Detalhes do Produto
@@ -265,7 +281,12 @@ const EditProdutoDialog: React.FC<{
       const precoVendaNumber = String(
         Number(precoVendaInput.replace(",", "."))
       );
-      onSave({ ...form, precoVenda: precoVendaNumber });
+      onSave({
+        ...form,
+        precoVenda: precoVendaNumber,
+        codigoBarras: "",
+        urlImage: form.urlImage ? form.urlImage : "",
+      });
       onOpenChange(false);
       fetchProdutos();
     } catch (error) {
@@ -290,6 +311,7 @@ const EditProdutoDialog: React.FC<{
               <Label htmlFor="nome">Nome</Label>
               <Input
                 id="nome"
+                className="border-gray-500"
                 value={form.nome}
                 onChange={(e) => handleChange("nome", e.target.value)}
               />
@@ -298,11 +320,35 @@ const EditProdutoDialog: React.FC<{
               <Label htmlFor="precoVenda">Preço de Venda (R$)</Label>
               <Input
                 id="precoVenda"
+                className="border-gray-500"
                 value={precoVendaInput}
                 onChange={(e) => handlePriceInput(e.target.value)}
-                onBlur={() => formatPrecoOnBlur()}
+                onBlur={formatPrecoOnBlur}
               />
             </div>
+            <div className="space-y-2 ">
+              <Label htmlFor="urlImage">Url da Image</Label>
+              <Input
+                id="urlImage"
+                className="border-gray-500"
+                value={form.urlImage ? form.urlImage : ""}
+                onChange={(e) => handleChange("urlImage", e.target.value)}
+              />
+            </div>
+
+            {form.urlImage && (
+              <div className="mt-2 flex justify-center">
+                <img
+                  src={form.urlImage}
+                  alt="Prévia"
+                  className="w-24 h-24 object-cover rounded-md border"
+                  onError={(e) =>
+                    ((e.target as HTMLImageElement).src =
+                      "https://placehold.co/100x100?text=Imagem+Inválida")
+                  }
+                />
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -311,7 +357,7 @@ const EditProdutoDialog: React.FC<{
               id="descricao"
               value={form.descricao}
               onChange={(e) => handleChange("descricao", e.target.value)}
-              className="min-h-28"
+              className="min-h-28 border-gray-500"
             />
           </div>
 
@@ -349,6 +395,7 @@ const EditProdutoDialog: React.FC<{
               <Input
                 id="estoqueMinimo"
                 type="number"
+                className="border-gray-500"
                 value={String(form.estoqueMinimo ?? "")}
                 onChange={(e) =>
                   handleChange(
@@ -387,13 +434,14 @@ const CreateProdutoDialog: React.FC<{
   onCreate: (p: Omit<Produto, "id">) => void;
 }> = ({ open, onOpenChange, onCreate }) => {
   // CORREÇÃO: Adicionado `precoCusto` ao estado inicial do formulário.
-  const initialState: Omit<Produto, "id" | "codigoBarras"> = {
+  const initialState: Omit<Produto, "id"> = {
     nome: "",
     descricao: "",
     precoVenda: "",
     urlImage: "",
     categoria: { id: "", nome: "" },
     estoqueMinimo: "0",
+    codigoBarras: "",
     lote: [],
     criadoEm: undefined,
   };
@@ -438,7 +486,6 @@ const CreateProdutoDialog: React.FC<{
       onCreate({
         ...form,
         precoVenda: precoVendaNumber,
-        codigoBarras: ""
       });
       onOpenChange(false);
       setForm(initialState);
@@ -451,26 +498,28 @@ const CreateProdutoDialog: React.FC<{
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto ">
-<DialogHeader>
-  <div className="flex items-center gap-2 max-w-lg justify-between">
-    <DialogTitle className="text-2xl font-semibold text-black ">
-      Criar novo produto
-    </DialogTitle>
+        <DialogHeader>
+          <div className="flex items-center gap-2 max-w-lg justify-between">
+            <DialogTitle className="text-2xl font-semibold text-black ">
+              Criar novo produto
+            </DialogTitle>
 
-    {/* Tooltip opcional para o ícone */}
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Trash
-            onClick={()=> {setForm(initialState)}}
-            id="nome-create"
-            className="w-5 h-5 text-black cursor-pointer hover:text-red-300 transition-colors"
-          />
-        </TooltipTrigger>
-      </Tooltip>
-    </TooltipProvider>
-  </div>
-</DialogHeader>
+            {/* Tooltip opcional para o ícone */}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Trash
+                    onClick={() => {
+                      setForm(initialState);
+                    }}
+                    id="nome-create"
+                    className="w-5 h-5 text-black cursor-pointer hover:text-red-300 transition-colors"
+                  />
+                </TooltipTrigger>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        </DialogHeader>
 
         <div className="space-y-6 py-2">
           {/* CORREÇÃO: Layout de grid corrigido e input de Preço de Custo adicionado. */}
@@ -478,7 +527,7 @@ const CreateProdutoDialog: React.FC<{
             <div className="space-y-2">
               <Label htmlFor="nome-create">Nome</Label>
               <Input
-              className="border-slate-900"
+                className="border-slate-900"
                 id="nome-create"
                 value={form.nome}
                 onChange={(e) => handleChange("nome", e.target.value)}
@@ -495,6 +544,16 @@ const CreateProdutoDialog: React.FC<{
                 placeholder="Ex: 2999 para R$ 29,99"
               />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="codigo-barras-create">Código de Barras</Label>
+              <Input
+                className="border-slate-900"
+                id="codigo-barras-create"
+                value={form.codigoBarras ?? ""}
+                onChange={(e) => handleChange("codigoBarras", e.target.value)}
+                placeholder="Deixe vazio para gerar automaticamente"
+              />
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -502,15 +561,30 @@ const CreateProdutoDialog: React.FC<{
             <Input
               className="border-slate-900"
               id="image-create"
+              placeholder="Cole a URL da imagem do produto"
               value={form.urlImage ?? ""}
               onChange={(e) => handleChange("urlImage", e.target.value)}
             />
+
+            {/* Se houver uma URL válida, mostra o preview */}
+            {form.urlImage && (
+              <div className="mt-2 flex justify-center">
+                <img
+                  src={form.urlImage}
+                  alt="Prévia do produto"
+                  className="w-32 h-32 object-contain border rounded-md shadow-sm bg-white"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src =
+                      "https://via.placeholder.com/150?text=Imagem+inválida";
+                  }}
+                />
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="descricao-create">Descrição</Label>
             <Textarea
-              
               id="descricao-create"
               value={form.descricao}
               onChange={(e) => handleChange("descricao", e.target.value)}
@@ -518,7 +592,7 @@ const CreateProdutoDialog: React.FC<{
             />
           </div>
 
-          <Separator /> 
+          <Separator />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2 ">
@@ -529,7 +603,6 @@ const CreateProdutoDialog: React.FC<{
                 <TagIcon className="w-4 h-4" /> Categoria
               </Label>
               <Select
-                
                 value={form.categoria.id}
                 onValueChange={(id) => handleSelectChange("categoria", id)}
               >
@@ -596,6 +669,68 @@ export const Products: React.FC = () => {
   const [openDetalhes, setOpenDetalhes] = useState(false);
   const [filtro, setFiltro] = useState("");
   const [ordenacao, setOrdenacao] = useState("nome-asc");
+
+  const totalProdutos = produtos.length;
+  const produtosComEstoque = produtos.filter(
+    (p) => p.lote && p.lote.length > 0
+  );
+  const totalEstoque = produtosComEstoque.reduce((acc, p) => {
+    const qtdTotal = p.lote.reduce(
+      (sum, lote) => sum + Number(lote.quantidadeAtual),
+      0
+    );
+    const precoMedio =
+      p.lote.reduce((sum, lote) => sum + Number(lote.precoCusto), 0) /
+      p.lote.length;
+    return acc + qtdTotal * precoMedio;
+  }, 0);
+
+  const lucroMedio =
+    produtosComEstoque.reduce((acc, p) => {
+      const custoMedio =
+        p.lote.reduce((sum, lote) => sum + Number(lote.precoCusto), 0) /
+        (p.lote.length || 1);
+      const venda = Number(p.precoVenda) || 0;
+      return acc + (venda - custoMedio);
+    }, 0) / (produtosComEstoque.length || 1);
+
+  const produtosBaixoEstoque = produtos.filter(
+    (p) =>
+      p.lote?.reduce((acc, lote) => acc + Number(lote.quantidadeAtual), 0) <
+      Number(p.estoqueMinimo || 0)
+  ).length;
+
+  // === DADOS GRÁFICOS ===
+  const topProdutosEstoque = produtosComEstoque
+    .map((p) => ({
+      nome: p.nome,
+      estoque: p.lote.reduce(
+        (sum, lote) => sum + Number(lote.quantidadeAtual),
+        0
+      ),
+    }))
+    .sort((a, b) => b.estoque - a.estoque)
+    .slice(0, 5);
+
+  const custoVendaData = produtosComEstoque.map((p) => {
+    const custo =
+      p.lote.reduce((sum, lote) => sum + Number(lote.precoCusto), 0) /
+      (p.lote.length || 1);
+    return { nome: p.nome, custo, venda: Number(p.precoVenda) || 0 };
+  });
+
+  const categorias = produtos.reduce((acc, p) => {
+    const nomeCat = p.categoria?.nome || "Sem categoria";
+    acc[nomeCat] = (acc[nomeCat] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const categoriaData = Object.entries(categorias).map(([nome, valor]) => ({
+    nome,
+    valor,
+  }));
+
+  const COLORS = ["#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6"];
 
   const handleOpenEdit = (produto: Produto) => {
     setSelectedProduct(produto);
@@ -694,6 +829,59 @@ export const Products: React.FC = () => {
     );
   }
 
+  const handlePrintBarcode = (codigo: string) => {
+    if (!codigo) {
+      alert("O produto ainda não tem código de barras!");
+      return;
+    }
+
+    const printWindow = window.open("", "_blank", "width=600,height=300");
+    if (!printWindow) return;
+
+    const doc = printWindow.document;
+    doc.head.innerHTML = `
+    <title>Código de Barras</title>
+    <style>
+      body {
+        margin: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+      }
+      svg {
+        max-width: 90%;
+        max-height: 90%;
+      }
+      @media print {
+        body { margin: 0; }
+        svg { page-break-inside: avoid; }
+      }
+    </style>
+  `;
+
+    const container = doc.createElement("div");
+    const svg = doc.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.id = "barcode";
+    container.appendChild(svg);
+    doc.body.appendChild(container);
+
+    const script = doc.createElement("script");
+    script.src =
+      "https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js";
+    script.onload = () => {
+      // @ts-ignore
+      printWindow.JsBarcode("#barcode", codigo, {
+        format: "EAN13",
+        displayValue: true,
+      });
+      printWindow.focus();
+      printWindow.print();
+      printWindow.close();
+    };
+    doc.body.appendChild(script);
+  };
+
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6">
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -733,6 +921,115 @@ export const Products: React.FC = () => {
         </Select>
       </div>
 
+      {/* === DASHBOARD ANALÍTICO === */}
+      <div className="grid md:grid-cols-4 gap-4">
+        <Card className="bg-gradient-to-r from-blue-50 to-blue-100 border-none shadow-sm">
+          <CardContent className="p-4">
+            <p className="text-sm text-blue-800">Total de Produtos</p>
+            <h2 className="text-2xl font-bold text-blue-700">
+              {totalProdutos}
+            </h2>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-r from-green-50 to-green-100 border-none shadow-sm">
+          <CardContent className="p-4">
+            <p className="text-sm text-green-800">Valor Total em Estoque</p>
+            <h2 className="text-2xl font-bold text-green-700">
+              R${" "}
+              {totalEstoque.toLocaleString("pt-BR", {
+                minimumFractionDigits: 2,
+              })}
+            </h2>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-r from-yellow-50 to-yellow-100 border-none shadow-sm">
+          <CardContent className="p-4">
+            <p className="text-sm text-yellow-800">Lucro Médio Estimado</p>
+            <h2 className="text-2xl font-bold text-yellow-700">
+              R$ {lucroMedio.toFixed(2)}
+            </h2>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-r from-red-50 to-red-100 border-none shadow-sm">
+          <CardContent className="p-4">
+            <p className="text-sm text-red-800">Produtos com Estoque Baixo</p>
+            <h2 className="text-2xl font-bold text-red-700">
+              {produtosBaixoEstoque}
+            </h2>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* === GRÁFICOS === */}
+      <div className="grid lg:grid-cols-3 md:grid-cols-2 gap-6 mt-6">
+        {/* Top 5 em estoque */}
+        <Card className="shadow-md">
+          <CardHeader>
+            <CardTitle>Top 5 Produtos em Estoque</CardTitle>
+          </CardHeader>
+          <CardContent className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={topProdutosEstoque}>
+                <XAxis dataKey="nome" />
+                <YAxis />
+                <RechartTooltip />
+                <Bar dataKey="estoque" fill="#3B82F6" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Custo x Venda */}
+        <Card className="shadow-md">
+          <CardHeader>
+            <CardTitle>Relação Custo x Venda</CardTitle>
+          </CardHeader>
+          <CardContent className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={custoVendaData}>
+                <XAxis dataKey="nome" />
+                <YAxis />
+                <Legend />
+                <RechartTooltip />
+                <Bar dataKey="custo" fill="#F87171" name="Custo" />
+                <Bar dataKey="venda" fill="#10B981" name="Venda" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Distribuição por categoria */}
+        <Card className="shadow-md">
+          <CardHeader>
+            <CardTitle>Distribuição por Categoria</CardTitle>
+          </CardHeader>
+          <CardContent className="h-64 flex items-center justify-center">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={categoriaData}
+                  dataKey="valor"
+                  nameKey="nome"
+                  outerRadius={90}
+                  label
+                >
+                  {categoriaData.map((_, index) => (
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={COLORS[index % COLORS.length]}
+                    />
+                  ))}
+                </Pie>
+                <RechartTooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
+
       <AnimatePresence>
         {!loading && produtosOrdenados.length === 0 ? (
           <motion.div
@@ -754,9 +1051,49 @@ export const Products: React.FC = () => {
               <TableRow>
                 <TableHead>Produto</TableHead>
                 <TableHead>Categoria</TableHead>
-                <TableHead>Fornecedor</TableHead>
-                <TableHead>Quantidade em estoque</TableHead>
-                <TableHead>Preço Custo(média)</TableHead>
+                <TableHead>
+                  Fornecedor
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="w-3.5 h-3.5 text-muted-foreground cursor-pointer" />
+                    </TooltipTrigger>
+                    <TooltipContent
+                      side="top"
+                      className="max-w-xs text-sm leading-relaxed"
+                    >
+                      Um produto pode ter vários fornecedores.
+                    </TooltipContent>
+                  </Tooltip>
+                </TableHead>
+                <TableHead>
+                  Quantidade em Estoque
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="w-3.5 h-3.5 text-muted-foreground cursor-pointer" />
+                    </TooltipTrigger>
+                    <TooltipContent
+                      side="top"
+                      className="max-w-xs text-sm leading-relaxed"
+                    >
+                      Quantidade total de produtos em estoque.
+                    </TooltipContent>
+                  </Tooltip>
+                </TableHead>
+                <TableHead>
+                  Preço Custo(médio)
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="w-3.5 h-3.5 text-muted-foreground cursor-pointer" />
+                    </TooltipTrigger>
+                    <TooltipContent
+                      side="top"
+                      className="max-w-xs text-sm leading-relaxed"
+                    >
+                      Custo médio é a soma da quantidade de produtos de cada
+                      lote, dividido pela quantidade de lotes.
+                    </TooltipContent>
+                  </Tooltip>
+                </TableHead>
                 <TableHead>Preço Venda</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
@@ -784,11 +1121,43 @@ export const Products: React.FC = () => {
                     {produto.categoria?.nome || "Sem categoria"}
                   </TableCell>
                   <TableCell>
-                    {produto.lote?.[0]
-                      ? new Date(produto.lote[0].dataCompra).toLocaleDateString(
-                          "pt-BR"
-                        )
-                      : "—"}
+                    {produto.lote?.length ? (
+                      <div className="flex items-center gap-1">
+                        {/* Mostra o primeiro fornecedor */}
+                        <span>
+                          {produto.lote[0]?.fornecedor?.nome ||
+                            "Sem fornecedor"}
+                        </span>
+
+                        {/* Se tiver mais de um fornecedor, mostra o tooltip */}
+                        {produto.lote.length > 1 && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <ArrowDownNarrowWide className="w-3.5 h-3.5 text-muted-foreground cursor-pointer" />
+                              </TooltipTrigger>
+                              <TooltipContent
+                                side="top"
+                                className="max-w-xs text-sm leading-relaxed"
+                              >
+                                <p className="font-medium mb-1">
+                                  Outros fornecedores:
+                                </p>
+                                <ul className="list-disc list-inside">
+                                  {produto.lote.slice(1).map((lote, index) => (
+                                    <li key={index}>
+                                      {lote.fornecedor?.nome || "Sem nome"}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                      </div>
+                    ) : (
+                      "Sem fornecedor"
+                    )}
                   </TableCell>
                   <TableCell>
                     {produto.lote?.reduce(
@@ -813,6 +1182,26 @@ export const Products: React.FC = () => {
                   </TableCell>
                   {/* CORREÇÃO: Bloco de ações com Tooltip corrigido. */}
                   <TableCell className="flex justify-end gap-2">
+                    <TooltipProvider>
+                      <Tooltip delayDuration={300}>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="border-slate-500 hover:bg-slate-100"
+                            onClick={() =>
+                              handlePrintBarcode(produto.codigoBarras)
+                            }
+                          >
+                            <Printer className="w-4 h-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          Imprimir código de barras
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+
                     <TooltipProvider>
                       <Tooltip delayDuration={300}>
                         <TooltipTrigger asChild>
@@ -855,7 +1244,15 @@ export const Products: React.FC = () => {
                             size="icon"
                             variant="destructive"
                             className="h-8 w-8"
-                            onClick={() => handleDelete(produto.id)}
+                            onClick={() => {
+                              if (
+                                confirm(
+                                  "Tem certeza que deseja excluir este produto?"
+                                )
+                              ) {
+                                handleDelete(produto.id);
+                              }
+                            }}
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>

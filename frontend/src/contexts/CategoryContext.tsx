@@ -6,6 +6,8 @@ export interface Category {
   id: string;
   nome: string;
   descricao: string;
+  criadoEm: Date;
+  atualizadoEm: Date;
 }
 
 interface CategoryContextType {

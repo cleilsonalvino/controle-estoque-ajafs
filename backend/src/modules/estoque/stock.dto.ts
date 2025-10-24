@@ -4,14 +4,14 @@ import { TipoMovimentacao } from "@prisma/client";
 
 export const createMovimentacaoSchema = z
   .object({
-    produtoId: z.string().uuid(),
+    produtoId: z.string({invalid_type_error: "Produto inválido ou faltando"}).uuid(),
     tipo: z.nativeEnum(TipoMovimentacao),
-    quantidade: z.number().positive(),
+    quantidade: z.number({invalid_type_error: "Quantidade inválida"}).positive(),
     observacao: z.string().optional(),
-    fornecedorId: z.string().uuid().optional(),
-    precoCusto: z.number().nonnegative().optional(),
+    fornecedorId: z.string({invalid_type_error: "Fornecedor inválido ou faltando"}).uuid("Deve ser ter um UUID válido").optional().nullable(),
+    precoCusto: z.number({invalid_type_error: "Preço de custo inválido"}).nonnegative().optional().nullable(),
     validade: z
-      .union([z.string().datetime(), z.string().date(), z.date()])
+      .union([z.string({invalid_type_error: "Data de validade inválida"}).datetime(), z.string().date(), z.date()])
       .optional()
       .nullable(),
   })

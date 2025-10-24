@@ -22,6 +22,9 @@ router.get(
   stockController.getMovimentacoes
 );
 
+router.get('/estoque-produto/:produtoId', stockController.getEstoqueProdutoId);
+
+
 router.get('/valor-estoque', stockController.getValorEstoque);
 
 export default router;

@@ -40,6 +40,7 @@ interface ProdutoContextType {
   updateProduto: (id: string, produtoAtualizado: Omit<Produto, "id">) => Promise<Produto | undefined>;
   deleteProduto: (id: string) => Promise<void>;
   darBaixaEstoquePorVenda: (produtoId: string, quantidade: Number) => Promise<void>;
+  getEstoqueProdutoId: (id: string) => Promise<number>;
 }
 
 const ProdutoContext = createContext<ProdutoContextType>({
@@ -50,7 +51,9 @@ const ProdutoContext = createContext<ProdutoContextType>({
   createProduto: async () => undefined,
   updateProduto: async () => undefined,
   deleteProduto: async () => {},
-  darBaixaEstoquePorVenda: async () => {}
+  darBaixaEstoquePorVenda: async () => {},
+  getEstoqueProdutoId: async () => 0
+
 });
 
 interface ProdutoProviderProps {
@@ -92,6 +95,8 @@ export const ProdutoProvider = ({ children }: ProdutoProviderProps) => {
           precoVenda: Number(novoProduto.precoVenda),
           estoqueMinimo: Number(novoProduto.estoqueMinimo),
           categoriaId: novoProduto.categoria.id,
+          urlImage: novoProduto.urlImage,
+          codigoBarras: novoProduto.codigoBarras
         };
 
         console.log("Produto para enviar:", produtoParaEnviar);
@@ -115,6 +120,8 @@ export const ProdutoProvider = ({ children }: ProdutoProviderProps) => {
         precoVenda: Number(produtoAtualizado.precoVenda),
         estoqueMinimo: Number(produtoAtualizado.estoqueMinimo),
         categoriaId: produtoAtualizado.categoria.id || "categoria_padrao",
+        urlImage: produtoAtualizado.urlImage,
+        codigoBarras: produtoAtualizado.codigoBarras
       };
 
       const { data } = await api.patch<Produto>(`/produtos/${id}`, produtoParaEnviar);
@@ -142,7 +149,7 @@ export const ProdutoProvider = ({ children }: ProdutoProviderProps) => {
 
   const darBaixaEstoquePorVenda = async (productId: string, quantity: number) => {
     try {
-      await api.patch(`/produtos/movimentacao`, { productId, quantidade: quantity, tipo: 'SAIDA', observacao: "Venda de produto"});
+      await api.patch(`/estoque/movimentacao`, { productId, quantidade: quantity, tipo: 'SAIDA', observacao: "Venda de produto"});
       toast.success(`Estoque atualizado com sucesso para o produto ${productId}!`);
       fetchProdutos(); // Refresh product list to reflect stock changes
     } catch (error) {
@@ -150,6 +157,17 @@ export const ProdutoProvider = ({ children }: ProdutoProviderProps) => {
       toast.error("Erro ao atualizar estoque");
     }
   };
+
+const getEstoqueProdutoId = async (id: string) => {
+  try {
+    const response = await api.get(`/estoque/estoque-produto/${id}`);
+    return response.data.estoque.estoqueTotal; // conforme o backend retorna { estoqueTotal }
+  } catch (error: any) {
+    console.error("Erro ao buscar estoque do produto:", error.response?.data || error.message);
+    // Retorna null ou 0 para evitar quebra do fluxo
+    return 0;
+  }
+};
 
 
   useEffect(() => {
@@ -166,7 +184,8 @@ export const ProdutoProvider = ({ children }: ProdutoProviderProps) => {
         createProduto,
         updateProduto,
         deleteProduto,
-        darBaixaEstoquePorVenda
+        darBaixaEstoquePorVenda,
+        getEstoqueProdutoId
       }}
     >
       {children}
