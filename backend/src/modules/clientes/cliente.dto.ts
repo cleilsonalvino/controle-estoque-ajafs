@@ -4,7 +4,8 @@ export const ClienteSchema = z.object({
   id: z.string().optional(),
   nome: z.string().min(3, 'O nome deve ter no mínimo 3 caracteres'),
   email: z.string().email('Email inválido').optional().nullable(),
-  telefone: z.string().optional(),
+  cpf: z.string().max(11, 'CPF inválido').optional().nullable(),
+  telefone: z.string().max(11, 'Telefone inválido').optional(),
   endereco: z.string().optional(),
 });
 

@@ -21,7 +21,9 @@ export interface Produto {
   codigoBarras: string;
   descricao: string;
   precoVenda: string;
+  quantidadeTotal: number;
   estoqueMinimo: string;
+  custoMedio?: string;
   categoria: {
     id: string;
     nome: string;
@@ -92,7 +94,7 @@ export const ProdutoProvider = ({ children }: ProdutoProviderProps) => {
         const produtoParaEnviar = {
           nome: novoProduto.nome,
           descricao: novoProduto.descricao,
-          precoVenda: Number(novoProduto.precoVenda),
+          precoVenda: novoProduto.precoVenda,
           estoqueMinimo: Number(novoProduto.estoqueMinimo),
           categoriaId: novoProduto.categoria.id,
           urlImage: novoProduto.urlImage,

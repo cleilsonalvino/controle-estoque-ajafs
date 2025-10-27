@@ -99,10 +99,11 @@ const usePdv = (
   );
   const [isNewCustomerDialogOpen, setIsNewCustomerDialogOpen] = useState(false);
   const [newCustomerName, setNewCustomerName] = useState("");
+  const [NewCPFCustomer, setNewCPFCustomer] = useState("")
 
   const subtotal = useMemo(
     () =>
-      saleItems.reduce((acc, item) => acc + item.precoVenda * item.quantity, 0),
+      saleItems.reduce((acc, item) => acc + item.precoVenda * item.quantidade, 0),
     [saleItems]
   );
   const total = useMemo(
@@ -162,14 +163,14 @@ const usePdv = (
           // Impede de adicionar mais que o estoque
           if (
             estoqueDisponivel !== undefined &&
-            existingItem.quantity >= estoqueDisponivel
+            existingItem.quantidade >= estoqueDisponivel
           ) {
             toast.error(`Estoque máximo atingido para ${produto.nome}.`);
             return prevItems; // Retorna o estado anterior sem alteração
           }
           return prevItems.map((item) =>
             item.id === produto.id
-              ? { ...item, quantity: item.quantity + 1 }
+              ? { ...item, quantidade: item.quantidade + 1 }
               : item
           );
         }
@@ -182,7 +183,7 @@ const usePdv = (
             produto,
             precoVenda: parseFloat(produto.precoVenda),
             precoCusto: produto.lote?.[0]?.precoCusto || 0,
-            quantity: 1,
+            quantidade: 1,
             type: "SAIDA",
           },
         ];
@@ -214,8 +215,8 @@ const usePdv = (
       setSaleItems((prev) =>
         newQuantity <= 0
           ? prev.filter((item) => item.id !== id)
-          : prev.map((item) =>
-              item.id === id ? { ...item, quantity: newQuantity } : item
+          : prev.map((item) => 
+              item.id === id ? { ...item, quantidade: newQuantity } : item
             )
       );
     },
@@ -273,7 +274,7 @@ const usePdv = (
       toast.error("O nome do cliente é obrigatório.");
       return;
     }
-    const promise = createCliente({ nome: newCustomerName.trim() });
+    const promise = createCliente({ nome: newCustomerName.trim(), cpf: NewCPFCustomer.trim()});
     toast.promise(promise, {
       loading: "Salvando novo cliente...",
       success: (newCustomer) => {
@@ -310,6 +311,8 @@ const usePdv = (
     isNewCustomerDialogOpen,
     setIsNewCustomerDialogOpen,
     newCustomerName,
+    NewCPFCustomer,
+    setNewCPFCustomer,
     setNewCustomerName,
     loadingProdutos,
     subtotal,
@@ -392,6 +395,8 @@ const PDV = ({ clientes, vendedores, onFinalizeSale, onExit }: PDVProps) => {
     selectedVendedor,
     setSelectedVendedor,
     selectedCliente,
+    setNewCPFCustomer,
+    NewCPFCustomer,
     setSelectedCliente,
     updateItemQuantity,
     handleFinalize,
@@ -536,7 +541,7 @@ const PDV = ({ clientes, vendedores, onFinalizeSale, onExit }: PDVProps) => {
                       <Input
                         type="number"
                         className="w-20 text-center"
-                        value={item.quantity}
+                        value={item.quantidade}
                         min={1}
                         onChange={(e) =>
                           updateItemQuantity(
@@ -546,7 +551,7 @@ const PDV = ({ clientes, vendedores, onFinalizeSale, onExit }: PDVProps) => {
                         }
                       />
                       <p className="w-24 text-right font-medium">
-                        R$ {(item.precoVenda * item.quantity).toFixed(2)}
+                        R$ {(item.precoVenda * item.quantidade).toFixed(2)}
                       </p>
                       <Button
                         variant="ghost"
@@ -853,6 +858,18 @@ const PDV = ({ clientes, vendedores, onFinalizeSale, onExit }: PDVProps) => {
               value={newCustomerName}
               onChange={(e) => setNewCustomerName(e.target.value)}
               placeholder="Ex: João da Silva"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleSaveCustomer();
+              }}
+            />
+          </div>
+                    <div className="py-4">
+            <Label htmlFor="new-customer-name">CPF do Cliente</Label>
+            <Input
+              id="new-customer-name"
+              value={NewCPFCustomer}
+              onChange={(e) => setNewCPFCustomer(e.target.value)}
+              placeholder="Ex: 08899955513"
               onKeyDown={(e) => {
                 if (e.key === "Enter") handleSaveCustomer();
               }}

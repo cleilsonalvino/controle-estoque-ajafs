@@ -3,6 +3,8 @@ import { CustomError } from "../../shared/errors.ts";
 
 const prisma = new PrismaClient();
 
+import { Prisma } from "@prisma/client";
+
 export const createProductService = async (data: any) => {
   console.log("Dados recebidos para criação do produto:", data);
 
@@ -17,7 +19,7 @@ export const createProductService = async (data: any) => {
 
   // Função para gerar código de barras EAN-13 válido
   const criarBarCode = () => {
-    const prefix = "789"; // Prefixo comum no Brasil
+    const prefix = "789";
     const randomDigits = Array.from({ length: 9 }, () =>
       Math.floor(Math.random() * 10)
     ).join("");
@@ -31,22 +33,24 @@ export const createProductService = async (data: any) => {
 
     const mod = sum % 10;
     const checkDigit = mod === 0 ? 0 : 10 - mod;
-    return partialCode + checkDigit.toString(); // 13 dígitos no total
+    return partialCode + checkDigit.toString();
   };
 
-  // Se não vier código de barras do formulário, gera um novo
   const codigoBarras = data.codigoBarras?.trim() || criarBarCode();
 
-  // Cria o produto no banco
+  // Converte precoVenda e estoqueMinimo para Decimal
+  const precoVendaDecimal = new Prisma.Decimal(data.precoVenda || "0");
+  const estoqueMinimoDecimal = new Prisma.Decimal(data.estoqueMinimo || "0");
+
   const createProduct = await prisma.produto.create({
     data: {
       nome: data.nome,
       descricao: data.descricao,
-      precoVenda: data.preco,
+      precoVenda: precoVendaDecimal,
       urlImage: data.urlImage,
-      estoqueMinimo: data.estoqueMinimo,
+      estoqueMinimo: estoqueMinimoDecimal,
       categoriaId: data.categoriaId,
-      codigoBarras, // 👈 usa o do form ou o gerado
+      codigoBarras,
     },
   });
 
@@ -55,20 +59,52 @@ export const createProductService = async (data: any) => {
 
 
 
+
 export const getProductsService = async () => {
-  const products = await prisma.produto.findMany({
-    include: {
-      categoria: true,
-      fornecedor: true, // fornecedor direto do produto
-      lote: {
-        include: {
-          fornecedor: true, // fornecedor do lote
-        },
+const products = await prisma.produto.findMany({
+  include: {
+    categoria: true,
+    fornecedor: true, // fornecedor direto do produto
+    lote: {
+      include: {
+        fornecedor: true, // fornecedor do lote
       },
     },
+  },
+});
+
+// Adiciona quantidade total em estoque
+const productsWithTotal = products.map((p) => ({
+  ...p,
+  quantidadeTotal: p.lote.reduce(
+    (acc, lote) => acc + Number(lote.quantidadeAtual),
+    0
+  ),
+}));
+
+const productsWithTotalCosted = productsWithTotal.map((p) => {
+  let totalValor = 0;
+  let totalQuantidade = 0;
+
+  p.lote.forEach((lote) => {
+    const precoCusto = Number(lote.precoCusto) || 0;
+    const quantidadeAtual = Number(lote.quantidadeAtual) || 0;
+    totalValor += precoCusto * quantidadeAtual;
+    totalQuantidade += quantidadeAtual;
   });
 
-  return products;
+  const custoMedio = totalQuantidade > 0 ? totalValor / totalQuantidade : 0;
+
+  return {
+    ...p,
+    custoMedio,
+  };
+});
+
+
+
+return productsWithTotalCosted;
+
 };
 
 

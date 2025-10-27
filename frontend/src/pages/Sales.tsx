@@ -68,7 +68,7 @@ const Sales = () => {
       formaPagamento: saleData.formaPagamento,
       itens: saleData.saleItems.map((item) => ({
         produtoId: item.id,
-        quantidade: item.quantity,
+        quantidade: item.quantidade,
         precoUnitario: item.precoVenda,
       })),
     };
@@ -79,7 +79,7 @@ const Sales = () => {
       setLastSale({
         saleItems: saleData.saleItems,
         total: saleData.saleItems.reduce(
-          (acc, item) => acc + (item.precoVenda || 0) * item.quantity,
+          (acc, item) => acc + (item.precoVenda || 0) * item.quantidade,
           0
         ),
         discount: saleData.desconto,

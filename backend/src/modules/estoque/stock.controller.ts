@@ -35,5 +35,16 @@ export class StockController {
     res.status(200).json({ estoque });
   }
 
+  public async deleteLote(req: Request, res: Response) {
+    const { loteId, productId } = req.params;
+    await stockService.deleteLote(loteId as string, productId as string);
+    res.status(204).send();
+  }
+
+  public async getLucroMedioEstimado(req: Request, res: Response) {
+    const custoMedioEstimado = await stockService.getLucroMedioEstimado();
+    res.status(200).json({ custoMedioEstimado });
+  }
+
 
 }

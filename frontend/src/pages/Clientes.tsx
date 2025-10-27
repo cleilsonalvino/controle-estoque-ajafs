@@ -47,6 +47,7 @@ import {
   Trash2,
   Search,
 } from "lucide-react";
+import ClienteDetalhesModal from "@/components/ClienteDetalhesModal";
 import {
   Table,
   TableBody,
@@ -109,7 +110,7 @@ const Clientes = () => {
     sales.forEach((v) => {
       v.itens?.forEach((i) => {
         const nomeProduto = i.produto?.nome || "Desconhecido";
-        contagem[nomeProduto] = (contagem[nomeProduto] || 0) + i.quantity;
+        contagem[nomeProduto] = (contagem[nomeProduto] || 0) + i.quantidade;
       });
     });
     return Object.entries(contagem)
@@ -153,6 +154,11 @@ const Clientes = () => {
                 <Input id="nome" />
               </div>
               <div className="space-y-2">
+                <Label>CPF</Label>
+                <Input id="cpf" type="number" max={11}/>
+              
+              </div>
+              <div className="space-y-2">
                 <Label>Email</Label>
                 <Input id="email" type="email" />
               </div>
@@ -164,6 +170,7 @@ const Clientes = () => {
                 <Label>Endereço</Label>
                 <Input id="endereco" />
               </div>
+              
             </div>
             <DialogFooter>
               <Button
@@ -340,7 +347,13 @@ const Clientes = () => {
               {paginatedClientes.length > 0 ? (
                 paginatedClientes.map((cliente) => (
                   <TableRow key={cliente.id}>
-                    <TableCell>{cliente.nome}</TableCell>
+                    <TableCell>
+                      <ClienteDetalhesModal cliente={cliente}>
+                        <Button variant="link" className="p-0 h-auto">
+                          {cliente.nome}
+                        </Button>
+                      </ClienteDetalhesModal>
+                    </TableCell>
                     <TableCell>{cliente.email}</TableCell>
                     <TableCell>{cliente.telefone}</TableCell>
                     <TableCell>{cliente.endereco}</TableCell>

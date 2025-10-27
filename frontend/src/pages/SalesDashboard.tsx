@@ -53,7 +53,9 @@ import { useVendedores, Vendedor } from "@/contexts/VendedorContext";
 
 import { Badge } from "@/components/ui/badge";
 import { useEffect, useMemo, useState } from "react";
-import NotaFiscalModal from "@/components/NotaFiscalModal";
+import GerarRelatorioNF from "@/components/GerarRelatorioNF";
+import SaleDetalhesModal from "@/components/SaleDetalhesModal";
+import ClienteDetalhesModal from "@/components/ClienteDetalhesModal";
 import { Sale } from "@/contexts/SalesContext"; // Removido SaleData se não for usado
 import api from "@/lib/api";
 
@@ -118,7 +120,7 @@ const SalesLast6Months = () => {
         acc[key].value += toNumber(sale.total);
         const itens = Array.isArray(sale.itens) ? sale.itens : [];
         acc[key].products += itens.reduce(
-          (sum, item) => sum + toNumber(item.quantity),
+          (sum, item) => sum + toNumber(item.quantidade),
           0
         );
       }
@@ -187,7 +189,7 @@ const TopSellingProducts = () => {
       for (const item of itens) {
         const productId = item.produtoId;
         if (!productId) continue;
-        const qty = toNumber(item.quantity ?? item.quantity);
+        const qty = toNumber(item.quantidade ?? item.quantidade);
         quantities.set(productId, (quantities.get(productId) ?? 0) + qty);
       }
     }
@@ -203,7 +205,8 @@ const TopSellingProducts = () => {
         const itens = Array.isArray(sale.itens) ? sale.itens : [];
         for (const i of itens) {
           if (i.produtoId === productId) {
-            acc += toNumber(i.quantity ?? i.quantity) * toNumber(i.precoCusto);
+            acc +=
+              toNumber(i.quantidade ?? i.quantidade) * toNumber(i.precoCusto);
           }
         }
         return acc;
@@ -281,7 +284,8 @@ const SalesByCategory = () => {
         const catId = p?.categoria?.id;
         if (!catId) continue;
         const value =
-          toNumber(item.quantity ?? item.quantity) * toNumber(item.precoCusto);
+          toNumber(item.quantidade ?? item.quantidade) *
+          toNumber(item.precoCusto);
         byCat.set(catId, (byCat.get(catId) ?? 0) + value);
       }
     }
@@ -655,13 +659,6 @@ const SalesDashboard = () => {
   // ========================
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
-      {saleForNotaFiscal && (
-        <NotaFiscalModal
-          sale={saleForNotaFiscal}
-          onClose={() => setSaleForNotaFiscal(null)}
-          onConfirm={confirmIssueNotaFiscal}
-        />
-      )}
       <h1 className="text-3xl font-bold text-gray-800 mb-6">
         Dashboard de Vendas
       </h1>
@@ -831,6 +828,9 @@ const SalesDashboard = () => {
       </div>
 
       {/* --- RELATÓRIO DETALHADO (MODIFICADO) --- */}
+      <div className="flex justify-end mb-4">
+        <GerarRelatorioNF />
+      </div>
       <Card>
         <CardHeader>
           <CardTitle>Relatório Detalhado de Vendas</CardTitle>
@@ -1017,8 +1017,30 @@ const SalesDashboard = () => {
                     <TableCell>
                       {new Date(s.criadoEm).toLocaleDateString("pt-BR")}
                     </TableCell>
-                    <TableCell>{getClienteDisplay(s)}</TableCell>
-                    <TableCell>{s.status}</TableCell>
+                    <TableCell>
+                      {s.cliente && (
+                        <ClienteDetalhesModal
+                          cliente={clientes.find((c) => c.id === s.cliente.id)}
+                        >
+                          <Button variant="link" className="p-0 h-auto">
+                            {getClienteDisplay(s)}
+                          </Button>
+                        </ClienteDetalhesModal>
+                      )}
+                      {!s.cliente && getClienteDisplay(s)}
+                    </TableCell>
+                    <TableCell
+                      className={
+                        s.status === "Cancelada"
+                          ? "text-red-500 font-semibold"
+                          : s.status === "Pendente"
+                          ? "text-yellow-500 font-medium"
+                          : "text-green-500"
+                      }
+                    >
+                      {s.status}
+                    </TableCell>
+
                     <TableCell>{s.vendedor?.nome}</TableCell>
                     <TableCell className="text-right">
                       {s.formaPagamento}
@@ -1027,22 +1049,15 @@ const SalesDashboard = () => {
                       {fmtBRL(toNumber(s.total))}
                     </TableCell>
                     <TableCell className="text-center">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setSelectedSale(s)}
-                        title="Ver Detalhes"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleIssueNotaFiscal(s)}
-                        title="Emitir Nota Fiscal"
-                      >
-                        <FileText className="h-4 w-4" />
-                      </Button>
+                      <SaleDetalhesModal sale={s}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          title="Ver Detalhes"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </SaleDetalhesModal>
                       {s.status !== "Cancelada" && (
                         <Button
                           variant="ghost"

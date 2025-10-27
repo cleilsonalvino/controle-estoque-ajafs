@@ -76,12 +76,17 @@ export class StockService {
       // =============================
       // ENTRADA (cria novo lote)
       // =============================
+
+      const precoCustoAtualizado = data.precoCusto
+        ? data.precoCusto.replace(",", ".")
+        : null;
+
       if (tipo === TipoMovimentacao.ENTRADA) {
         const novoLote = await tx.lote.create({
           data: {
             produtoId,
             fornecedorId: fornecedorId || null,
-            precoCusto: precoCusto ?? 0,
+            precoCusto: precoCustoAtualizado ?? 0,
             quantidadeAtual: quantidade,
             validade: validade ? new Date(validade) : null,
             // se tiver "dataCompra" no schema e não tiver default, descomente:
@@ -265,4 +270,76 @@ export class StockService {
 
     return { estoqueTotal };
   }
+
+  public async deleteLote(loteId: string, produtoId: string) {
+    // Verifica se o lote existe e pertence ao produto
+    const lote = await prisma.lote.findUnique({
+      where: { id: loteId },
+    });
+
+    if (!lote || lote.produtoId !== produtoId) {
+      throw new CustomError("Lote não encontrado para o produto especificado", 404);
+    }
+    await prisma.lote.delete({
+      where: { id: loteId },
+    });
+  }
+public async getLucroMedioEstimado() {
+  const produtos = await prisma.produto.findMany({
+    where: {
+      lote: {
+        some: {
+          quantidadeAtual: { gt: 0 },
+        },
+      },
+    },
+    include: {
+      lote: {
+        where: {
+          quantidadeAtual: { gt: 0 },
+        },
+      },
+    },
+  });
+
+  let lucroTotal = 0;
+  let quantidadeTotal = 0;
+
+  for (const produto of produtos) {
+    const lotes = produto.lote;
+    const quantidadeProduto = lotes.reduce((acc, lote) => acc + Number(lote.quantidadeAtual), 0);
+
+    if (quantidadeProduto === 0) continue;
+
+    // calcula custo médio do produto
+    const custoTotal = lotes.reduce(
+      (acc, lote) => acc + Number(lote.precoCusto) * Number(lote.quantidadeAtual),
+      0
+    );
+    const custoMedio = custoTotal / quantidadeProduto;
+
+    // lucro unitário = preço de venda - custo médio
+    const precoVenda = Number(produto.precoVenda) || 0;
+    const lucroUnitario = precoVenda - custoMedio;
+
+    // acumula lucro total considerando estoque
+    lucroTotal += lucroUnitario * quantidadeProduto;
+    quantidadeTotal += quantidadeProduto;
+  }
+
+  // lucro médio estimado geral
+  const lucroMedioEstimado =
+    quantidadeTotal > 0 ? lucroTotal / quantidadeTotal : 0;
+
+  // formata para reais (opcional)
+  const lucroFormatado = lucroMedioEstimado.toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
+
+  return { lucroMedioEstimado, lucroFormatado };
 }
+
+}
+
+

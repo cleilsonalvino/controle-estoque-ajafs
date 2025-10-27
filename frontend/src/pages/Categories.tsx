@@ -78,9 +78,7 @@ const Categories = () => {
   const handleAdd = () => {
     if (!formData.nome) return;
     createCategory({
-      ...formData,
-      criadoEm: new Date(),
-      atualizadoEm: new Date(),
+      ...formData
     });
     resetForm();
   };

@@ -14,7 +14,7 @@ interface CategoryContextType {
   categories: Category[];
   loading: boolean;
   fetchCategories: () => Promise<void>;
-  createCategory: (newCategory: Omit<Category, "id">) => Promise<Category | undefined>;
+  createCategory: (newCategory: Omit<Category, "id" | "criadoEm" | "atualizadoEm">) => Promise<Category | undefined>;
   updateCategory: (id: string, updatedCategory: Omit<Category, "id">) => Promise<Category | undefined>;
   deleteCategory: (id: string) => Promise<void>;
 }
@@ -49,7 +49,7 @@ export const CategoryProvider = ({ children }: CategoryProviderProps) => {
     }
   };
 
-  const createCategory = async (newCategory: Omit<Category, "id">) => {
+  const createCategory = async (newCategory: Omit<Category, "id" | "criadoEm" | "atualizadoEm">) => {
     try {
       const { data } = await api.post<Category>("/categorias/create", newCategory);
       setCategories((prev) => [...prev, data]);

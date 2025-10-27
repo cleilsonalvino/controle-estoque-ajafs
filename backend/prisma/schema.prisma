@@ -144,6 +144,7 @@ model ItemVenda {
 model Cliente {
   id        String   @id @default(uuid())
   nome      String
+  cpf       String?  @unique
   email     String?  @unique
   telefone  String?
   endereco  String?

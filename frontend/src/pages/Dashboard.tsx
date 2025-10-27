@@ -19,6 +19,7 @@ import {
 import { useProdutos } from "@/contexts/ProdutoContext";
 import { useSales } from "@/contexts/SalesContext";
 import api from "@/lib/api";
+import StockTurnoverChart from "@/components/GiroEstoque";
 
 interface ValorEstoqueResponse {
   valorEstoque: {
@@ -110,7 +111,8 @@ const Dashboard = () => {
   ];
 
   return (
-    <TooltipProvider delayDuration={100}>
+    <div>
+          <TooltipProvider delayDuration={100}>
       <div className="p-6 space-y-10">
         {/* Cabeçalho */}
         <div className="flex justify-between items-center">
@@ -173,6 +175,9 @@ const Dashboard = () => {
         </div>
       </div>
     </TooltipProvider>
+    <StockTurnoverChart />
+    </div>
+
   );
 };
 

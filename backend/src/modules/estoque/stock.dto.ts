@@ -7,9 +7,9 @@ export const createMovimentacaoSchema = z
     produtoId: z.string({invalid_type_error: "Produto inválido ou faltando"}).uuid(),
     tipo: z.nativeEnum(TipoMovimentacao),
     quantidade: z.number({invalid_type_error: "Quantidade inválida"}).positive(),
-    observacao: z.string().optional(),
+    observacao: z.string().optional().nullable(),
     fornecedorId: z.string({invalid_type_error: "Fornecedor inválido ou faltando"}).uuid("Deve ser ter um UUID válido").optional().nullable(),
-    precoCusto: z.number({invalid_type_error: "Preço de custo inválido"}).nonnegative().optional().nullable(),
+    precoCusto: z.string({invalid_type_error: "Preço de custo inválido"}).optional().nullable(),
     validade: z
       .union([z.string({invalid_type_error: "Data de validade inválida"}).datetime(), z.string().date(), z.date()])
       .optional()

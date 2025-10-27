@@ -14,7 +14,7 @@ export interface SaleItem {
   produto: Produto;
   precoVenda: number;
   precoCusto: number;
-  quantity: number;
+  quantidade: number;
   produtoId?: string;
 }
 
@@ -24,6 +24,7 @@ export interface Sale {
   cliente: {
     id: string;
     nome: string;
+    cpf?: string;
   };
   total: string;
   status: string;

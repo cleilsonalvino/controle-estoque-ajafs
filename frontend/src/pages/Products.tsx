@@ -32,6 +32,8 @@ import {
   Info,
   ArrowDownNarrowWide,
   Printer,
+  TrendingUp,
+  TrendingDown,
 } from "lucide-react";
 import {
   Table as ShadcnTable,
@@ -77,6 +79,18 @@ const ProdutoDetalhesDialog: React.FC<{
   produto: Produto | null;
 }> = ({ open, onOpenChange, produto }) => {
   if (!produto) return null;
+
+  async function handledeleteLote(id: string) {
+    try {
+      const lote = await api.delete(
+        `/estoque/deletar-lote/${id}/produto/${produto.id}/`
+      );
+      alert("Lote deletado com sucesso!");
+      onOpenChange(false);
+    } catch (err) {
+      console.log(err);
+    }
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -125,6 +139,17 @@ const ProdutoDetalhesDialog: React.FC<{
                     {produto.categoria?.nome || "Sem categoria"}
                   </p>
                 </div>
+                <div>
+                  <Label>Custo Médio</Label>
+                  <p className="font-semibold">
+                    {produto.custoMedio
+                      ? Number(produto.custoMedio).toLocaleString("pt-BR", {
+                          style: "currency",
+                          currency: "BRL",
+                        })
+                      : "Sem dados"}
+                  </p>
+                </div>
               </div>
             </div>
           </div>
@@ -140,6 +165,7 @@ const ProdutoDetalhesDialog: React.FC<{
                   <TableHead>Preço de Custo</TableHead>
                   <TableHead>Fornecedor</TableHead>
                   <TableHead>Data de Compra</TableHead>
+                  <TableHead>Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -163,6 +189,22 @@ const ProdutoDetalhesDialog: React.FC<{
                     </TableCell>
                     <TableCell>
                       {new Date(lote.dataCompra).toLocaleDateString("pt-BR")}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            if (
+                              confirm("Deseja realmente deletar este lote?")
+                            ) {
+                              handledeleteLote(lote.id);
+                            }
+                          }}
+                        >
+                          <Trash className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -441,6 +483,7 @@ const CreateProdutoDialog: React.FC<{
     urlImage: "",
     categoria: { id: "", nome: "" },
     estoqueMinimo: "0",
+    quantidadeTotal: 0,
     codigoBarras: "",
     lote: [],
     criadoEm: undefined,
@@ -468,9 +511,25 @@ const CreateProdutoDialog: React.FC<{
     if (selected) setForm({ ...form, [path]: selected });
   };
 
-  const handlePriceInput = (field: "precoCusto" | "precoVenda", v: string) => {
-    const digits = v.replace(/\D/g, "");
-    setForm({ ...form, [field]: digits });
+  const handlePriceInput = (
+    field: "precoCusto" | "precoVenda",
+    value: string
+  ) => {
+    // Remove tudo que não for número
+    let digits = value.replace(/\D/g, "");
+
+    // Garante pelo menos "0" se o campo estiver vazio
+    if (digits === "") digits = "0";
+
+    // Converte para reais com 2 casas decimais
+    const numericValue = (parseInt(digits, 10) / 100).toFixed(2);
+
+    // Formata para o padrão brasileiro: 1234.56 → 1.234,56
+    const formatted = numericValue
+      .replace(".", ",")
+      .replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+
+    setForm((prev) => ({ ...prev, [field]: formatted }));
   };
 
   const canSave = useMemo(() => {
@@ -481,12 +540,16 @@ const CreateProdutoDialog: React.FC<{
     if (!canSave) return;
     setSaving(true);
     try {
-      // CORREÇÃO: `precoCusto` é incluído ao criar o produto.
-      const precoVendaNumber = (Number(form.precoVenda) / 100).toFixed(2);
+      // Converte "1.234,56" → "1234.56"
+      const precoVendaNumber = parseFloat(
+        form.precoVenda.replace(/\./g, "").replace(",", ".")
+      ).toFixed(2);
+
       onCreate({
         ...form,
         precoVenda: precoVendaNumber,
       });
+
       onOpenChange(false);
       setForm(initialState);
       fetchProdutos();
@@ -541,7 +604,8 @@ const CreateProdutoDialog: React.FC<{
                 id="preco-venda-create"
                 value={form.precoVenda}
                 onChange={(e) => handlePriceInput("precoVenda", e.target.value)}
-                placeholder="Ex: 2999 para R$ 29,99"
+                placeholder="0,00"
+                inputMode="numeric"
               />
             </div>
             <div className="space-y-2">
@@ -674,25 +738,48 @@ export const Products: React.FC = () => {
   const produtosComEstoque = produtos.filter(
     (p) => p.lote && p.lote.length > 0
   );
+  // Total em estoque (R$)
   const totalEstoque = produtosComEstoque.reduce((acc, p) => {
     const qtdTotal = p.lote.reduce(
       (sum, lote) => sum + Number(lote.quantidadeAtual),
       0
     );
+
     const precoMedio =
       p.lote.reduce((sum, lote) => sum + Number(lote.precoCusto), 0) /
-      p.lote.length;
+      (p.lote.length || 1);
+
     return acc + qtdTotal * precoMedio;
   }, 0);
 
-  const lucroMedio =
-    produtosComEstoque.reduce((acc, p) => {
-      const custoMedio =
-        p.lote.reduce((sum, lote) => sum + Number(lote.precoCusto), 0) /
-        (p.lote.length || 1);
-      const venda = Number(p.precoVenda) || 0;
-      return acc + (venda - custoMedio);
-    }, 0) / (produtosComEstoque.length || 1);
+  // Lucro total estimado (R$)
+  // Lucro total esperado sobre o estoque
+  const lucroTotalEstimado = produtosComEstoque.reduce((acc, p) => {
+    const lotesAtivos = p.lote.filter((l) => Number(l.quantidadeAtual) > 0);
+
+    const quantidadeTotal = lotesAtivos.reduce(
+      (sum, lote) => sum + Number(lote.quantidadeAtual),
+      0
+    );
+
+    const valorTotalCusto = lotesAtivos.reduce(
+      (sum, lote) =>
+        sum + Number(lote.precoCusto) * Number(lote.quantidadeAtual),
+      0
+    );
+
+    const valorTotalVenda = quantidadeTotal * (Number(p.precoVenda) || 0);
+
+    return acc + (valorTotalVenda - valorTotalCusto);
+  }, 0);
+
+  // Lucro médio estimado por produto
+  const lucroMedio = produtosComEstoque.length
+    ? lucroTotalEstimado / produtosComEstoque.length
+    : 0;
+
+  const percentualLucro =
+    totalEstoque > 0 ? (lucroTotalEstimado / totalEstoque) * 100 : 0;
 
   const produtosBaixoEstoque = produtos.filter(
     (p) =>
@@ -946,10 +1033,41 @@ export const Products: React.FC = () => {
 
         <Card className="bg-gradient-to-r from-yellow-50 to-yellow-100 border-none shadow-sm">
           <CardContent className="p-4">
-            <p className="text-sm text-yellow-800">Lucro Médio Estimado</p>
-            <h2 className="text-2xl font-bold text-yellow-700">
-              R$ {lucroMedio.toFixed(2)}
-            </h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-yellow-700">
+                R${" "}
+                {lucroTotalEstimado.toLocaleString("pt-BR", {
+                  minimumFractionDigits: 2,
+                })}
+              </h2>
+
+              {/* Tooltip explicativo */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="w-4 h-4 text-muted-foreground cursor-pointer" />
+                </TooltipTrigger>
+                <TooltipContent
+                  side="top"
+                  className="max-w-xs text-sm leading-relaxed"
+                >
+                  <p>
+                    Lucro Estimado: diferença entre o preço de venda e o custo
+                    dos produtos em estoque. Representa quanto a empresa pode
+                    ganhar se vender todo o estoque pelo preço de venda atual.
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
+
+            {/* Seta indicando lucro positivo ou negativo */}
+            <p className="text-sm text-yellow-800 flex items-center mt-2 gap-1">
+              Lucro Estimado ({percentualLucro.toFixed(1)}%)
+              {lucroTotalEstimado > 0 ? (
+                <TrendingUp className="text-green-400 w-5 h-5" />
+              ) : (
+                <TrendingDown className="text-red-400 w-5 h-5" />
+              )}
+            </p>
           </CardContent>
         </Card>
 
@@ -1159,22 +1277,15 @@ export const Products: React.FC = () => {
                       "Sem fornecedor"
                     )}
                   </TableCell>
-                  <TableCell>
-                    {produto.lote?.reduce(
-                      (total, lote) => total + Number(lote.quantidadeAtual),
-                      0
-                    )}
-                  </TableCell>
+                  <TableCell>{produto.quantidadeTotal}</TableCell>
 
                   <TableCell>
-                    R${" "}
-                    {(
-                      produto.lote?.reduce(
-                        (acumulador, item) =>
-                          acumulador + Number(item.precoCusto),
-                        0
-                      ) / produto.lote?.length
-                    ).toFixed(2)}
+                    {produto.custoMedio
+                      ? Number(produto.custoMedio).toLocaleString("pt-BR", {
+                          style: "currency",
+                          currency: "BRL",
+                        })
+                      : "Sem dados"}
                   </TableCell>
 
                   <TableCell>

@@ -68,8 +68,8 @@ export const AppSidebar = () => {
                 <Package className="h-6 w-6 text-primary-foreground" />
               </div>
               <div>
-                <h2 className="font-bold text-foreground">Sistema</h2>
-                <p className="text-xs text-muted-foreground">Estoque</p>
+                <h2 className="font-bold text-foreground">AJAFS</h2>
+                <p className="text-xs text-muted-foreground">Gestão empresarial</p>
               </div>
             </div>
           )}

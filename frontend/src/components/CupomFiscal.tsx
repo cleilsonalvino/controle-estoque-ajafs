@@ -32,15 +32,15 @@ const CupomFiscal = ({ saleItems, total, discount, paymentMethod, clientName, ve
         <div className="border-t border-b py-4">
           {saleItems.map((item) => (
             <div key={item.id} className="flex justify-between">
-              <span>{item.produto.nome} (x{item.quantity})</span>
-              <span>{(item.precoVenda * item.quantity).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
+              <span>{item.produto.nome} (x{item.quantidade})</span>
+              <span>{(item.precoVenda * item.quantidade).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
             </div>
           ))}
         </div>
         <div className="py-4">
           <div className="flex justify-between">
             <span>Subtotal</span>
-            <span>{saleItems.reduce((acc, item) => acc + item.precoVenda * item.quantity, 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
+            <span>{saleItems.reduce((acc, item) => acc + item.precoVenda * item.quantidade, 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
           </div>
           <div className="flex justify-between">
             <span>Desconto</span>

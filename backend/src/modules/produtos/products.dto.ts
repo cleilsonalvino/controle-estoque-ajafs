@@ -2,11 +2,11 @@ import { z } from "zod";
 
 export const createProductSchema = z.object({
   nome: z.string(),
-  descricao: z.string().optional().default(""),
-  precoVenda: z.number().nonnegative().optional().default(0),
-  urlImage: z.string().optional().default(""),
-  codigoBarras: z.string().optional(),
-  estoqueMinimo: z.number().nonnegative().optional().default(0),
+  descricao: z.string().optional().default("").nullable(),
+  precoVenda: z.string().optional().default("").nullable(),
+  urlImage: z.string().optional().default("").nullable(),
+  codigoBarras: z.string().optional().nullable(),
+  estoqueMinimo: z.number().nonnegative().optional().default(0).nullable(),
   categoriaId: z.string().uuid().optional(),
 }).strict();
 

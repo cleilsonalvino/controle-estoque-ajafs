@@ -27,4 +27,8 @@ router.get('/estoque-produto/:produtoId', stockController.getEstoqueProdutoId);
 
 router.get('/valor-estoque', stockController.getValorEstoque);
 
+router.get('/custo-medio-estimado', stockController.getLucroMedioEstimado);
+
+router.delete('/deletar-lote/:loteId/produto/:produtoId', stockController.deleteLote);
+
 export default router;

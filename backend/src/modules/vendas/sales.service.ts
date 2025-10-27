@@ -299,6 +299,7 @@ export const getVendasService = async () => {
             select: {
               nome: true,
               id: true,
+              precoVenda: true,
             },
           },
           quantidade: true,
