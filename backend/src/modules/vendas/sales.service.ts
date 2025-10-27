@@ -22,8 +22,6 @@ export const createVendaService = async (data: any) => {
       select: { nome: true },
     });
 
-
-
     const quantidadeSolicitada = Number(item.quantidade);
 
     const lotes = await prisma.lote.findMany({
@@ -53,7 +51,6 @@ export const createVendaService = async (data: any) => {
         sum + Number(item.precoUnitario) * Number(item.quantidade),
       0
     );
-    
 
     // Cria venda
     const novaVenda = await tx.venda.create({
@@ -65,7 +62,6 @@ export const createVendaService = async (data: any) => {
         status: "Concluída",
         formaPagamento: data.formaPagamento || "Dinheiro",
         desconto: data.desconto || 0,
-
       },
     });
 
@@ -210,7 +206,9 @@ export const updateVendaService = async (id: string, data: any) => {
               loteId: lote.id,
               tipo: TipoMovimentacao.ENTRADA,
               quantidade: devolver,
-              observacao: `Ajuste (-${Math.abs(diff)}) na venda ${vendaAtual.numero}`,
+              observacao: `Ajuste (-${Math.abs(diff)}) na venda ${
+                vendaAtual.numero
+              }`,
             },
           });
 
@@ -278,7 +276,8 @@ export const updateVendaService = async (id: string, data: any) => {
     });
 
     const total = itens.reduce(
-      (sum: number, i: { precoUnitario: any; quantidade: any; }) => sum + Number(i.precoUnitario) * Number(i.quantidade),
+      (sum: number, i: { precoUnitario: any; quantidade: any }) =>
+        sum + Number(i.precoUnitario) * Number(i.quantidade),
       0
     );
 
@@ -296,18 +295,16 @@ export const getVendasService = async () => {
     include: {
       itens: {
         select: {
-          produto:{
-            select:{
+          produto: {
+            select: {
               nome: true,
               id: true,
-
-            }
+            },
           },
           quantidade: true,
           precoUnitario: true,
           vendaId: true,
         },
-
       },
       cliente: {
         select: { nome: true, id: true }, // retorna só o nome (sem id)
@@ -412,7 +409,6 @@ export const deleteVendaService = async (id: string) => {
   return { message: "Venda deletada e estoque (lotes) ajustado com sucesso" };
 };
 
-
 // ======================================================
 // CANCELAR VENDA (devolve estoque e mantém histórico)
 // ======================================================
@@ -493,9 +489,9 @@ export const cancelVendaService = async (id: string) => {
       where: { id: venda.id },
       data: {
         status: "Cancelada",
-        observacoes: `${venda.observacoes || ""} | Venda cancelada em ${new Date().toLocaleString(
-          "pt-BR"
-        )}`,
+        observacoes: `${
+          venda.observacoes || ""
+        } | Venda cancelada em ${new Date().toLocaleString("pt-BR")}`,
       },
     });
   });
@@ -505,3 +501,79 @@ export const cancelVendaService = async (id: string) => {
   };
 };
 
+///////////////////////
+//Consulta com filtros
+///////////////////////
+
+export const getVendasFiltrarService = async (filtros: any) => {
+  const whereClause: any = {};
+
+  // 🧍 Cliente
+  if (filtros.clienteId && filtros.clienteId !== "todos") {
+    whereClause.clienteId = filtros.clienteId;
+  }
+
+  // 👨‍💼 Vendedor
+  if (filtros.vendedorId && filtros.vendedorId !== "todos") {
+    whereClause.vendedorId = filtros.vendedorId;
+  }
+
+  // 📦 Status
+  if (filtros.status && filtros.status !== "todos") {
+    whereClause.status = filtros.status;
+  }
+
+  // 💳 Forma de pagamento
+  if (filtros.formaPagamento && filtros.formaPagamento !== "todos") {
+    const formas = filtros.formaPagamento
+      .split(",")
+      .map((f: string) => f.trim());
+
+    if (formas.length > 1) {
+      whereClause.formaPagamento = {
+        in: formas,
+        mode: "insensitive",
+      };
+    } else {
+      whereClause.formaPagamento = {
+        equals: formas[0],
+        mode: "insensitive",
+      };
+    }
+  }
+
+  // 🗓️ Filtros de data opcionais
+  if (filtros.dataInicio || filtros.dataFim) {
+    whereClause.criadoEm = {}; // cuidado: use "criadoEm" se esse é o campo real
+
+    if (filtros.dataInicio) {
+      whereClause.criadoEm.gte = new Date(filtros.dataInicio as string);
+    }
+
+    if (filtros.dataFim) {
+      const dataFim = new Date(filtros.dataFim as string);
+      dataFim.setHours(23, 59, 59, 999);
+      whereClause.criadoEm.lte = dataFim;
+    }
+  }
+
+  // 🔎 Consulta ao banco
+  const vendasFiltradas = await prisma.venda.findMany({
+    where: whereClause,
+    include: {
+      itens: {
+        select: {
+          produto: { select: { nome: true, id: true } },
+          quantidade: true,
+          precoUnitario: true,
+          vendaId: true,
+        },
+      },
+      cliente: { select: { nome: true, id: true } },
+      vendedor: { select: { nome: true, id: true } },
+    },
+    orderBy: { criadoEm: "desc" },
+  });
+
+  return vendasFiltradas;
+};

@@ -6,6 +6,7 @@ import {
   updateVendaService,
   deleteVendaService,
   cancelVendaService,
+  getVendasFiltrarService,
 } from "./sales.service.ts";
 
 import { createVendaSchema } from "./sales.dto.ts";
@@ -22,7 +23,7 @@ export const createVendaController = async (req: Request, res: Response) => {
       details: validation.error.format(), // mostra exatamente o campo errado
     });
   }
-  
+
   const venda = await createVendaService(req.body);
   res.status(201).json(venda);
 };
@@ -60,3 +61,15 @@ export const cancelarVendaController = async (req: Request, res: Response) => {
     return res.status(error.status || 500).json({ message: error.message });
   }
 };
+
+export const getVendasFiltrarController = async (req: Request, res: Response) => {
+  try {
+    const filtros = req.query; // todos os parâmetros de query
+    const vendas = await getVendasFiltrarService(filtros);
+    res.json(vendas);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Erro ao buscar vendas" });
+  }
+};
+
