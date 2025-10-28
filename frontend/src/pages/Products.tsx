@@ -69,6 +69,8 @@ import {
   Legend,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useLocation } from "react-router-dom";
+import { toast as sonnerToast } from "sonner";
 
 /**
  * Modal de Detalhes do Produto
@@ -256,11 +258,11 @@ const EditProdutoDialog: React.FC<{
   onOpenChange: (v: boolean) => void;
   produto: Produto | null;
   onSave: (p: Produto) => void;
-}> = ({ open, onOpenChange, produto, onSave }) => {
+  categorias: Categoria[];
+  fornecedores: Fornecedor[];
+}> = ({ open, onOpenChange, produto, onSave, categorias, fornecedores }) => {
   const [form, setForm] = useState<Produto | null>(produto);
   const [saving, setSaving] = useState(false);
-  const [categorias, setCategorias] = useState<Categoria[]>([]);
-  const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
   const [precoVendaInput, setPrecoVendaInput] = useState("");
 
   const { fetchProdutos } = useProdutos();
@@ -274,13 +276,6 @@ const EditProdutoDialog: React.FC<{
       produto ? produto.precoVenda.toString().replace(".", ",") : ""
     );
   }, [produto]);
-
-  useEffect(() => {
-    if (open) {
-      fetchCategorias().then(setCategorias);
-      fetchFornecedores().then(setFornecedores);
-    }
-  }, [open]);
 
   const handleChange = (key: keyof Produto, value: any) => {
     if (!form) return;
@@ -474,7 +469,9 @@ const CreateProdutoDialog: React.FC<{
   open: boolean;
   onOpenChange: (v: boolean) => void;
   onCreate: (p: Omit<Produto, "id">) => void;
-}> = ({ open, onOpenChange, onCreate }) => {
+  categorias: Categoria[];
+  fornecedores: Fornecedor[];
+}> = ({ open, onOpenChange, onCreate, categorias, fornecedores }) => {
   // CORREÇÃO: Adicionado `precoCusto` ao estado inicial do formulário.
   const initialState: Omit<Produto, "id"> = {
     nome: "",
@@ -491,16 +488,7 @@ const CreateProdutoDialog: React.FC<{
 
   const [form, setForm] = useState(initialState);
   const [saving, setSaving] = useState(false);
-  const [categorias, setCategorias] = useState<Categoria[]>([]);
-  const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
   const { fetchProdutos } = useProdutos();
-
-  useEffect(() => {
-    if (open) {
-      fetchCategorias().then(setCategorias);
-      fetchFornecedores().then(setFornecedores);
-    }
-  }, [open]);
 
   const handleChange = (key: keyof typeof form, value: any) =>
     setForm({ ...form, [key]: value });
@@ -724,8 +712,9 @@ const CreateProdutoDialog: React.FC<{
  */
 export const Products: React.FC = () => {
   const { toast } = useToast();
-  const { produtos, loading, createProduto, updateProduto, deleteProduto } =
+  const { produtos, loading, createProduto, updateProduto, deleteProduto, fetchProdutos } =
     useProdutos();
+  const location = useLocation();
 
   const [selectedProduct, setSelectedProduct] = useState<Produto | null>(null);
   const [openEdit, setOpenEdit] = useState(false);
@@ -733,6 +722,37 @@ export const Products: React.FC = () => {
   const [openDetalhes, setOpenDetalhes] = useState(false);
   const [filtro, setFiltro] = useState("");
   const [ordenacao, setOrdenacao] = useState("nome-asc");
+  const [categorias, setCategorias] = useState<Categoria[]>([]);
+  const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
+
+  // === REFRESH AUTOMÁTICO ===
+  useEffect(() => {
+    const fetchAll = async () => {
+      await Promise.all([
+        fetchProdutos(),
+        fetchCategorias().then(setCategorias),
+        fetchFornecedores().then(setFornecedores),
+      ]);
+    };
+
+    // Roda ao abrir a rota
+    fetchAll();
+
+    // Atualiza ao voltar foco na aba
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        fetchAll().then(() => {
+          sonnerToast.info("Dados atualizados automaticamente");
+        });
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [location.pathname]);
 
   const totalProdutos = produtos.length;
   const produtosComEstoque = produtos.filter(
@@ -773,10 +793,6 @@ export const Products: React.FC = () => {
     return acc + (valorTotalVenda - valorTotalCusto);
   }, 0);
 
-  // Lucro médio estimado por produto
-  const lucroMedio = produtosComEstoque.length
-    ? lucroTotalEstimado / produtosComEstoque.length
-    : 0;
 
   const percentualLucro =
     totalEstoque > 0 ? (lucroTotalEstimado / totalEstoque) * 100 : 0;
@@ -806,11 +822,6 @@ export const Products: React.FC = () => {
     return { nome: p.nome, custo, venda: Number(p.precoVenda) || 0 };
   });
 
-  const categorias = produtos.reduce((acc, p) => {
-    const nomeCat = p.categoria?.nome || "Sem categoria";
-    acc[nomeCat] = (acc[nomeCat] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
 
   const categoriaData = Object.entries(categorias).map(([nome, valor]) => ({
     nome,
@@ -1385,12 +1396,16 @@ export const Products: React.FC = () => {
           onOpenChange={setOpenEdit}
           produto={selectedProduct}
           onSave={handleSave}
+          categorias={categorias}
+          fornecedores={fornecedores}
         />
       )}
       <CreateProdutoDialog
         open={openCreate}
         onOpenChange={setOpenCreate}
         onCreate={handleCreate}
+        categorias={categorias}
+        fornecedores={fornecedores}
       />
       {selectedProduct && (
         <ProdutoDetalhesDialog

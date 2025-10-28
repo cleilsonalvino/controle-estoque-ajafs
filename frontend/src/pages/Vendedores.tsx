@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -18,7 +18,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+  import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useVendedores, Vendedor } from "@/contexts/VendedorContext";
 import { useSales } from "@/contexts/SalesContext";
@@ -40,6 +40,7 @@ import { format, differenceInDays, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { useLocation } from "react-router-dom";
 
 // Helper para formatar moeda
 const formatCurrency = (value: number) => {
@@ -50,8 +51,34 @@ const formatCurrency = (value: number) => {
 };
 
 const Vendedores = () => {
-  const { vendedores, createVendedor, updateVendedor, deleteVendedor, loading } = useVendedores();
-  const { sales } = useSales();
+  const { vendedores, createVendedor, updateVendedor, deleteVendedor, loading, fetchVendedores } = useVendedores();
+  const { sales, fetchSales } = useSales();
+  const location = useLocation();
+
+  // === REFRESH AUTOMÁTICO ===
+  useEffect(() => {
+    const fetchAll = async () => {
+      await Promise.all([fetchVendedores(), fetchSales()]);
+    };
+
+    // Roda ao abrir a rota
+    fetchAll();
+
+    // Atualiza ao voltar foco na aba
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        fetchAll().then(() => {
+          toast.info("Dados atualizados automaticamente");
+        });
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [location.pathname]);
 
   // Estados dos Modais e Formulário
   const [isModalOpen, setIsModalOpen] = useState(false);

@@ -56,12 +56,12 @@ const AddSupplierModal: React.FC<AddSupplierModalProps> = ({ isOpen, onClose }) 
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Adicionar Novo Fornecedor</DialogTitle>
+          <DialogTitle>Adicionar \zx</DialogTitle>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="space-y-2">
             <Label htmlFor="nome">Nome*</Label>
-            <Input id="nome" value={newSupplier.nome} onChange={handleChange} />
+            <Input id="nome" value={newSupplier.nome} onChange={handleChange} className='border-gray-500'/>
           </div>
           <div className="space-y-2">
             <Label htmlFor="contato">Contato*</Label>

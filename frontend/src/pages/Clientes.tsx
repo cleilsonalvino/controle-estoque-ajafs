@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -56,11 +56,39 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useLocation } from "react-router-dom";
+import { toast } from "sonner";
 
 const Clientes = () => {
-  const { clientes, createCliente, updateCliente, deleteCliente } = useClientes();
-  const { sales } = useSales();
-  const { produtos } = useProdutos();
+  const { clientes, createCliente, updateCliente, deleteCliente, fetchClientes } = useClientes();
+  const { sales, fetchSales } = useSales();
+  const { produtos, fetchProdutos } = useProdutos();
+  const location = useLocation();
+
+  // === REFRESH AUTOMÁTICO ===
+  useEffect(() => {
+    const fetchAll = async () => {
+      await Promise.all([fetchClientes(), fetchSales(), fetchProdutos()]);
+    };
+
+    // Roda ao abrir a rota
+    fetchAll();
+
+    // Atualiza ao voltar foco na aba
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        fetchAll().then(() => {
+          toast.info("Dados atualizados automaticamente");
+        });
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [location.pathname]);
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);

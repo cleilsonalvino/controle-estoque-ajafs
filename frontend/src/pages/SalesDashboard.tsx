@@ -35,7 +35,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Loader2,
-  X, // Adicionado para feedback de loading
+  X,
+  Badge, // Adicionado para feedback de loading
 } from "lucide-react";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
@@ -51,13 +52,14 @@ import { useClientes, Cliente } from "@/contexts/ClienteContext";
 import { useVendedores, Vendedor } from "@/contexts/VendedorContext";
 // ------------------------------------
 
-import { Badge } from "@/components/ui/badge";
 import { useEffect, useMemo, useState } from "react";
 import GerarRelatorioNF from "@/components/GerarRelatorioNF";
 import SaleDetalhesModal from "@/components/SaleDetalhesModal";
 import ClienteDetalhesModal from "@/components/ClienteDetalhesModal";
 import { Sale } from "@/contexts/SalesContext"; // Removido SaleData se não for usado
 import api from "@/lib/api";
+import { useLocation } from "react-router-dom";
+import { toast } from "sonner";
 
 // ========================
 // Utils
@@ -237,7 +239,6 @@ const TopSellingProducts = () => {
             >
               <div className="flex items-center space-x-3">
                 <Badge
-                  variant="outline"
                   className="w-6 h-6 p-0 flex items-center justify-center text-xs"
                 >
                   {index + 1}
@@ -345,7 +346,7 @@ const SalesByCategory = () => {
 // ========================
 const SalesDashboard = () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { sales: allSalesRaw, cancelSale } = useSales();
+  const { sales: allSalesRaw, cancelSale, fetchSales } = useSales();
   const { produtos, fetchProdutos } = useProdutos() as {
     produtos: Produto[];
     fetchProdutos: () => void;
@@ -363,18 +364,41 @@ const SalesDashboard = () => {
     vendedores: Vendedor[];
     fetchVendedores: () => void;
   };
+  const location = useLocation();
 
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [saleForNotaFiscal, setSaleForNotaFiscal] = useState<Sale | null>(null);
 
-  // Carregar dados mestre (produtos, categorias, clientes, vendedores)
+  // === REFRESH AUTOMÁTICO ===
   useEffect(() => {
-    fetchProdutos?.();
-    fetchCategories?.();
-    fetchClientes?.();
-    fetchVendedores?.();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    const fetchAll = async () => {
+      await Promise.all([
+        fetchSales?.(),
+        fetchProdutos?.(),
+        fetchCategories?.(),
+        fetchClientes?.(),
+        fetchVendedores?.(),
+      ]);
+    };
+
+    // Roda ao abrir a rota
+    fetchAll();
+
+    // Atualiza ao voltar foco na aba
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        fetchAll().then(() => {
+          toast.info("Dados atualizados automaticamente");
+        });
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [location.pathname]);
 
   // Dados brutos para os cards do dashboard
   const allSales = Array.isArray(allSalesRaw) ? allSalesRaw : [];
@@ -664,9 +688,9 @@ const SalesDashboard = () => {
       </h1>
 
       {/* Cards resumo (Sem alterações, usam allSales) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-6 ">
+        <Card className="bg-gradient-to-r from-blue-50 to-blue-100 border-none shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 ">
             <CardTitle className="text-sm font-medium">
               Faturamento Total
             </CardTitle>
@@ -682,7 +706,7 @@ const SalesDashboard = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-gradient-to-r from-orange-50 to-orange-100 border-none shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Número de Vendas
@@ -698,7 +722,7 @@ const SalesDashboard = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-gradient-to-r from-green-50 to-green-100 border-none shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Ticket Médio</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
@@ -711,7 +735,7 @@ const SalesDashboard = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-gradient-to-r from-green-300 to-green-200 border-none shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Lucro Estimado
@@ -728,7 +752,7 @@ const SalesDashboard = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-gradient-to-r from-yellow-50 to-yellow-100 border-none shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Vendas Pendentes
@@ -743,7 +767,7 @@ const SalesDashboard = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-gradient-to-r from-red-50 to-red-100 border-none shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Vendas Canceladas

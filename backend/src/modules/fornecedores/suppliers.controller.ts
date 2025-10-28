@@ -38,6 +38,16 @@ export const getSupplierByIdController = async (req: Request, res: Response) => 
 
 export const updateSupplierController = async (req: Request, res: Response) => {
   const { id } = req.params;
+
+  const validation = updateSupplierSchema.safeParse(req.body);
+
+  if (!validation.success) {
+    return res.status(400).json({
+      message: "Erro de validação nos dados do fornecedor",
+      details: validation.error.format(),
+    });
+  }
+
   const supplier = await updateSupplierService(id as string, req.body);
   res.status(200).json(supplier);
 };

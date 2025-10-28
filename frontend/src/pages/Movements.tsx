@@ -73,6 +73,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useLocation } from "react-router-dom";
 
 interface Movement {
   id: string;
@@ -126,13 +127,18 @@ const Movements = () => {
 
   const [products, setProducts] = useState<any[]>([]);
   const [suppliers, setSuppliers] = useState<any[]>([]);
+  const location = useLocation();
 
-  // --- Busca de dados (sem alteração) ---
-  const fetchMovements = async () => {
+  const fetchAll = async () => {
     try {
       setLoading(true);
-      const response = await api.get("/estoque/movimentacoes");
-      const data = response.data.map((item: any) => ({
+      const [movementsResponse, productsResponse, suppliersResponse] = await Promise.all([
+        api.get("/estoque/movimentacoes"),
+        api.get("/produtos"),
+        api.get("/fornecedores"),
+      ]);
+
+      const movementsData = movementsResponse.data.map((item: any) => ({
         id: item.id,
         type: item.tipo,
         product: item.produto?.nome || "Produto Deletado",
@@ -142,36 +148,43 @@ const Movements = () => {
         user: item.usuario?.nome || "Usuário do Sistema",
         fornecedor: item.fornecedor?.nome || "-",
         notes: item.observacao || null,
-        precoCusto: item.precoCusto, // Adicionado
-        validade: item.validade, // Adicionado
+        precoCusto: item.precoCusto,
+        validade: item.validade,
       }));
-      data.sort(
+      movementsData.sort(
         (a: { date: string }, b: { date: string }) =>
           new Date(b.date).getTime() - new Date(a.date).getTime()
       );
-      setMovements(data);
+      setMovements(movementsData);
+      setProducts(productsResponse.data);
+      setSuppliers(suppliersResponse.data);
     } catch (error) {
-      toast.error("Falha ao carregar o histórico de movimentações.");
+      toast.error("Falha ao carregar dados da página.");
     } finally {
       setLoading(false);
     }
   };
 
+  // === REFRESH AUTOMÁTICO ===
   useEffect(() => {
-    fetchMovements();
-    (async () => {
-      try {
-        const [p, f] = await Promise.all([
-          api.get("/produtos"),
-          api.get("/fornecedores"),
-        ]);
-        setProducts(p.data);
-        setSuppliers(f.data);
-      } catch (error) {
-        toast.error("Falha ao carregar produtos ou fornecedores.");
+    // Roda ao abrir a rota
+    fetchAll();
+
+    // Atualiza ao voltar foco na aba
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        fetchAll().then(() => {
+          toast.info("Dados atualizados automaticamente");
+        });
       }
-    })();
-  }, []);
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [location.pathname]);
 
   // --- Filtragem (sem alteração) ---
   const filteredMovements = useMemo(() => {
@@ -288,7 +301,7 @@ const Movements = () => {
       toast.success("Movimentação registrada com sucesso!");
       setShowAddDialog(false);
       setForm(initialFormState); // Reseta o formulário
-      fetchMovements(); // Recarrega os dados
+      fetchAll(); // Recarrega os dados
     } catch (error: any) {
       // Tenta pegar erros da API (se houver)
       const errorMsg =

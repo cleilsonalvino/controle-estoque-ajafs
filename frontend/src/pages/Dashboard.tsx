@@ -20,6 +20,8 @@ import { useProdutos } from "@/contexts/ProdutoContext";
 import { useSales } from "@/contexts/SalesContext";
 import api from "@/lib/api";
 import StockTurnoverChart from "@/components/GiroEstoque";
+import { useLocation } from "react-router-dom";
+import { toast } from "sonner";
 
 interface ValorEstoqueResponse {
   valorEstoque: {
@@ -30,8 +32,9 @@ interface ValorEstoqueResponse {
 }
 
 const Dashboard = () => {
-  const { produtos, loading } = useProdutos();
-  const { sales } = useSales();
+  const { produtos, loading, fetchProdutos } = useProdutos();
+  const { sales, fetchSales } = useSales();
+  const location = useLocation();
 
   const [valorEstoque, setValorEstoque] = useState<number>(0);
   const [qtdLotes, setQtdLotes] = useState<number>(0);
@@ -49,8 +52,28 @@ const Dashboard = () => {
       }
     };
 
-    fetchValorEstoque();
-  }, []);
+    const fetchAll = async () => {
+      await Promise.all([fetchProdutos(), fetchSales(), fetchValorEstoque()]);
+    };
+
+    // Roda ao abrir a rota
+    fetchAll();
+
+    // Atualiza ao voltar foco na aba
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        fetchAll().then(() => {
+          toast.info("Dados atualizados automaticamente");
+        });
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [location.pathname]);
 
   const lowStockProducts = produtos.filter(
     (p) =>

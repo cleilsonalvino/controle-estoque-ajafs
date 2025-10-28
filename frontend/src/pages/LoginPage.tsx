@@ -11,28 +11,24 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/useAuth";
 import { useNavigate } from "react-router-dom";
-import { toast } from "sonner"; // opcional, se estiver usando o Sonner para notificações
+import { toast } from "sonner";
 
 export function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  // Estados para capturar email e senha
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [senha, setPassword] = useState("");
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    if (token) {
-      navigate("/");
-    }
+    if (token) navigate("/");
   }, [navigate]);
 
-
-  const handleSubmit = async (event) => {
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
-    const success = await login(email, password);
+    const success = await login(email, senha);
 
     if (success) {
       toast.success("Login realizado com sucesso!");
@@ -43,43 +39,75 @@ export function LoginPage() {
   };
 
   return (
-    <div className="flex items-center justify-center h-screen bg-muted/40">
-      <Card className="mx-auto max-w-sm shadow-lg">
-        <CardHeader>
-          <CardTitle className="text-2xl text-center">Login</CardTitle>
-          <CardDescription className="text-center">
-            Entre com suas credenciais para acessar o sistema
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="grid gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="m@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="password">Senha</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
-            <Button type="submit" className="w-full">
-              Entrar
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+    <div className="min-h-screen flex">
+      {/* === LADO ESQUERDO === */}
+      <div className="hidden lg:flex flex-1 bg-gradient-to-br from-blue-700 to-purple-600 items-center justify-center text-white relative overflow-hidden">
+        <div className="absolute inset-0 bg-black/20" />
+        <div className="relative z-10 flex flex-col items-center text-center px-10">
+          <img
+            src="/logo-ajafs.png" // substitua pelo caminho da logo do software
+            alt="Logo AJAFS"
+            className="w-36 mb-6 drop-shadow-lg"
+          />
+          <h1 className="text-4xl font-bold leading-tight">
+            Bem-vindo ao Sistema de Gestão
+          </h1>
+          <p className="text-white/90 mt-4 max-w-md">
+            Organize suas vendas, controle seu estoque e acompanhe resultados em tempo real com o sistema da AJAFS.
+          </p>
+        </div>
+        {/* efeito sutil */}
+        <div className="absolute bottom-0 w-full h-40 bg-gradient-to-t from-black/20 to-transparent" />
+      </div>
+
+      {/* === LADO DIREITO === */}
+      <div className="flex-1 flex items-center justify-center bg-muted/30 p-6">
+        <Card className="w-full max-w-sm shadow-lg border border-border/50 bg-white/80 backdrop-blur">
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl font-bold text-gray-900">
+              Acesso ao Sistema
+            </CardTitle>
+            <CardDescription className="text-gray-600">
+              Entre com suas credenciais para continuar
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="grid gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="email">E-mail</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="exemplo@empresa.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="password">Senha</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={senha}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+              </div>
+              <Button
+                type="submit"
+                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:opacity-90 transition-all"
+              >
+                Entrar
+              </Button>
+            </form>
+            <p className="text-center text-sm text-muted-foreground mt-4">
+              © {new Date().getFullYear()} AJAFS - Todos os direitos reservados
+            </p>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

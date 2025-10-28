@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Tag,
   Plus,
@@ -46,15 +46,52 @@ import { useCategories, Category } from "@/contexts/CategoryContext";
 import { useProdutos } from "@/contexts/ProdutoContext";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { useLocation } from "react-router-dom";
+import { toast } from "sonner";
 
 const Categories = () => {
-  const { categories, loading, createCategory, updateCategory, deleteCategory } = useCategories();
-  const { produtos } = useProdutos();
+  const {
+    categories,
+    loading,
+    createCategory,
+    updateCategory,
+    deleteCategory,
+    fetchCategories,
+  } = useCategories();
+  const { produtos, fetchProdutos } = useProdutos();
+  const location = useLocation();
+
+  // === REFRESH AUTOMÁTICO ===
+  useEffect(() => {
+    const fetchAll = async () => {
+      await Promise.all([fetchCategories(), fetchProdutos()]);
+    };
+
+    // Roda ao abrir a rota
+    fetchAll();
+
+    // Atualiza ao voltar foco na aba
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        fetchAll().then(() => {
+          toast.info("Dados atualizados automaticamente");
+        });
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [location.pathname]);
 
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortOption, setSortOption] = useState<"A-Z" | "Z-A" | "recentes">("recentes");
+  const [sortOption, setSortOption] = useState<"A-Z" | "Z-A" | "recentes">(
+    "recentes"
+  );
 
   const [formData, setFormData] = useState({ nome: "", descricao: "" });
 
@@ -77,7 +114,7 @@ const Categories = () => {
   const handleAdd = () => {
     if (!formData.nome) return;
     createCategory({
-      ...formData
+      ...formData,
     });
     resetForm();
   };
@@ -85,9 +122,7 @@ const Categories = () => {
   const handleUpdate = () => {
     if (!editingCategory) return;
     updateCategory(editingCategory.id, {
-      ...formData,
-      criadoEm: editingCategory.criadoEm,
-      atualizadoEm: new Date(),
+      ...formData
     });
     resetForm();
   };
@@ -142,9 +177,19 @@ const Categories = () => {
     quantidade: produtos.filter((p) => p.categoria?.id === cat.id).length,
   }));
 
-  const totalProdutosPorCategoria = categoriasComProdutos.reduce((acc, c) => acc + c.quantidade, 0);
+  const totalProdutosPorCategoria = categoriasComProdutos.reduce(
+    (acc, c) => acc + c.quantidade,
+    0
+  );
 
-  const COLORS = ["#3B82F6", "#10B981", "#F59E0B", "#8B5CF6", "#EF4444", "#0EA5E9"];
+  const COLORS = [
+    "#3B82F6",
+    "#10B981",
+    "#F59E0B",
+    "#8B5CF6",
+    "#EF4444",
+    "#0EA5E9",
+  ];
 
   const categoriasOrdenadas = [...categoriasComProdutos]
     .sort((a, b) => b.quantidade - a.quantidade)
@@ -157,7 +202,8 @@ const Categories = () => {
         <div>
           <h1 className="text-3xl font-bold">Categorias</h1>
           <p className="text-muted-foreground">
-            Visualize suas categorias e acompanhe a quantidade de produtos vinculados.
+            Visualize suas categorias e acompanhe a quantidade de produtos
+            vinculados.
           </p>
         </div>
         <div className="flex gap-2 flex-wrap">
@@ -295,7 +341,9 @@ const Categories = () => {
       ) : filteredCategories.length > 0 ? (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {filteredCategories.map((category, i) => {
-            const qtd = produtos.filter((p) => p.categoria?.id === category.id).length;
+            const qtd = produtos.filter(
+              (p) => p.categoria?.id === category.id
+            ).length;
             return (
               <motion.div
                 key={category.id}
@@ -305,15 +353,42 @@ const Categories = () => {
               >
                 <Card className="border bg-white/70 backdrop-blur-lg hover:shadow-lg transition-all duration-300">
                   <CardHeader className="pb-2">
+                    <div className="flex justify-between items-start text-xs text-muted-foreground">
+                      <span>Última Atualização:</span>
+                      {category.atualizadoEm
+                        ? new Date(category.atualizadoEm).toLocaleString(
+                            "pt-BR",
+                            {
+                              day: "2-digit",
+                              month: "2-digit",
+                              year: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                              second: "2-digit",
+                            }
+                          )
+                        : "---"}
+                    </div>
+
                     <div className="flex justify-between items-center">
                       <CardTitle className="text-lg font-semibold truncate">
                         {category.nome}
                       </CardTitle>
                       <div className="flex gap-2">
-                        <Button variant="ghost" size="icon" onClick={() => openEditDialog(category)}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => openEditDialog(category)}
+                        >
                           <Edit className="h-4 w-4 text-blue-600" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(category.id, category.nome)}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() =>
+                            handleDelete(category.id, category.nome)
+                          }
+                        >
                           <Trash2 className="h-4 w-4 text-red-600" />
                         </Button>
                       </div>
@@ -335,9 +410,13 @@ const Categories = () => {
       ) : (
         <Card className="border bg-white/70 backdrop-blur-md text-center py-10">
           <Tag className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
-          <h3 className="text-lg font-semibold">Nenhuma categoria encontrada</h3>
+          <h3 className="text-lg font-semibold">
+            Nenhuma categoria encontrada
+          </h3>
           <p className="text-muted-foreground text-sm">
-            {searchTerm ? "Tente ajustar os termos de busca." : "Cadastre sua primeira categoria."}
+            {searchTerm
+              ? "Tente ajustar os termos de busca."
+              : "Cadastre sua primeira categoria."}
           </p>
         </Card>
       )}
@@ -346,7 +425,9 @@ const Categories = () => {
       <Dialog open={showAddDialog} onOpenChange={resetForm}>
         <DialogContent className="sm:max-w-[450px]">
           <DialogHeader>
-            <DialogTitle>{editingCategory ? "Editar Categoria" : "Nova Categoria"}</DialogTitle>
+            <DialogTitle>
+              {editingCategory ? "Editar Categoria" : "Nova Categoria"}
+            </DialogTitle>
             <DialogDescription>
               {editingCategory
                 ? "Atualize as informações da categoria."
@@ -360,7 +441,9 @@ const Categories = () => {
               <Input
                 placeholder="Ex: Eletrônicos"
                 value={formData.nome}
-                onChange={(e) => setFormData((p) => ({ ...p, nome: e.target.value }))}
+                onChange={(e) =>
+                  setFormData((p) => ({ ...p, nome: e.target.value }))
+                }
               />
             </div>
             <div className="space-y-2">
@@ -368,7 +451,9 @@ const Categories = () => {
               <Textarea
                 placeholder="Descreva o tipo de produtos desta categoria..."
                 value={formData.descricao}
-                onChange={(e) => setFormData((p) => ({ ...p, descricao: e.target.value }))}
+                onChange={(e) =>
+                  setFormData((p) => ({ ...p, descricao: e.target.value }))
+                }
                 rows={3}
               />
             </div>

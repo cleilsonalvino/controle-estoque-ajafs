@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Layers, Plus, Edit, Trash2 } from "lucide-react";
 import { motion } from "framer-motion";
 import {
@@ -36,6 +36,8 @@ import {
   ServiceCategory,
 } from "@/contexts/ServiceCategoryContext";
 import { useTiposServicos } from "@/contexts/TiposServicosContext";
+import { useLocation } from "react-router-dom";
+import { toast } from "sonner";
 
 const ServiceCategories = () => {
   const {
@@ -44,8 +46,35 @@ const ServiceCategories = () => {
     createServiceCategory,
     updateServiceCategory,
     deleteServiceCategory,
+    fetchServiceCategories,
   } = useServiceCategories();
-  const { tiposServicos } = useTiposServicos();
+  const { tiposServicos, fetchTiposServicos } = useTiposServicos();
+  const location = useLocation();
+
+  // === REFRESH AUTOMÁTICO ===
+  useEffect(() => {
+    const fetchAll = async () => {
+      await Promise.all([fetchServiceCategories(), fetchTiposServicos()]);
+    };
+
+    // Roda ao abrir a rota
+    fetchAll();
+
+    // Atualiza ao voltar foco na aba
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        fetchAll().then(() => {
+          toast.info("Dados atualizados automaticamente");
+        });
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [location.pathname]);
 
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingCategory, setEditingCategory] =

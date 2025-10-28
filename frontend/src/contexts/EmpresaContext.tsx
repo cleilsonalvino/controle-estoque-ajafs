@@ -5,22 +5,26 @@ import { toast } from "sonner";
 
 export interface Empresa {
   id: string;
+  nome: string;
   cnpj: string;
+  telefone: string;
+  email?: string | null;
   razaoSocial: string;
   nomeFantasia: string;
   inscEstadual: string;
   inscMunicipal: string;
   cnae: string;
-  telefone: string;
-  email: string;
   cep: string;
   estado: string;
   cidade: string;
   endereco: string;
   numero: string;
-  complemento: string;
+  complemento?: string | null;
   bairro: string;
+  criadoEm: Date;
+  atualizadoEm: Date;
 }
+
 
 interface EmpresaContextType {
   empresa: Empresa | null;

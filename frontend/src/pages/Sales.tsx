@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSales, SaleItem } from "@/contexts/SalesContext";
 import { useClientes } from "@/contexts/ClienteContext";
 import { useVendedores } from "@/contexts/VendedorContext";
@@ -31,14 +31,47 @@ import {
   CheckCircle,
 } from "lucide-react";
 import { toast } from "sonner";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useTiposServicos } from "@/contexts/TiposServicosContext";
 
 const Sales = () => {
-  const { createSale } = useSales();
-  const { clientes } = useClientes();
-  const { vendedores } = useVendedores();
-  const { produtos } = useProdutos();
+  const { createSale, fetchSales } = useSales();
+  const { clientes, fetchClientes } = useClientes();
+  const { vendedores, fetchVendedores } = useVendedores();
+  const { produtos, fetchProdutos } = useProdutos();
+  const { tiposServicos, fetchTiposServicos } = useTiposServicos();
+  const location = useLocation();
+
+  // === REFRESH AUTOMÁTICO ===
+  useEffect(() => {
+    const fetchAll = async () => {
+      await Promise.all([
+        fetchSales(),
+        fetchClientes(),
+        fetchVendedores(),
+        fetchProdutos(),
+        fetchTiposServicos(),
+      ]);
+    };
+
+    // Roda ao abrir a rota
+    fetchAll();
+
+    // Atualiza ao voltar foco na aba
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        fetchAll().then(() => {
+          toast.info("Dados atualizados automaticamente");
+        });
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [location.pathname]);
 
   const [mode, setMode] = useState<"menu" | "pdv">("menu");
   const [showCupom, setShowCupom] = useState(false);
@@ -46,7 +79,6 @@ const Sales = () => {
   const [isServiceDialogOpen, setIsServiceDialogOpen] = useState(false);
   const [loadingService, setLoadingService] = useState(false);
 
-  const {tiposServicos} = useTiposServicos();
 
 
   // Campos do formulário de serviço

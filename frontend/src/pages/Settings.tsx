@@ -10,6 +10,8 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useEmpresa, Empresa } from "@/contexts/EmpresaContext";
+import { useLocation } from "react-router-dom";
+import { toast as sonnerToast } from "sonner";
 
 const estadosBrasileiros = [
   { sigla: "AC", nome: "Acre" }, { sigla: "AL", nome: "Alagoas" }, { sigla: "AP", nome: "Amapá" },
@@ -25,9 +27,35 @@ const estadosBrasileiros = [
 
 const Settings = () => {
   const { toast } = useToast();
-  const { empresa, loading, createEmpresa, updateEmpresa } = useEmpresa();
+  const { empresa, loading, createEmpresa, updateEmpresa, fetchEmpresa } = useEmpresa();
+  const location = useLocation();
   
-  const [formData, setFormData] = useState<Partial<Empresa & { emailNotifications: boolean, stockAlerts: boolean, lowStockThreshold: string, dailyReports: boolean, autoSave: boolean, backupFrequency: string, theme: string, language: string, defaultMinStock: string, currencySymbol: string, taxRate: string }>>({});
+  const [formData, setFormData] = useState<Partial<Empresa >>({});
+
+  // === REFRESH AUTOMÁTICO ===
+  useEffect(() => {
+    const fetchAll = async () => {
+      await fetchEmpresa();
+    };
+
+    // Roda ao abrir a rota
+    fetchAll();
+
+    // Atualiza ao voltar foco na aba
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        fetchAll().then(() => {
+          sonnerToast.info("Dados atualizados automaticamente");
+        });
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [location.pathname]);
 
   useEffect(() => {
     if (empresa) {
@@ -275,239 +303,7 @@ const Settings = () => {
           
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Bell className="h-5 w-5" />
-              Notificações
-            </CardTitle>
-            <CardDescription>
-              Configure como você quer ser notificado
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Notificações por Email</Label>
-                <p className="text-sm text-muted-foreground">
-                  Receba notificações importantes por email
-                </p>
-              </div>
-              <Switch
-                checked={formData.emailNotifications || false}
-                onCheckedChange={(checked) => handleFormChange("emailNotifications", checked)}
-              />
-            </div>
-            
-            <Separator />
-            
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Alertas de Estoque Baixo</Label>
-                <p className="text-sm text-muted-foreground">
-                  Seja notificado quando produtos estiverem com estoque baixo
-                </p>
-              </div>
-              <Switch
-                checked={formData.stockAlerts || false}
-                onCheckedChange={(checked) => handleFormChange("stockAlerts", checked)}
-              />
-            </div>
 
-            {formData.stockAlerts && (
-              <div className="space-y-2 pl-4 border-l-2 ml-2">
-                <Label htmlFor="lowStockThreshold">Limite para Alerta de Estoque Baixo</Label>
-                <Input
-                  id="lowStockThreshold"
-                  type="number"
-                  min="1"
-                  value={formData.lowStockThreshold || ""}
-                  onChange={(e) => handleFormChange("lowStockThreshold", e.target.value)}
-                  className="w-32"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Alertar quando a quantidade for menor ou igual a este valor.
-                </p>
-              </div>
-            )}
-            
-            <Separator />
-            
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Relatórios Diários</Label>
-                <p className="text-sm text-muted-foreground">
-                  Receba um resumo diário por email
-                </p>
-              </div>
-              <Switch
-                checked={formData.dailyReports || false}
-                onCheckedChange={(checked) => handleFormChange("dailyReports", checked)}
-              />
-            </div>
-          </CardContent>
-          <CardFooter className="flex justify-end">
-            <Button onClick={handleSaveNotifications}>
-              <Save className="h-4 w-4 mr-2" />
-              Salvar
-            </Button>
-          </CardFooter>
-        </Card>
-
-        <Card className="bg-gradient-card border-0 shadow-md">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Database className="h-5 w-5" />
-              Sistema
-            </CardTitle>
-            <CardDescription>
-              Configurações gerais do sistema
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Salvamento Automático</Label>
-                <p className="text-sm text-muted-foreground">
-                  Salvar alterações automaticamente
-                </p>
-              </div>
-              <Switch
-                checked={formData.autoSave || false}
-                onCheckedChange={(checked) => handleFormChange("autoSave", checked)}
-              />
-            </div>
-            
-            <Separator />
-            
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Frequência de Backup</Label>
-                <Select 
-                  value={formData.backupFrequency || ""} 
-                  onValueChange={(value) => handleFormChange("backupFrequency", value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="hourly">A cada hora</SelectItem>
-                    <SelectItem value="daily">Diariamente</SelectItem>
-                    <SelectItem value="weekly">Semanalmente</SelectItem>
-                    <SelectItem value="monthly">Mensalmente</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <Label>Idioma</Label>
-                <Select 
-                  value={formData.language || ""} 
-                  onValueChange={(value) => handleFormChange("language", value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pt-BR">Português (Brasil)</SelectItem>
-                    <SelectItem value="en-US">English (US)</SelectItem>
-                    <SelectItem value="es-ES">Español</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </CardContent>
-          <CardFooter className="flex justify-end">
-            <Button onClick={handleSaveSystem}>
-              <Save className="h-4 w-4 mr-2" />
-              Salvar
-            </Button>
-          </CardFooter>
-        </Card>
-
-        <Card className="bg-gradient-card border-0 shadow-md">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Shield className="h-5 w-5" />
-              Configurações de Estoque
-            </CardTitle>
-            <CardDescription>
-              Configurações padrão para produtos e estoque
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid gap-4 md:grid-cols-3">
-              <div className="space-y-2">
-                <Label htmlFor="defaultMinStock">Estoque Mínimo Padrão</Label>
-                <Input
-                  id="defaultMinStock"
-                  type="number"
-                  min="0"
-                  value={formData.defaultMinStock || ""}
-                  onChange={(e) => handleFormChange("defaultMinStock", e.target.value)}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="currencySymbol">Símbolo da Moeda</Label>
-                <Input
-                  id="currencySymbol"
-                  value={formData.currencySymbol || ""}
-                  onChange={(e) => handleFormChange("currencySymbol", e.target.value)}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="taxRate">Taxa de Imposto (%)</Label>
-                <Input
-                  id="taxRate"
-                  type="number"
-                  min="0"
-                  max="100"
-                  step="0.01"
-                  value={formData.taxRate || ""}
-                  onChange={(e) => handleFormChange("taxRate", e.target.value)}
-                />
-              </div>
-            </div>
-          </CardContent>
-          <CardFooter className="flex justify-end">
-            <Button onClick={handleSaveStock}>
-              <Save className="h-4 w-4 mr-2" />
-              Salvar
-            </Button>
-          </CardFooter>
-        </Card>
-
-        <Card className="bg-gradient-card border-0 shadow-md">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Palette className="h-5 w-5" />
-              Informações do Sistema
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Versão do Sistema</Label>
-                <Badge variant="outline">v1.0.0</Badge>
-              </div>
-              <div className="space-y-2">
-                <Label>Última Atualização</Label>
-                <p className="text-sm text-muted-foreground">15 de Janeiro, 2024</p>
-              </div>
-              <div className="space-y-2">
-                <Label>Licença</Label>
-                <Badge variant="success">Ativa</Badge>
-              </div>
-              <div className="space-y-2">
-                <Label>Suporte</Label>
-                <p className="text-sm text-muted-foreground">Premium até 15/01/2025</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
       </div>
     </div>
   );

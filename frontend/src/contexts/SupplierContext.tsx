@@ -9,8 +9,8 @@ export interface Supplier {
   email: string | null;
   telefone: string;
   endereco: string;
-  criadoEm: Date;
-  atualizadoEm: Date;
+  criadoEm?: Date;
+  atualizadoEm?: Date;
 }
 
 interface SupplierContextType {

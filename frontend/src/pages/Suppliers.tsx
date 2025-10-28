@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Users,
   Plus,
@@ -13,7 +13,13 @@ import {
   Building2,
   Loader2,
 } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -28,20 +34,58 @@ import { Label } from "@/components/ui/label";
 import { useSuppliers, Supplier } from "@/contexts/SupplierContext";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { useLocation } from "react-router-dom";
+import { toast } from "sonner";
 
 const Suppliers = () => {
-  const { suppliers, loading, createSupplier, updateSupplier, deleteSupplier } = useSuppliers();
+  const {
+    suppliers,
+    loading,
+    createSupplier,
+    updateSupplier,
+    deleteSupplier,
+    fetchSuppliers,
+  } = useSuppliers();
+  const location = useLocation();
+
+  // === REFRESH AUTOMÁTICO ===
+  useEffect(() => {
+    const fetchAll = async () => {
+      await fetchSuppliers();
+    };
+
+    // Roda ao abrir a rota
+    fetchAll();
+
+    // Atualiza ao voltar foco na aba
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        fetchAll().then(() => {
+          toast.info("Dados atualizados automaticamente");
+        });
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [location.pathname]);
+
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortOption, setSortOption] = useState<"A-Z" | "Z-A" | "recentes">("recentes");
+  const [sortOption, setSortOption] = useState<"A-Z" | "Z-A" | "recentes">(
+    "recentes"
+  );
 
   const [formData, setFormData] = useState({
     nome: "",
-    contato: "",
-    email: "",
-    telefone: "",
-    endereco: "",
+    contato: null,
+    email: null,
+    telefone: null,
+    endereco: null,
   });
 
   // === Filtros e ordenação ===
@@ -49,7 +93,8 @@ const Suppliers = () => {
     .filter(
       (s) =>
         s.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (s.contato && s.contato.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (s.contato &&
+          s.contato.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (s.email && s.email.toLowerCase().includes(searchTerm.toLowerCase()))
     )
     .sort((a, b) => {
@@ -62,10 +107,20 @@ const Suppliers = () => {
 
   const exportPDF = () => {
     const doc = new jsPDF();
-    doc.text(`Relatório de Fornecedores - ${new Date().toLocaleString("pt-BR")}`, 14, 15);
+    doc.text(
+      `Relatório de Fornecedores - ${new Date().toLocaleString("pt-BR")}`,
+      14,
+      15
+    );
     autoTable(doc, {
       head: [["Empresa", "Contato", "Email", "Telefone", "Endereço"]],
-      body: filteredSuppliers.map((s) => [s.nome, s.contato, s.email, s.telefone, s.endereco]),
+      body: filteredSuppliers.map((s) => [
+        s.nome,
+        s.contato,
+        s.email,
+        s.telefone,
+        s.endereco,
+      ]),
       startY: 20,
     });
     doc.save("fornecedores.pdf");
@@ -76,9 +131,6 @@ const Suppliers = () => {
     if (!formData.nome) return;
     createSupplier({
       ...formData,
-      // Adicionando valores padrão para 'criadoEm' e 'atualizadoEm'
-      criadoEm: new Date(),
-      atualizadoEm: new Date(),
     });
     resetForm();
   };
@@ -87,8 +139,6 @@ const Suppliers = () => {
     if (!editingSupplier) return;
     updateSupplier(editingSupplier.id, {
       ...formData,
-      criadoEm: editingSupplier.criadoEm, // Manter a data de criação original
-      atualizadoEm: new Date(), // Atualizar a data de atualização
     });
     resetForm();
   };
@@ -102,7 +152,13 @@ const Suppliers = () => {
   };
 
   const resetForm = () => {
-    setFormData({ nome: "", contato: "", email: "", telefone: "", endereco: "" });
+    setFormData({
+      nome: "",
+      contato: "",
+      email: "",
+      telefone: "",
+      endereco: "",
+    });
     setEditingSupplier(null);
     setShowAddDialog(false);
   };
@@ -134,13 +190,18 @@ const Suppliers = () => {
       <div className="flex flex-wrap justify-between items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold">Fornecedores</h1>
-          <p className="text-muted-foreground">Gerencie seus parceiros e contatos comerciais.</p>
+          <p className="text-muted-foreground">
+            Gerencie seus parceiros e contatos comerciais.
+          </p>
         </div>
         <div className="flex gap-2 flex-wrap">
           <Button variant="outline" onClick={exportPDF}>
             <FileDown className="h-4 w-4 mr-2" /> PDF
           </Button>
-          <Button onClick={() => setShowAddDialog(true)} className="bg-gradient-to-r from-blue-600 to-purple-600 text-white">
+          <Button
+            onClick={() => setShowAddDialog(true)}
+            className="bg-gradient-to-r from-blue-600 to-purple-600 text-white"
+          >
             <Plus className="h-4 w-4 mr-2" /> Novo Fornecedor
           </Button>
         </div>
@@ -180,7 +241,11 @@ const Suppliers = () => {
             <div>
               <p className="text-sm text-orange-800">Última Atualização</p>
               <h2 className="text-lg font-bold">
-                {suppliers[0]?.criadoEm ? new Date(suppliers[0].atualizadoEm).toLocaleDateString("pt-BR") : "—"}
+                {suppliers[0]?.criadoEm
+                  ? new Date(suppliers[0].atualizadoEm).toLocaleDateString(
+                      "pt-BR"
+                    )
+                  : "—"}
               </h2>
             </div>
             <Building2 className="text-orange-600 w-8 h-8" />
@@ -228,21 +293,47 @@ const Suppliers = () => {
               className="border bg-white/70 backdrop-blur-lg hover:shadow-lg transition-all duration-300"
             >
               <CardHeader className="pb-2">
+                <div className="flex justify-between items-start text-xs text-muted-foreground">
+                  <span>Última Atualização:</span>
+                  {supplier.atualizadoEm
+                    ? new Date(supplier.atualizadoEm).toLocaleString("pt-BR", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        second: "2-digit",
+                      })
+                    : ""}
+                </div>
+
                 <div className="flex justify-between items-center">
                   <CardTitle className="text-lg font-semibold truncate">
                     {supplier.nome}
                   </CardTitle>
                   <div className="flex gap-2">
-                    <Button variant="ghost" size="icon" onClick={() => openEditDialog(supplier)}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => openEditDialog(supplier)}
+                    >
                       <Edit className="h-4 w-4 text-blue-600" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(supplier.id, supplier.nome)}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => {
+                        if (confirm("Deseja excluir este fornecedor?")) {
+                          handleDelete(supplier.id, supplier.nome);
+                        }
+                      }}
+                    >
                       <Trash2 className="h-4 w-4 text-red-600" />
                     </Button>
                   </div>
                 </div>
                 <CardDescription className="text-sm text-muted-foreground">
-                  {supplier.contato || "—"} 
+                  {supplier.contato || "—"}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3 text-sm text-muted-foreground">
@@ -265,7 +356,9 @@ const Suppliers = () => {
       ) : (
         <Card className="border bg-white/70 backdrop-blur-md text-center py-10">
           <Users className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
-          <h3 className="text-lg font-semibold">Nenhum fornecedor encontrado</h3>
+          <h3 className="text-lg font-semibold">
+            Nenhum fornecedor encontrado
+          </h3>
           <p className="text-muted-foreground text-sm">
             {searchTerm
               ? "Tente ajustar os termos de busca."
@@ -278,7 +371,9 @@ const Suppliers = () => {
       <Dialog open={showAddDialog} onOpenChange={resetForm}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>{editingSupplier ? "Editar Fornecedor" : "Novo Fornecedor"}</DialogTitle>
+            <DialogTitle>
+              {editingSupplier ? "Editar Fornecedor" : "Novo Fornecedor"}
+            </DialogTitle>
             <DialogDescription>
               {editingSupplier
                 ? "Atualize as informações do fornecedor."
@@ -290,32 +385,67 @@ const Suppliers = () => {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Empresa</Label>
-                <Input value={formData.nome} onChange={(e) => setFormData((p) => ({ ...p, nome: e.target.value }))} />
+                <Input
+                  value={formData.nome}
+                  onChange={(e) =>
+                    setFormData((p) => ({ ...p, nome: e.target.value }))
+                  }
+                  className="border-gray-500"
+                />
               </div>
               <div className="space-y-2">
                 <Label>Contato</Label>
-                <Input value={formData.contato} onChange={(e) => setFormData((p) => ({ ...p, contato: e.target.value }))} />
+                <Input
+                  value={formData.contato}
+                  onChange={(e) =>
+                    setFormData((p) => ({ ...p, contato: e.target.value }))
+                  }
+                  className="border-gray-500"
+                />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Email</Label>
-                <Input value={formData.email} onChange={(e) => setFormData((p) => ({ ...p, email: e.target.value }))} />
+                <Input
+                  value={formData.email}
+                  onChange={(e) =>
+                    setFormData((p) => ({ ...p, email: e.target.value }))
+                  }
+                  className="border-gray-500"
+                />
               </div>
               <div className="space-y-2">
                 <Label>Telefone</Label>
-                <Input value={formData.telefone} onChange={(e) => setFormData((p) => ({ ...p, telefone: e.target.value }))} />
+                <Input
+                  value={formData.telefone}
+                  onChange={(e) =>
+                    setFormData((p) => ({ ...p, telefone: e.target.value }))
+                  }
+                  className="border-gray-500"
+                />
               </div>
             </div>
             <div className="space-y-2">
               <Label>Endereço</Label>
-              <Input value={formData.endereco} onChange={(e) => setFormData((p) => ({ ...p, endereco: e.target.value }))} />
+              <Input
+                value={formData.endereco}
+                onChange={(e) =>
+                  setFormData((p) => ({ ...p, endereco: e.target.value }))
+                }
+                className="border-gray-500"
+              />
             </div>
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={resetForm}>Cancelar</Button>
-            <Button onClick={editingSupplier ? handleUpdate : handleAdd} className="bg-gradient-to-r from-blue-600 to-purple-600 text-white">
+            <Button variant="outline" onClick={resetForm}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={editingSupplier ? handleUpdate : handleAdd}
+              className="bg-gradient-to-r from-blue-600 to-purple-600 text-white"
+            >
               {editingSupplier ? "Salvar Alterações" : "Adicionar"}
             </Button>
           </DialogFooter>

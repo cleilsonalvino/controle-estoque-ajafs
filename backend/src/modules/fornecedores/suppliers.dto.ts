@@ -4,14 +4,15 @@ import { z } from "zod";
 export const createSupplierSchema = z.object({
   nome: z.string(),
   email: z.string().email().optional().nullable(),
-  contato: z.string().optional(),
-  telefone: z.string().optional(),
-  endereco: z.string().optional(),
+  contato: z.string().optional().nullable(),
+  telefone: z.string().optional().nullable(),
+  endereco: z.string().optional().nullable(),
 });
 
 export const updateSupplierSchema = z.object({
-  nome: z.string().optional(),
-  email: z.string().email().optional(),
-  telefone: z.string().optional(),
-  descricao: z.string().optional(),
+  nome: z.string(),
+  email: z.string().email().optional().nullable(),
+  telefone: z.string().optional().nullable(),
+  descricao: z.string().optional().nullable(),
+  atualizadoEm: z.date().optional().default(new Date()),
 });
