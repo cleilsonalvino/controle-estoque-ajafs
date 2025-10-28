@@ -26,7 +26,6 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useSuppliers, Supplier } from "@/contexts/SupplierContext";
-import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -60,20 +59,6 @@ const Suppliers = () => {
     });
 
   // === Exportações ===
-  const exportExcel = () => {
-    const ws = XLSX.utils.json_to_sheet(
-      filteredSuppliers.map((s) => ({
-        Empresa: s.nome,
-        Contato: s.contato,
-        Email: s.email,
-        Telefone: s.telefone,
-        Endereço: s.endereco,
-      }))
-    );
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Fornecedores");
-    XLSX.writeFile(wb, "fornecedores.xlsx");
-  };
 
   const exportPDF = () => {
     const doc = new jsPDF();
@@ -152,9 +137,6 @@ const Suppliers = () => {
           <p className="text-muted-foreground">Gerencie seus parceiros e contatos comerciais.</p>
         </div>
         <div className="flex gap-2 flex-wrap">
-          <Button variant="outline" onClick={exportExcel}>
-            <FileDown className="h-4 w-4 mr-2" /> Excel
-          </Button>
           <Button variant="outline" onClick={exportPDF}>
             <FileDown className="h-4 w-4 mr-2" /> PDF
           </Button>

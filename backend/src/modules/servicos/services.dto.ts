@@ -8,7 +8,7 @@ export const createServiceSchema = z.object({
   precoCusto: z.coerce.number().min(0, 'O preço de custo não pode ser negativo').default(0),
   precoVenda: z.coerce.number().min(0, 'O preço de venda não pode ser negativo').default(0),
   duracaoMinutos: z.coerce.number().int().min(0, 'A duração deve ser um número positivo').optional(),
-  categoriaId: z.string().uuid('O ID da categoria deve ser um UUID válido').optional(),
+  categoriaId: z.string().uuid('O ID da categoria deve ser um UUID válido').optional().nullable(),
 });
 
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Wrench,
   Plus,
@@ -33,27 +33,62 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { useLocation } from "react-router-dom";
+import { toast } from "sonner";
 
 const TiposServicos = () => {
-  const { tiposServicos, loading, createTipoServico, updateTipoServico, deleteTipoServico } =
-    useTiposServicos();
-  const { serviceCategories } = useServiceCategories();
+  const {
+    tiposServicos,
+    loading,
+    createTipoServico,
+    updateTipoServico,
+    deleteTipoServico,
+    fetchTiposServicos,
+  } = useTiposServicos();
+
+  const { serviceCategories, fetchServiceCategories } = useServiceCategories();
 
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingTipoServico, setEditingTipoServico] = useState<TipoServico | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortOption, setSortOption] = useState<"A-Z" | "Z-A" | "recentes">("recentes");
+  const location = useLocation();
 
+  // === REFRESH AUTOMÁTICO ===
+  useEffect(() => {
+    const fetchAll = async () => {
+      await Promise.all([fetchServiceCategories(), fetchTiposServicos()]);
+    };
+
+    // Roda ao abrir a rota
+    fetchAll();
+
+    // Atualiza ao voltar foco na aba
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        fetchAll().then(() => {
+          toast.info("Dados atualizados automaticamente");
+        });
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [location.pathname]);
+
+  // === FORM ===
   const [formData, setFormData] = useState({
     nome: "",
     descricao: "",
     precoCusto: 0.0,
     precoVenda: 0.0,
     duracaoMinutos: 0,
-    categoriaId: "",
+    categoriaId: null,
   });
 
   // === FILTRAGEM E ORDENAÇÃO ===
@@ -70,30 +105,33 @@ const TiposServicos = () => {
     });
 
   // === CRUD ===
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (!formData.nome) return;
-    createTipoServico({
+    await createTipoServico({
       ...formData,
       precoCusto: Number(formData.precoCusto),
       precoVenda: Number(formData.precoVenda),
       duracaoMinutos: Number(formData.duracaoMinutos),
     });
+    await fetchTiposServicos(); // refaz o fetch após criar
     resetForm();
   };
 
-  const handleUpdate = () => {
+  const handleUpdate = async () => {
     if (!editingTipoServico) return;
-    updateTipoServico(editingTipoServico.id, {
+    await updateTipoServico(editingTipoServico.id, {
       ...formData,
       precoCusto: Number(formData.precoCusto),
       precoVenda: Number(formData.precoVenda),
       duracaoMinutos: Number(formData.duracaoMinutos),
     });
+    await fetchTiposServicos(); // refaz o fetch após editar
     resetForm();
   };
 
-  const handleDelete = (id: string) => {
-    deleteTipoServico(id);
+  const handleDelete = async (id: string) => {
+    await deleteTipoServico(id);
+    await fetchTiposServicos(); // refaz o fetch após deletar
   };
 
   const resetForm = () => {
@@ -103,7 +141,7 @@ const TiposServicos = () => {
       precoCusto: 0.0,
       precoVenda: 0.0,
       duracaoMinutos: 0,
-      categoriaId: "",
+      categoriaId: null,
     });
     setEditingTipoServico(null);
     setShowAddDialog(false);
@@ -122,23 +160,7 @@ const TiposServicos = () => {
     setShowAddDialog(true);
   };
 
-  // === EXPORTAÇÃO ===
-  const exportExcel = () => {
-    const ws = XLSX.utils.json_to_sheet(
-      filteredTiposServicos.map((s) => ({
-        Serviço: s.nome,
-        Descrição: s.descricao,
-        "Preço de Custo": s.precoCusto,
-        "Preço de Venda": s.precoVenda,
-        "Duração (min)": s.duracaoMinutos,
-        Categoria: serviceCategories.find((c) => c.id === s.categoriaId)?.nome || "—",
-      }))
-    );
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Serviços");
-    XLSX.writeFile(wb, "tipos_de_servicos.xlsx");
-  };
-
+  // === EXPORTAÇÃO PDF ===
   const exportPDF = () => {
     const doc = new jsPDF();
     doc.text("Relatório de Tipos de Serviços", 14, 15);
@@ -177,9 +199,6 @@ const TiposServicos = () => {
           </p>
         </div>
         <div className="flex gap-2 flex-wrap">
-          <Button variant="outline" onClick={exportExcel}>
-            <FileDown className="h-4 w-4 mr-2" /> Excel
-          </Button>
           <Button variant="outline" onClick={exportPDF}>
             <FileDown className="h-4 w-4 mr-2" /> PDF
           </Button>
@@ -207,7 +226,7 @@ const TiposServicos = () => {
           <CardContent className="flex justify-between items-center p-4">
             <div>
               <p className="text-sm text-green-800">Média de Preço de Serviço</p>
-              <h2 className="text-2xl font-bold">R$ {mediaPrecoVenda.toFixed(2)}</h2>
+              <h2 className="text-2xl font-bold">R$ {mediaPrecoVenda}</h2>
             </div>
             <DollarSign className="text-green-600 w-8 h-8" />
           </CardContent>
@@ -216,7 +235,7 @@ const TiposServicos = () => {
           <CardContent className="flex justify-between items-center p-4">
             <div>
               <p className="text-sm text-orange-800">Duração Média</p>
-              <h2 className="text-2xl font-bold">{mediaDuracao.toFixed(0)} min</h2>
+              <h2 className="text-2xl font-bold">{mediaDuracao} min</h2>
             </div>
             <Clock className="text-orange-600 w-8 h-8" />
           </CardContent>
@@ -277,10 +296,10 @@ const TiposServicos = () => {
               </CardHeader>
               <CardContent className="space-y-2">
                 <p className="text-sm text-green-600 font-semibold">
-                  Preço Venda: R$ "—"
+                  Preço Venda: R$ {s.precoVenda ?? "—"}
                 </p>
                 <p className="text-sm text-red-500">
-                  Custo: R$ "—"
+                  Custo: R$ {s.precoCusto ?? "—"}
                 </p>
                 <p className="text-xs text-muted-foreground">
                   Duração: {s.duracaoMinutos || "—"} min
@@ -305,8 +324,7 @@ const TiposServicos = () => {
         </Card>
       )}
 
-      {/* === MODAL === */}
-      <Dialog open={showAddDialog} onOpenChange={resetForm}>
+            <Dialog open={showAddDialog} onOpenChange={resetForm}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>

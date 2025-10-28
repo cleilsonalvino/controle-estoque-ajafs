@@ -38,8 +38,6 @@ import { Calendar } from "@/components/ui/calendar";
 import { DateRange } from "react-day-picker";
 import { format, differenceInDays, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
-
-import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -157,15 +155,6 @@ const Vendedores = () => {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => { /* ... */ };
 
   // === Lógica de Exportação (agora usa dados filtrados) ===
-  const exportExcel = () => {
-    const dataToExport = filteredVendedores.map(v => ({
-      'Vendedor': v.nome, 'Email': v.email, 'Nº Vendas': v.totalVendas,
-      'Valor Vendido': v.totalValor, 'Meta (Prorateada)': v.meta, '% Meta': v.percentualMeta.toFixed(1)
-    }));
-    const ws = XLSX.utils.json_to_sheet(dataToExport);
-    XLSX.utils.book_append_sheet(XLSX.utils.book_new(), ws, "Vendedores");
-    XLSX.writeFile(XLSX.utils.book_new(), "desempenho_vendedores.xlsx");
-  };
   const exportPDF = () => {
     const doc = new jsPDF();
     doc.text("Relatório de Desempenho dos Vendedores", 14, 15);
@@ -204,7 +193,6 @@ const Vendedores = () => {
                <Calendar initialFocus mode="range" defaultMonth={date?.from} selected={date} onSelect={setDate} numberOfMonths={2} locale={ptBR}/>
             </PopoverContent>
           </Popover>
-          <Button variant="outline" onClick={exportExcel}><FileDown className="h-4 w-4 mr-2" /> Excel</Button>
           <Button variant="outline" onClick={exportPDF}><FileDown className="h-4 w-4 mr-2" /> PDF</Button>
           <Button onClick={() => handleOpenModal('create')} className="bg-gradient-primary text-primary-foreground"><PlusCircle className="h-4 w-4 mr-2" /> Adicionar Vendedor</Button>
         </div>

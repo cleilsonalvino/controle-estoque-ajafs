@@ -1,4 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useLocation, NavLink, useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/useAuth";
 import {
   LayoutDashboard,
   Package,
@@ -14,10 +18,6 @@ import {
   Wrench,
   Layers,
 } from "lucide-react";
-import { NavLink, useLocation, useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { useAuth } from "@/contexts/useAuth";
 
 const menuItems = [
   { title: "Inicio", url: "/", icon: LayoutDashboard },
@@ -36,10 +36,19 @@ const menuItems = [
 
 export const AppSidebar = () => {
   const [collapsed, setCollapsed] = useState(false);
+  const [activePath, setActivePath] = useState("");
   const location = useLocation();
-  const currentPath = location.pathname;
   const { logout } = useAuth();
   const navigate = useNavigate();
+
+  // Atualiza o item ativo sempre que a rota muda
+  useEffect(() => {
+    setActivePath(location.pathname);
+    console.log("Rota atualizada:", location.pathname);
+
+    // Se você quiser fazer um refetch de dados do menu ou do usuário, pode colocar aqui
+    // fetchMenuData();
+  }, [location.pathname]);
 
   const handleLogout = () => {
     logout();
@@ -47,8 +56,8 @@ export const AppSidebar = () => {
   };
 
   const isActive = (path: string) => {
-    if (path === "/" && currentPath === "/") return true;
-    if (path !== "/" && currentPath.startsWith(path)) return true;
+    if (path === "/" && activePath === "/") return true;
+    if (path !== "/" && activePath.startsWith(path)) return true;
     return false;
   };
 
@@ -69,7 +78,9 @@ export const AppSidebar = () => {
               </div>
               <div>
                 <h2 className="font-bold text-foreground">AJAFS</h2>
-                <p className="text-xs text-muted-foreground">Gestão empresarial</p>
+                <p className="text-xs text-muted-foreground">
+                  Gestão empresarial
+                </p>
               </div>
             </div>
           )}
@@ -79,11 +90,7 @@ export const AppSidebar = () => {
             onClick={() => setCollapsed(!collapsed)}
             className="h-8 w-8 p-0"
           >
-            {collapsed ? (
-              <ChevronRight className="h-4 w-4" />
-            ) : (
-              <ChevronLeft className="h-4 w-4" />
-            )}
+            {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
           </Button>
         </div>
       </div>
@@ -112,9 +119,7 @@ export const AppSidebar = () => {
                         : "text-muted-foreground group-hover:text-foreground"
                     )}
                   />
-                  {!collapsed && (
-                    <span className="font-medium">{item.title}</span>
-                  )}
+                  {!collapsed && <span className="font-medium">{item.title}</span>}
                 </NavLink>
               </li>
             );
@@ -124,11 +129,7 @@ export const AppSidebar = () => {
 
       {/* Footer */}
       <div className="p-4 border-t">
-        <Button
-          onClick={handleLogout}
-          variant="ghost"
-          className="w-full justify-start"
-        >
+        <Button onClick={handleLogout} variant="ghost" className="w-full justify-start">
           <LogOut className="h-5 w-5 mr-3" />
           {!collapsed && <span>Logout</span>}
         </Button>

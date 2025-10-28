@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
+import { useTiposServicos } from "@/contexts/TiposServicosContext";
 
 const Sales = () => {
   const { createSale } = useSales();
@@ -44,6 +45,9 @@ const Sales = () => {
   const [lastSale, setLastSale] = useState<any>(null);
   const [isServiceDialogOpen, setIsServiceDialogOpen] = useState(false);
   const [loadingService, setLoadingService] = useState(false);
+
+  const {tiposServicos} = useTiposServicos();
+
 
   // Campos do formulário de serviço
   const [serviceData, setServiceData] = useState({
@@ -254,13 +258,16 @@ const Sales = () => {
 
             <div>
               <Label>Descrição do Serviço *</Label>
-              <Input
-                placeholder="Ex: Manutenção de Computador"
-                value={serviceData.descricao}
-                onChange={(e) =>
-                  setServiceData({ ...serviceData, descricao: e.target.value })
-                }
-              />
+              <Select>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a descrição" />
+                </SelectTrigger>
+                {tiposServicos.map((tipo) => (
+                  <SelectContent key={tipo.id}>
+                    <SelectItem value={tipo.id}>{tipo.nome}</SelectItem>
+                  </SelectContent>
+                ))}
+              </Select>
             </div>
 
             <div>

@@ -29,11 +29,13 @@ import { EmpresaProvider } from "./contexts/EmpresaContext";
 import Clientes from "./pages/Clientes";
 import Vendedores from "./pages/Vendedores";
 import TiposServicos from "./pages/TiposServicos";
+import { TitleBar } from "./components/TitleBar";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
+    <TitleBar/>
     <TooltipProvider>
       <Toaster />
       <Sonner />
@@ -57,7 +59,7 @@ const App = () => (
                                 {/* === GROUP 1: Routes WITH Sidebar === */}
                                 <Route path="/" element={<Layout />}>
                                   <Route index element={<Dashboard />} />
-                                  <Route path="/products" element={<Products />} />
+                                  <Route path="/products" element={<Products />}/>
                                   <Route path="/movements" element={<Movements />} />
                                   <Route path="/suppliers" element={<Suppliers />} />
                                   <Route path="/categories" element={<Categories />} />

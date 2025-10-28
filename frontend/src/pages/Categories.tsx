@@ -44,7 +44,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useCategories, Category } from "@/contexts/CategoryContext";
 import { useProdutos } from "@/contexts/ProdutoContext";
-import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -118,17 +117,6 @@ const Categories = () => {
   };
 
   // === EXPORTAÇÃO ===
-  const exportExcel = () => {
-    const ws = XLSX.utils.json_to_sheet(
-      filteredCategories.map((c) => ({
-        Categoria: c.nome,
-        Descrição: c.descricao,
-      }))
-    );
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Categorias");
-    XLSX.writeFile(wb, "categorias.xlsx");
-  };
 
   const exportPDF = () => {
     const doc = new jsPDF();
@@ -173,9 +161,6 @@ const Categories = () => {
           </p>
         </div>
         <div className="flex gap-2 flex-wrap">
-          <Button variant="outline" onClick={exportExcel}>
-            <FileDown className="h-4 w-4 mr-2" /> Excel
-          </Button>
           <Button variant="outline" onClick={exportPDF}>
             <FileDown className="h-4 w-4 mr-2" /> PDF
           </Button>

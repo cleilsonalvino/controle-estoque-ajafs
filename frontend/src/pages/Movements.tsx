@@ -65,7 +65,6 @@ import { DateRange } from "react-day-picker";
 import { Calendar } from "@/components/ui/calendar";
 import { format, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import {
@@ -298,27 +297,6 @@ const Movements = () => {
     }
   };
 
-  // --- Exportações (sem alteração) ---
-  const exportExcel = () => {
-    const ws = XLSX.utils.json_to_sheet(
-      filteredMovements.map((m) => ({
-        Produto: m.product,
-        Tipo: m.type,
-        Quantidade: m.quantity,
-        Fornecedor: m.fornecedor,
-        "Preço Custo": m.precoCusto, // Adicionado
-        Validade: m.validade ? format(new Date(m.validade), "dd/MM/yyyy") : "-", // Adicionado
-        Data: new Date(m.date).toLocaleString("pt-BR"),
-        Usuário: m.user,
-        Observação: m.notes,
-      }))
-    );
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Movimentações");
-    XLSX.writeFile(wb, "movimentacoes_estoque.xlsx");
-    toast.success("Planilha Excel exportada!");
-  };
-
   const exportPDF = () => {
     const doc = new jsPDF();
     doc.text("Relatório de Movimentações de Estoque", 14, 15);
@@ -372,13 +350,6 @@ const Movements = () => {
         <div className="flex gap-2 flex-wrap">
           <Button onClick={() => setShowAddDialog(true)}>
             <Plus className="h-4 w-4 mr-2" /> Nova Movimentação
-          </Button>
-          <Button
-            variant="outline"
-            onClick={exportExcel}
-            disabled={!filteredMovements.length}
-          >
-            <FileDown className="h-4 w-4 mr-2" /> Excel
           </Button>
           <Button
             variant="outline"
