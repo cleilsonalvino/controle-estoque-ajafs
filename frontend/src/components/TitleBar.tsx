@@ -13,8 +13,6 @@ export function TitleBar() {
       style={{
         height: "30px",
         display: "flex",
-        position: "fixed",
-        width: "100%",
         justifyContent: "flex-end",
         alignItems: "center",
         background: "#3654D9",

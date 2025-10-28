@@ -2,12 +2,12 @@ import { z } from "zod";
 
 export const createProductSchema = z.object({
   nome: z.string(),
-  descricao: z.string().optional().default("").nullable(),
-  precoVenda: z.string().optional().default("").nullable(),
-  urlImage: z.string().optional().default("").nullable(),
+  descricao: z.string().optional().nullable(),
+  precoVenda: z.string().optional().nullable(),
+  urlImage: z.string().optional().nullable(),
   codigoBarras: z.string().optional().nullable(),
-  estoqueMinimo: z.number().nonnegative().optional().default(0).nullable(),
-  categoriaId: z.string().uuid().optional(),
+  estoqueMinimo: z.number().nonnegative().optional().default(0),
+  categoriaId: z.string().uuid().optional().nullable(),
 }).strict();
 
 export const updateProductSchema = z.object({
