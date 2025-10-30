@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useSuppliers } from '../contexts/SupplierContext';
+import { toast } from 'sonner';
 
 interface AddSupplierModalProps {
   isOpen: boolean;
@@ -28,8 +29,8 @@ const AddSupplierModal: React.FC<AddSupplierModalProps> = ({ isOpen, onClose }) 
 
   const handleSave = async () => {
     // Basic validation
-    if (!newSupplier.nome || !newSupplier.contato || !newSupplier.telefone || !newSupplier.endereco) {
-      alert('Por favor, preencha todos os campos obrigatórios (Nome, Contato, Telefone, Endereço).');
+    if (!newSupplier.nome) {
+      toast('Por favor, preencha pelo menos o nome do fornecedor.');
       return;
     }
 
@@ -56,7 +57,7 @@ const AddSupplierModal: React.FC<AddSupplierModalProps> = ({ isOpen, onClose }) 
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Adicionar \zx</DialogTitle>
+          <DialogTitle>Adicionar Novo Fornecedor</DialogTitle>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="space-y-2">
@@ -64,20 +65,20 @@ const AddSupplierModal: React.FC<AddSupplierModalProps> = ({ isOpen, onClose }) 
             <Input id="nome" value={newSupplier.nome} onChange={handleChange} className='border-gray-500'/>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="contato">Contato*</Label>
-            <Input id="contato" value={newSupplier.contato} onChange={handleChange} />
+            <Label htmlFor="contato">Contato</Label>
+            <Input className='border-gray-500' id="contato" value={newSupplier.contato} onChange={handleChange} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" value={newSupplier.email} onChange={handleChange} />
+            <Input className='border-gray-500' id="email" type="email" value={newSupplier.email} onChange={handleChange} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="telefone">Telefone*</Label>
-            <Input id="telefone" value={newSupplier.telefone} onChange={handleChange} />
+            <Label htmlFor="telefone">Telefone</Label>
+            <Input className='border-gray-500' id="telefone" value={newSupplier.telefone} onChange={handleChange} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="endereco">Endereço*</Label>
-            <Input id="endereco" value={newSupplier.endereco} onChange={handleChange} />
+            <Input className='border-gray-500' id="endereco" value={newSupplier.endereco} onChange={handleChange} />
           </div>
         </div>
         <DialogFooter>

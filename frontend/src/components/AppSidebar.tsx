@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useLocation, NavLink, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -19,36 +19,66 @@ import {
   Layers,
 } from "lucide-react";
 
-const menuItems = [
-  { title: "Inicio", url: "/", icon: LayoutDashboard },
-  { title: "Dashboard de Vendas", url: "/dashboard-sales", icon: BarChart3 },
-  { title: "Registrar Venda", url: "/sales", icon: ShoppingCart },
-  { title: "Produtos", url: "/products", icon: Package },
-  { title: "Movimentações", url: "/movements", icon: ArrowUpDown },
-  { title: "Fornecedores", url: "/suppliers", icon: Users },
-  { title: "Categorias", url: "/categories", icon: Tag },
-  { title: "Tipos de Serviços", url: "/tipos-servicos", icon: Wrench },
-  { title: "Categorias de Serviço", url: "/service-categories", icon: Layers },
-  { title: "Clientes", url: "/clientes", icon: Users },
-  { title: "Vendedores", url: "/vendedores", icon: Users },
-  { title: "Configurações", url: "/settings", icon: Settings },
+// Mova esta lista para 'src/config/menuItems.ts' para usar em Settings.tsx também
+const allMenuItems = [
+  { key: "dashboard", title: "Inicio", url: "/", icon: LayoutDashboard },
+  {
+    key: "dashboard-sales",
+    title: "Dashboard de Vendas",
+    url: "/dashboard-sales",
+    icon: BarChart3,
+  },
+  { key: "sales", title: "Registrar Venda", url: "/sales", icon: ShoppingCart },
+  { key: "products", title: "Produtos", url: "/products", icon: Package },
+  {
+    key: "movements",
+    title: "Movimentações",
+    url: "/movements",
+    icon: ArrowUpDown,
+  },
+  { key: "suppliers", title: "Fornecedores", url: "/suppliers", icon: Users },
+  { key: "categories", title: "Categorias", url: "/categories", icon: Tag },
+  {
+    key: "tipos-servicos",
+    title: "Tipos de Serviços",
+    url: "/tipos-servicos",
+    icon: Wrench,
+  },
+  {
+    key: "service-categories",
+    title: "Categorias de Serviço",
+    url: "/service-categories",
+    icon: Layers,
+  },
+  { key: "clientes", title: "Clientes", url: "/clientes", icon: Users },
+  { key: "vendedores", title: "Vendedores", url: "/vendedores", icon: Users },
+  { key: "settings", title: "Configurações", url: "/settings", icon: Settings },
 ];
 
 export const AppSidebar = () => {
   const [collapsed, setCollapsed] = useState(false);
-  const [activePath, setActivePath] = useState("");
   const location = useLocation();
-  const { logout } = useAuth();
+  const { logout, user, isLoading } = useAuth(); // NOVO: Pegar o isLoading
   const navigate = useNavigate();
 
-  // Atualiza o item ativo sempre que a rota muda
-  useEffect(() => {
-    setActivePath(location.pathname);
-    console.log("Rota atualizada:", location.pathname);
+  const visibleMenuItems = useMemo(() => {
+    if (isLoading || !user?.telasPermitidas) {
+      return [];
+    }
 
-    // Se você quiser fazer um refetch de dados do menu ou do usuário, pode colocar aqui
-    // fetchMenuData();
-  }, [location.pathname]);
+    console.log("🔑 Permissões:", user.telasPermitidas);
+
+    if (user.papel === "ADMIN" || user.telasPermitidas.includes("admin")) {
+      return allMenuItems;
+    }
+
+    // CORRIGIDO: compara pelas URLs
+    return allMenuItems.filter(
+      (item) =>
+        user.telasPermitidas.includes(item.url) ||
+        user.telasPermitidas.includes(item.key)
+    );
+  }, [user, isLoading]);
 
   const handleLogout = () => {
     logout();
@@ -56,6 +86,7 @@ export const AppSidebar = () => {
   };
 
   const isActive = (path: string) => {
+    const activePath = location.pathname;
     if (path === "/" && activePath === "/") return true;
     if (path !== "/" && activePath.startsWith(path)) return true;
     return false;
@@ -90,48 +121,68 @@ export const AppSidebar = () => {
             onClick={() => setCollapsed(!collapsed)}
             className="h-8 w-8 p-0"
           >
-            {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+            {collapsed ? (
+              <ChevronRight className="h-4 w-4" />
+            ) : (
+              <ChevronLeft className="h-4 w-4" />
+            )}
           </Button>
         </div>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-4">
+      <nav className="flex-1 p-4 overflow-y-auto">
         <ul className="space-y-2">
-          {menuItems.map((item) => {
-            const active = isActive(item.url);
-            return (
-              <li key={item.title}>
-                <NavLink
-                  to={item.url}
-                  className={cn(
-                    "flex items-center space-x-3 px-3 py-2 rounded-lg transition-all duration-200 group",
-                    active
-                      ? "bg-primary text-primary-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                  )}
-                >
-                  <item.icon
+          {/* ATUALIZADO: Mostra um 'esqueleto' simples enquanto carrega */}
+          {isLoading && !collapsed && (
+            <div className="space-y-2">
+              <div className="h-8 bg-muted rounded animate-pulse" />
+              <div className="h-8 bg-muted rounded animate-pulse w-5/6" />
+              <div className="h-8 bg-muted rounded animate-pulse w-4/6" />
+            </div>
+          )}
+
+          {!isLoading &&
+            visibleMenuItems.map((item) => {
+              const active = isActive(item.url);
+              return (
+                <li key={item.title}>
+                  <NavLink
+                    to={item.url}
                     className={cn(
-                      "h-5 w-5 shrink-0",
+                      "flex items-center space-x-3 px-3 py-2 rounded-lg transition-all duration-200 group",
                       active
-                        ? "text-primary-foreground"
-                        : "text-muted-foreground group-hover:text-foreground"
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
                     )}
-                  />
-                  {!collapsed && <span className="font-medium">{item.title}</span>}
-                </NavLink>
-              </li>
-            );
-          })}
+                  >
+                    <item.icon
+                      className={cn(
+                        "h-5 w-5 shrink-0",
+                        active
+                          ? "text-primary-foreground"
+                          : "text-muted-foreground group-hover:text-foreground"
+                      )}
+                    />
+                    {!collapsed && (
+                      <span className="font-medium">{item.title}</span>
+                    )}
+                  </NavLink>
+                </li>
+              );
+            })}
         </ul>
       </nav>
 
       {/* Footer */}
-      <div className="p-4 border-t">
-        <Button onClick={handleLogout} variant="ghost" className="w-full justify-start">
+      <div className="p-4 border-t mt-auto">
+        <Button
+          onClick={handleLogout}
+          variant="ghost"
+          className="w-full justify-start"
+        >
           <LogOut className="h-5 w-5 mr-3" />
-          {!collapsed && <span>Logout</span>}
+          {!collapsed && <span>Sair</span>}
         </Button>
       </div>
     </div>

@@ -1,4 +1,5 @@
 import { type Request, type Response } from "express";
+import {createUserSchema} from "./users.dto.ts";
 import {
   createUserService,
   getUsersService,

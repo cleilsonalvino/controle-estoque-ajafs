@@ -2,20 +2,21 @@ import { z } from "zod";
 
 export const createProductSchema = z.object({
   nome: z.string(),
-  descricao: z.string().optional().nullable(),
-  precoVenda: z.string().optional().nullable(),
-  urlImage: z.string().optional().nullable(),
-  codigoBarras: z.string().optional().nullable(),
+  descricao: z.string().optional(),
+  precoVenda: z.string().optional(),
+  urlImage: z.string().optional(),
+  codigoBarras: z.string().optional(),
   estoqueMinimo: z.number().nonnegative().optional().default(0),
-  categoriaId: z.string().uuid().optional().nullable(),
+  categoriaId: z.string().uuid('ID de categoria inválido').optional().nullable(),
 }).strict();
 
 export const updateProductSchema = z.object({
   nome: z.string().optional(),
-  descricao: z.string().optional(),
-  precoVenda: z.number().nonnegative(),
-  urlImage: z.string().url().optional(),
-  estoqueMinimo: z.number().optional(),
+  descricao: z.string().optional().nullable(),
+  precoVenda: z.string().optional(),
+  urlImage: z.string().optional().nullable(),
+  codigoBarras: z.string().optional().nullable(),
+  estoqueMinimo: z.number().nonnegative().optional(),
   categoriaId: z.string().uuid().optional(),
 });
 

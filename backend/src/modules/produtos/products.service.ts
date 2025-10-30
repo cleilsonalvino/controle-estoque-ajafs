@@ -10,11 +10,19 @@ export const createProductService = async (data: any) => {
 
   // Verifica se já existe produto com o mesmo nome
   const product = await prisma.produto.findUnique({
-    where: { nome: data.nome },
+    where: { nome: data.nome, },
   });
 
+  const productCodigo = await prisma.produto.findUnique({
+    where: { codigoBarras: data.codigoBarras, },
+  });
+
+  if (productCodigo) {
+    throw new CustomError("O código de barras desse Produto já está em uso.", 400);
+  }
+
   if (product) {
-    throw new CustomError("Produto já existe", 400);
+    throw new CustomError("O nome desse Produto já está em uso.", 400);
   }
 
   // Função para gerar código de barras EAN-13 válido

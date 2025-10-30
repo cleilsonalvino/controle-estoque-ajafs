@@ -1,62 +1,85 @@
-import { createContext, useContext, useState, useEffect } from "react";
-import api from "@/lib/api"; // ajuste o caminho conforme seu projeto
+import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import api from "../lib/api"; // Corrigido: usando caminho relativo
+
+// Defina uma interface para o seu objeto de usuário
+interface User {
+  id: string;
+  nome: string;
+  email: string;
+  papel: string;
+  telasPermitidas: string[]; // O mais importante!
+}
 
 const AuthContext = createContext({
-  user: null,
-  isAuthenticated: false as boolean,
-  login: async (_email: string, _password: string) => false as boolean,
+  user: null as User | null,
+  isAuthenticated: false,
+  isLoading: true, // NOVO ESTADO: Começa como true
+  login: async (_email: string, _password: string) => false,
   logout: () => {},
 });
 
-// Provider principal
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true); // NOVO ESTADO
 
-  // Carregar usuário ao abrir o app (se tiver token salvo)
+  // Função para buscar dados do perfil do usuário
+  const fetchUserProfile = useCallback(async () => {
+    try {
+      const { data } = await api.get("/auth/me");
+      setUser(data);
+      setIsAuthenticated(true);
+    } catch (error) {
+      console.error("Falha ao buscar perfil do usuário, fazendo logout.", error);
+      logout();
+    } finally {
+      setIsLoading(false); // NOVO: Termina o carregamento
+    }
+  }, []);
+
+  // Carregar usuário ao abrir o app
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (token) {
       api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-      setIsAuthenticated(true);
+      fetchUserProfile();
+    } else {
+      setIsLoading(false); // NOVO: Se não há token, não está carregando
     }
-  }, []);
+  }, [fetchUserProfile]);
 
-  // Função para buscar dados do usuário autenticado
-
-  // Função de login
   const login = async (email: any, senha: any) => {
+    setIsLoading(true); // NOVO: Inicia o carregamento ao tentar logar
     try {
       const { data } = await api.post("/auth/login", { email, senha });
-
-      const token = data.token; // ajuste conforme sua resposta da API
-      console.log("Token recebido:", token);
-
+      const token = data.token;
       localStorage.setItem("token", token);
       api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-
-      setIsAuthenticated(true);
+      
+      await fetchUserProfile(); // Busca os dados (que vai setar isLoading=false no final)
+      
       return true;
     } catch (error) {
       console.error("Erro no login:", error);
+      setIsLoading(false); // NOVO: Para de carregar se o login falhar
       return false;
     }
   };
 
-  // Função de logout
   const logout = () => {
     localStorage.removeItem("token");
     delete api.defaults.headers.common["Authorization"];
     setIsAuthenticated(false);
     setUser(null);
+    setIsLoading(false); // NOVO: Garante que não está carregando
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, login, logout }}>
+    <AuthContext.Provider value={{ user, isAuthenticated, isLoading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
 };
 
-// Hook para usar o contexto
 export const useAuth = () => useContext(AuthContext);
+

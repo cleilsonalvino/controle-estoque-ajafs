@@ -1,8 +1,8 @@
 import { z } from "zod";
 
 export const createUserSchema = z.object({
-  nome: z.string(),
-  email: z.string().email(),
+  nome: z.string().min(3),
+  email: z.string().email("Email inválido"),
   senha: z.string().min(6),
   papel: z.enum(["ADMINISTRADOR", "USUARIO"]).optional(),
 });

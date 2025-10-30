@@ -578,3 +578,20 @@ export const getVendasFiltrarService = async (filtros: any) => {
 
   return vendasFiltradas;
 };
+
+export const deleteAllSalesService = async (): Promise<string> => {
+  // Conta quantas vendas existem
+  const countSales = await prisma.venda.count();
+
+  if (countSales === 0) {
+    // Lança um erro customizado se não houver vendas
+    throw new CustomError("Não há vendas para deletar.", 400);
+  }
+
+  // Deleta todas as vendas
+  const result = await prisma.venda.deleteMany();
+
+  // Retorna uma mensagem resumida
+  const message = `Foram deletadas ${result.count} vendas do sistema.`;
+  return message;
+};

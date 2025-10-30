@@ -41,19 +41,20 @@ export function LoginPage() {
   return (
     <div className="min-h-screen flex">
       {/* === LADO ESQUERDO === */}
-      <div className="hidden lg:flex flex-1 bg-gradient-to-br from-blue-700 to-purple-600 items-center justify-center text-white relative overflow-hidden">
+      <div className="hidden lg:flex flex-1 bg-gradient-to-br from-blue-200 to-purple-100 items-center justify-center text-white relative overflow-hidden">
         <div className="absolute inset-0 bg-black/20" />
         <div className="relative z-10 flex flex-col items-center text-center px-10">
           <img
             src="/logo-ajafs.png" // substitua pelo caminho da logo do software
             alt="Logo AJAFS"
-            className="w-36 mb-6 drop-shadow-lg"
+            className="w-72 object-contain drop-shadow-lg "
           />
           <h1 className="text-4xl font-bold leading-tight">
             Bem-vindo ao Sistema de Gestão
           </h1>
           <p className="text-white/90 mt-4 max-w-md">
-            Organize suas vendas, controle seu estoque e acompanhe resultados em tempo real com o sistema da AJAFS.
+            Organize suas vendas, controle seu estoque e acompanhe resultados em
+            tempo real com o sistema da AJAFS.
           </p>
         </div>
         {/* efeito sutil */}
@@ -103,7 +104,18 @@ export function LoginPage() {
               </Button>
             </form>
             <p className="text-center text-sm text-muted-foreground mt-4">
-              © {new Date().getFullYear()} AJAFS - Todos os direitos reservados
+              © {new Date().getFullYear()}{" "}
+              <a href="https.www.ajafs.com.br" className="text-blue-500">
+                AJAFS
+              </a>{" "}
+              - Todos os direitos reservados <br />
+              Desenvolvido por{" "}
+              <a
+                href="https://www.cleilsonalvino.com.br"
+                className="text-blue-500"
+              >
+                Cleilson Alvino
+              </a>
             </p>
           </CardContent>
         </Card>

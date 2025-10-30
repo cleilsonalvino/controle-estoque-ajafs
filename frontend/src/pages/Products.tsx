@@ -34,6 +34,7 @@ import {
   Printer,
   TrendingUp,
   TrendingDown,
+  AlertTriangle,
 } from "lucide-react";
 import {
   Table as ShadcnTable,
@@ -70,7 +71,8 @@ import {
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLocation } from "react-router-dom";
-import { toast as sonnerToast } from "sonner";
+import { toast as sonnerToast, toast } from "sonner";
+import { id } from "date-fns/locale";
 
 /**
  * Modal de Detalhes do Produto
@@ -82,15 +84,19 @@ const ProdutoDetalhesDialog: React.FC<{
 }> = ({ open, onOpenChange, produto }) => {
   if (!produto) return null;
 
-  async function handledeleteLote(id: string) {
+  async function handledeleteLote(loteId: string, produtoId: string) {
+    if (!produtoId) {
+      console.error("Produto ID não definido!");
+      return;
+    }
+
     try {
-      const lote = await api.delete(
-        `/estoque/deletar-lote/${id}/produto/${produto.id}/`
-      );
+      await api.delete(`/estoque/deletar-lote/${loteId}/produto/${produtoId}`);
       alert("Lote deletado com sucesso!");
       onOpenChange(false);
     } catch (err) {
-      console.log(err);
+      console.error("Erro ao deletar lote:", err);
+      alert("Não foi possível deletar o lote.");
     }
   }
 
@@ -200,7 +206,7 @@ const ProdutoDetalhesDialog: React.FC<{
                             if (
                               confirm("Deseja realmente deletar este lote?")
                             ) {
-                              handledeleteLote(lote.id);
+                              handledeleteLote(lote.id, produto.id);
                             }
                           }}
                         >
@@ -261,7 +267,20 @@ const EditProdutoDialog: React.FC<{
   categorias: Categoria[];
   fornecedores: Fornecedor[];
 }> = ({ open, onOpenChange, produto, onSave, categorias, fornecedores }) => {
-  const [form, setForm] = useState<Produto | null>(produto);
+  const initialStateProduto = {
+    id: produto?.id || "",
+    nome: produto?.nome || "",
+    precoVenda: produto?.precoVenda || "",
+    urlImage: produto?.urlImage || "",
+    descricao: produto?.descricao || "",
+    categoria: produto?.categoria || { id: "", nome: "" },
+    estoqueMinimo: produto?.estoqueMinimo || "0",
+    quantidadeTotal: produto?.quantidadeTotal || 0,
+    codigoBarras: produto?.codigoBarras || "",
+    lote: produto?.lote || [],
+  };
+
+  const [form, setForm] = useState<Produto | null>(initialStateProduto);
   const [saving, setSaving] = useState(false);
   const [precoVendaInput, setPrecoVendaInput] = useState("");
 
@@ -315,15 +334,12 @@ const EditProdutoDialog: React.FC<{
     if (!form || !canSave) return;
     try {
       setSaving(true);
-      const precoVendaNumber = String(
-        Number(precoVendaInput.replace(",", "."))
-      );
+
       onSave({
         ...form,
-        precoVenda: precoVendaNumber,
-        codigoBarras: "",
-        urlImage: form.urlImage ? form.urlImage : "",
       });
+
+      toast("✅ Produto atualizado com sucesso!");
       onOpenChange(false);
       fetchProdutos();
     } catch (error) {
@@ -344,7 +360,7 @@ const EditProdutoDialog: React.FC<{
         <div className="space-y-6 py-2">
           {/* CORREÇÃO: Layout ajustado e campo de Preço de Custo removido. */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="md:col-span-2 space-y-2">
+            <div className="space-y-2">
               <Label htmlFor="nome">Nome</Label>
               <Input
                 id="nome"
@@ -364,10 +380,19 @@ const EditProdutoDialog: React.FC<{
               />
             </div>
             <div className="space-y-2 ">
+              <Label htmlFor="codigoBarras">Codigo de Barras</Label>
+              <Input
+                id="codigoBarras"
+                className="border-gray-500 "
+                value={form.codigoBarras ? form.codigoBarras : ""}
+                onChange={(e) => handleChange("codigoBarras", e.target.value)}
+              />
+            </div>
+            <div className="space-y-2 col-span-3">
               <Label htmlFor="urlImage">Url da Image</Label>
               <Input
                 id="urlImage"
-                className="border-gray-500"
+                className="border-gray-500 "
                 value={form.urlImage ? form.urlImage : ""}
                 onChange={(e) => handleChange("urlImage", e.target.value)}
               />
@@ -537,10 +562,6 @@ const CreateProdutoDialog: React.FC<{
         ...form,
         precoVenda: precoVendaNumber,
       });
-
-      onOpenChange(false);
-      setForm(initialState);
-      fetchProdutos();
     } finally {
       setSaving(false);
     }
@@ -576,7 +597,9 @@ const CreateProdutoDialog: React.FC<{
           {/* CORREÇÃO: Layout de grid corrigido e input de Preço de Custo adicionado. */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="nome-create">Nome</Label>
+              <Label htmlFor="nome-create">
+                Nome<span className="text-red-500">*</span>
+              </Label>
               <Input
                 className="border-slate-900"
                 id="nome-create"
@@ -586,7 +609,9 @@ const CreateProdutoDialog: React.FC<{
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="preco-venda-create">Preço de Venda (R$)</Label>
+              <Label htmlFor="preco-venda-create">
+                Preço de Venda (R$)<span className="text-red-500">*</span>
+              </Label>
               <Input
                 className="border-slate-900"
                 id="preco-venda-create"
@@ -712,8 +737,14 @@ const CreateProdutoDialog: React.FC<{
  */
 export const Products: React.FC = () => {
   const { toast } = useToast();
-  const { produtos, loading, createProduto, updateProduto, deleteProduto, fetchProdutos } =
-    useProdutos();
+  const {
+    produtos,
+    loading,
+    createProduto,
+    updateProduto,
+    deleteProduto,
+    fetchProdutos,
+  } = useProdutos();
   const location = useLocation();
 
   const [selectedProduct, setSelectedProduct] = useState<Produto | null>(null);
@@ -793,13 +824,12 @@ export const Products: React.FC = () => {
     return acc + (valorTotalVenda - valorTotalCusto);
   }, 0);
 
-
   const percentualLucro =
     totalEstoque > 0 ? (lucroTotalEstimado / totalEstoque) * 100 : 0;
 
   const produtosBaixoEstoque = produtos.filter(
     (p) =>
-      p.lote?.reduce((acc, lote) => acc + Number(lote.quantidadeAtual), 0) <
+      p.lote?.reduce((acc, lote) => acc + Number(lote.quantidadeAtual), 0) <=
       Number(p.estoqueMinimo || 0)
   ).length;
 
@@ -822,7 +852,6 @@ export const Products: React.FC = () => {
     return { nome: p.nome, custo, venda: Number(p.precoVenda) || 0 };
   });
 
-
   const categoriaData = Object.entries(categorias).map(([nome, valor]) => ({
     nome,
     valor,
@@ -831,6 +860,7 @@ export const Products: React.FC = () => {
   const COLORS = ["#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6"];
 
   const handleOpenEdit = (produto: Produto) => {
+    console.log("Editando produto:", produto);
     setSelectedProduct(produto);
     setOpenEdit(true);
   };
@@ -839,8 +869,6 @@ export const Products: React.FC = () => {
     try {
       const { id, ...dados } = produtoAtualizado;
       await updateProduto(id, dados);
-
-      toast({ title: "✅ Produto atualizado com sucesso!" });
     } catch (error) {
       toast({
         title: "Erro ao atualizar produto",
@@ -852,9 +880,12 @@ export const Products: React.FC = () => {
 
   const handleCreate = async (novoProduto: Omit<Produto, "id">) => {
     try {
-      await createProduto(novoProduto);
-      toast({ title: "✅ Produto criado com sucesso!" });
-      setOpenCreate(false);
+      const response = await createProduto(novoProduto);
+      if (response) {
+        toast({ title: "✅ Produto criado com sucesso!" });
+        setOpenCreate(false);
+        fetchProdutos();
+      }
     } catch (error) {
       toast({
         title: "Erro ao criar produto",
@@ -1228,163 +1259,212 @@ export const Products: React.FC = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {produtosOrdenados.map((produto, i) => (
-                <motion.tr
-                  key={`${produto.id}-${produto.criadoEm}`}
-                  variants={cardVariants}
-                  initial="hidden"
-                  animate="visible"
-                  custom={i}
-                  className="hover:bg-muted/30 transition-colors"
-                >
-                  <TableCell
-                    className="font-medium cursor-pointer hover:text-primary"
-                    onClick={() => {
-                      setSelectedProduct(produto);
-                      setOpenDetalhes(true);
-                    }}
+              {produtosOrdenados.map((produto, i) => {
+                // Calcula o estoque total somando os lotes
+                const estoqueAtual =
+                  produto.lote?.reduce(
+                    (acc, lote) => acc + Number(lote.quantidadeAtual),
+                    0
+                  ) || 0;
+
+                // Verifica se o estoque está abaixo do mínimo
+                const isBaixoEstoque =
+                  estoqueAtual <= (Number(produto.estoqueMinimo) || 0);
+
+                return (
+                  <motion.tr
+                    key={`${produto.id}-${produto.criadoEm}`}
+                    variants={cardVariants}
+                    initial="hidden"
+                    animate="visible"
+                    custom={i}
+                    className={`hover:bg-muted/30 transition-colors ${
+                      isBaixoEstoque ? "bg-yellow-50" : ""
+                    }`}
                   >
-                    {produto.nome}
-                  </TableCell>
-                  <TableCell>
-                    {produto.categoria?.nome || "Sem categoria"}
-                  </TableCell>
-                  <TableCell>
-                    {produto.lote?.length ? (
-                      <div className="flex items-center gap-1">
-                        {/* Mostra o primeiro fornecedor */}
-                        <span>
-                          {produto.lote[0]?.fornecedor?.nome ||
-                            "Sem fornecedor"}
-                        </span>
+                    {/* 🔹 Nome do produto + ícone de alerta */}
+                    <TableCell
+                      className="font-medium cursor-pointer hover:text-primary flex items-center gap-2"
+                      onClick={() => {
+                        setSelectedProduct(produto);
+                        setOpenDetalhes(true);
+                      }}
+                    >
+                      {produto.nome}
 
-                        {/* Se tiver mais de um fornecedor, mostra o tooltip */}
-                        {produto.lote.length > 1 && (
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <ArrowDownNarrowWide className="w-3.5 h-3.5 text-muted-foreground cursor-pointer" />
-                              </TooltipTrigger>
-                              <TooltipContent
-                                side="top"
-                                className="max-w-xs text-sm leading-relaxed"
-                              >
-                                <p className="font-medium mb-1">
-                                  Outros fornecedores:
+                      {isBaixoEstoque && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <AlertTriangle
+                                className={`w-4 h-4 ${
+                                  estoqueAtual === 0
+                                    ? "text-red-600"
+                                    : "text-yellow-600"
+                                }`}
+                              />
+                            </TooltipTrigger>
+                            <TooltipContent side="top">
+                              {estoqueAtual === 0 ? (
+                                <p className="text-sm text-red-600">
+                                  Sem estoque
                                 </p>
-                                <ul className="list-disc list-inside">
-                                  {produto.lote.slice(1).map((lote, index) => (
-                                    <li key={index}>
-                                      {lote.fornecedor?.nome || "Sem nome"}
-                                    </li>
-                                  ))}
-                                </ul>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        )}
-                      </div>
-                    ) : (
-                      "Sem fornecedor"
-                    )}
-                  </TableCell>
-                  <TableCell>{produto.quantidadeTotal}</TableCell>
+                              ) : (
+                                <p className="text-sm">
+                                  Estoque baixo ({estoqueAtual} unidades)
+                                </p>
+                              )}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                    </TableCell>
 
-                  <TableCell>
-                    {produto.custoMedio
-                      ? Number(produto.custoMedio).toLocaleString("pt-BR", {
-                          style: "currency",
-                          currency: "BRL",
-                        })
-                      : "Sem dados"}
-                  </TableCell>
+                    {/* 🔹 Categoria */}
+                    <TableCell>
+                      {produto.categoria?.nome || "Sem categoria"}
+                    </TableCell>
 
-                  <TableCell>
-                    {produto.precoVenda ? `R$ ${produto.precoVenda}` : "—"}
-                  </TableCell>
-                  {/* CORREÇÃO: Bloco de ações com Tooltip corrigido. */}
-                  <TableCell className="flex justify-end gap-2">
-                    <TooltipProvider>
-                      <Tooltip delayDuration={300}>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="border-slate-500 hover:bg-slate-100"
-                            onClick={() =>
-                              handlePrintBarcode(produto.codigoBarras)
-                            }
-                          >
-                            <Printer className="w-4 h-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          Imprimir código de barras
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+                    {/* 🔹 Fornecedores */}
+                    <TableCell>
+                      {produto.lote?.length ? (
+                        <div className="flex items-center gap-1">
+                          <span>
+                            {produto.lote[0]?.fornecedor?.nome ||
+                              "Sem fornecedor"}
+                          </span>
+                          {produto.lote.length > 1 && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <ArrowDownNarrowWide className="w-3.5 h-3.5 text-muted-foreground cursor-pointer" />
+                                </TooltipTrigger>
+                                <TooltipContent
+                                  side="top"
+                                  className="max-w-xs text-sm leading-relaxed"
+                                >
+                                  <p className="font-medium mb-1">
+                                    Outros fornecedores:
+                                  </p>
+                                  <ul className="list-disc list-inside">
+                                    {produto.lote
+                                      .slice(1)
+                                      .map((lote, index) => (
+                                        <li key={index}>
+                                          {lote.fornecedor?.nome || "Sem nome"}
+                                        </li>
+                                      ))}
+                                  </ul>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
+                        </div>
+                      ) : (
+                        "Sem fornecedor"
+                      )}
+                    </TableCell>
 
-                    <TooltipProvider>
-                      <Tooltip delayDuration={300}>
-                        <TooltipTrigger asChild>
-                          <Button
-                            size="icon"
-                            variant="outline"
-                            className="h-8 w-8"
-                            onClick={() => {
-                              setSelectedProduct(produto);
-                              setOpenDetalhes(true);
-                            }}
-                          >
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Ver detalhes</TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+                    {/* 🔹 Quantidade */}
+                    <TableCell>{produto.quantidadeTotal}</TableCell>
 
-                    <TooltipProvider>
-                      <Tooltip delayDuration={300}>
-                        <TooltipTrigger asChild>
-                          <Button
-                            size="icon"
-                            variant="outline"
-                            className="h-8 w-8"
-                            onClick={() => handleOpenEdit(produto)}
-                          >
-                            <Edit3 className="w-4 h-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Editar</TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+                    {/* 🔹 Custo médio */}
+                    <TableCell>
+                      {produto.custoMedio
+                        ? Number(produto.custoMedio).toLocaleString("pt-BR", {
+                            style: "currency",
+                            currency: "BRL",
+                          })
+                        : "Sem dados"}
+                    </TableCell>
 
-                    <TooltipProvider>
-                      <Tooltip delayDuration={300}>
-                        <TooltipTrigger asChild>
-                          <Button
-                            size="icon"
-                            variant="destructive"
-                            className="h-8 w-8"
-                            onClick={() => {
-                              if (
-                                confirm(
-                                  "Tem certeza que deseja excluir este produto?"
-                                )
-                              ) {
-                                handleDelete(produto.id);
+                    <TableCell>
+                      {produto.precoVenda ? `R$ ${produto.precoVenda}` : "—"}
+                    </TableCell>
+                    {/* CORREÇÃO: Bloco de ações com Tooltip corrigido. */}
+                    <TableCell className="flex justify-end gap-2">
+                      <TooltipProvider>
+                        <Tooltip delayDuration={300}>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="border-slate-500 hover:bg-slate-100"
+                              onClick={() =>
+                                handlePrintBarcode(produto.codigoBarras)
                               }
-                            }}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Excluir</TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </TableCell>
-                </motion.tr>
-              ))}
+                            >
+                              <Printer className="w-4 h-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            Imprimir código de barras
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+
+                      <TooltipProvider>
+                        <Tooltip delayDuration={300}>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="icon"
+                              variant="outline"
+                              className="h-8 w-8"
+                              onClick={() => {
+                                setSelectedProduct(produto);
+                                setOpenDetalhes(true);
+                              }}
+                            >
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Ver detalhes</TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+
+                      <TooltipProvider>
+                        <Tooltip delayDuration={300}>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="icon"
+                              variant="outline"
+                              className="h-8 w-8"
+                              onClick={() => handleOpenEdit(produto)}
+                            >
+                              <Edit3 className="w-4 h-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Editar</TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+
+                      <TooltipProvider>
+                        <Tooltip delayDuration={300}>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="icon"
+                              variant="destructive"
+                              className="h-8 w-8"
+                              onClick={() => {
+                                if (
+                                  confirm(
+                                    "Tem certeza que deseja excluir este produto?"
+                                  )
+                                ) {
+                                  handleDelete(produto.id);
+                                }
+                              }}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Excluir</TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </TableCell>
+                  </motion.tr>
+                );
+              })}
             </TableBody>
           </ShadcnTable>
         )}

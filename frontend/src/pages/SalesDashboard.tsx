@@ -1,4 +1,4 @@
-import ExcelJS from "exceljs";
+import {isAxiosError} from "axios";
 import { saveAs } from "file-saver";
 import {
   Card,
@@ -238,9 +238,7 @@ const TopSellingProducts = () => {
               className="flex items-center justify-between"
             >
               <div className="flex items-center space-x-3">
-                <Badge
-                  className="w-6 h-6 p-0 flex items-center justify-center text-xs"
-                >
+                <Badge className="w-6 h-6 p-0 flex items-center justify-center text-xs">
                   {index + 1}
                 </Badge>
                 <div>
@@ -602,51 +600,6 @@ const SalesDashboard = () => {
     doc.save("relatorio_vendas.pdf");
   };
 
-  const exportToExcel = async () => {
-    const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet("Vendas");
-
-    // Cabeçalhos
-    worksheet.columns = [
-      { header: "Número", key: "numero", width: 15 },
-      { header: "Data", key: "data", width: 15 },
-      { header: "Cliente", key: "cliente", width: 30 },
-      { header: "Status", key: "status", width: 15 },
-      { header: "Valor (R$)", key: "valor", width: 15 },
-      { header: "Tipo de Pagamento", key: "formaPagamento", width: 20 },
-    ];
-
-    // Dados
-    tableData.forEach((s) => {
-      // Alterado de filteredSales
-      worksheet.addRow({
-        numero: s.numero,
-        data: new Date(s.criadoEm).toLocaleDateString("pt-BR"),
-        cliente: getClienteDisplay(s),
-        status: s.status,
-        valor: toNumber(s.total),
-        formaPagamento: s.formaPagamento, // Coluna adicionada
-      });
-    });
-
-    // Estilo de cabeçalho
-    worksheet.getRow(1).eachCell((cell) => {
-      cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
-      cell.fill = {
-        type: "pattern",
-        pattern: "solid",
-        fgColor: { argb: "FF333333" },
-      };
-      cell.alignment = { horizontal: "center" };
-    });
-
-    // Cria o arquivo
-    const buffer = await workbook.xlsx.writeBuffer();
-    const blob = new Blob([buffer], {
-      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    });
-    saveAs(blob, "relatorio_vendas.xlsx");
-  };
 
   // Paginação (Atualizada para usar tableData)
   const [currentPage, setCurrentPage] = useState(1);
@@ -677,6 +630,38 @@ const SalesDashboard = () => {
     setFilterDataInicio("");
     setFilterDataFim("");
   };
+
+  async function handleDeleteHistorySales() {
+    try {
+      const confirmar = confirm(
+        "Deseja mesmo excluir todo o histórico de vendas?\nEsta ação não poderá ser desfeita!"
+      );
+
+      if (!confirmar) return; // sai se o usuário cancelar
+
+      const response = await api.delete("/vendas/delete-all");
+
+      if (response.status === 200) {
+        toast.success("Histórico de vendas excluído com sucesso!");
+        // alert("Histórico de vendas excluído com sucesso!"); // opcional
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error("Erro ao excluir histórico:", error);
+
+      if (isAxiosError(error)) {
+        // Captura erro tratado vindo do back-end (CustomError)
+        const mensagem =
+          error.response?.data?.message ||
+          "Erro ao deletar vendas. Tente novamente.";
+
+        toast.error(mensagem); // Mostra o erro do backend (ex: "Não há vendas para deletar")
+      } else {
+        // Erros não relacionados ao Axios
+        toast.error("Erro inesperado. Verifique sua conexão.");
+      }
+    }
+  }
 
   // ========================
   // Render
@@ -934,6 +919,14 @@ const SalesDashboard = () => {
                   <SelectItem value="Boleto">Boleto</SelectItem>
                 </SelectContent>
               </Select>
+              <Button
+                className="ml-10"
+                onClick={() => {
+                  handleDeleteHistorySales();
+                }}
+              >
+                EXCLUIR DADOS
+              </Button>
             </div>
 
             {/* Filtros de Data */}
@@ -971,14 +964,6 @@ const SalesDashboard = () => {
               >
                 <Download className="h-4 w-4 mr-2" />
                 Exportar PDF
-              </Button>
-              <Button
-                variant="outline"
-                onClick={exportToExcel}
-                disabled={isLoadingTable || tableData.length === 0}
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Exportar Excel
               </Button>
               <Button
                 variant="secondary"

@@ -486,7 +486,7 @@ const PDV = ({ clientes, vendedores, onFinalizeSale, onExit }: PDVProps) => {
       {/* ... (Todo o JSX do PDV, painel esquerdo e direito, permanece o mesmo até o final) */}
       <div className="flex flex-1 flex-col p-4 gap-4">
         <div className="grid grid-rows-[1fr_auto] gap-4 h-full">
-          <Card className="flex flex-col">
+          <Card className="flex flex-col h-full overflow-y-auto">
             <CardHeader>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Itens da Venda ({saleItems.length})</CardTitle>

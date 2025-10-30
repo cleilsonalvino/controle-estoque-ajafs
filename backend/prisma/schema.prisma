@@ -14,14 +14,15 @@ generator client {
 // Usuários (opcional)
 // ================================
 model Usuario {
-  id           String   @id @default(uuid())
-  nome         String
-  email        String   @unique
-  senha        String
-  papel        Papel    @default(USUARIO)
-  ativo        Boolean  @default(true)
-  criadoEm     DateTime @default(now())
-  atualizadoEm DateTime @updatedAt
+  id              String   @id @default(uuid())
+  nome            String
+  email           String   @unique
+  senha           String
+  telasPermitidas String[] @default([])
+  papel           Papel    @default(USUARIO)
+  ativo           Boolean  @default(true)
+  criadoEm        DateTime @default(now())
+  atualizadoEm    DateTime @updatedAt
 }
 
 enum Papel {

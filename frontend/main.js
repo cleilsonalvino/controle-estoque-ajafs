@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from "electron";
+import { app, BrowserWindow, ipcMain, shell } from "electron";
 import path from "path";
 import fetch from "node-fetch"; // npm install node-fetch
 import { fileURLToPath } from "url";
@@ -23,13 +23,23 @@ async function createWindow() {
   const win = new BrowserWindow({
     width: 1200,
     height: 800,
-    frame: false,
+    frame: true,
+    autoHideMenuBar: true,
+    title: "Sistema de Gestão empresarial - AJAFS",
     icon: path.join(__dirname, "public", "logo.png"),
     webPreferences: {
-      preload: path.join(__dirname, "preload.js"),
+      //preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
     },
+  });
+
+  // impede que links externos abram dentro do app
+  win.webContents.on("will-navigate", (event, url) => {
+    if (url.startsWith("http") && !url.startsWith("http://localhost")) {
+      event.preventDefault();
+      shell.openExternal(url);
+    }
   });
 
   if (isDev) {
@@ -42,6 +52,7 @@ async function createWindow() {
   }
 }
 
+/*
 ipcMain.on("window-close", () => {
   BrowserWindow.getFocusedWindow()?.close();
 });
@@ -58,6 +69,7 @@ ipcMain.on("window-maximize", () => {
 ipcMain.on("devOps", () => {
   BrowserWindow.getFocusedWindow()?.webContents.openDevTools();
 });
+*/
 
 app.whenReady().then(() => {
   createWindow();

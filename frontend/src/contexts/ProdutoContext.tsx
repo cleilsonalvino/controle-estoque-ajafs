@@ -1,17 +1,25 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
 import api from "@/lib/api"; // já configurado no seu projeto
 import { toast } from "sonner"; // opcional, se quiser mostrar notificações
-
+import { isAxiosError } from "axios";
 
 export interface Lote {
   id: string;
-  precoCusto: number,
-  dataCompra: Date,
-  fornecedor:{
-    nome: string
-  },
+  precoCusto: number;
+  dataCompra: Date;
+  fornecedor: {
+    nome: string;
+  };
   validade: string | null;
   quantidadeAtual: number;
+  criadoEm?: Date;
+  atualizadoEm?: Date;
 }
 
 // types.ts ou dentro do contexto mesmo
@@ -19,17 +27,18 @@ export interface Produto {
   id: string;
   nome: string;
   codigoBarras: string;
-  descricao: string;
+  descricao?: string | "";
   precoVenda: string;
   quantidadeTotal: number;
   estoqueMinimo: string;
   custoMedio?: string;
   categoria: {
     id: string;
-    nome: string;
+    nome?: string;
   };
-  urlImage?: string;
-  criadoEm: Date;
+  urlImage?: string | "";
+  criadoEm?: Date;
+  atualizadoEm?: Date;
   lote: Lote[];
 }
 
@@ -38,10 +47,18 @@ interface ProdutoContextType {
   loading: boolean;
   fetchProdutos: () => Promise<void>;
   getProdutoById: (id: string) => Promise<Produto | undefined>;
-  createProduto: (novoProduto: Omit<Produto, "id" | "codigoBarras">) => Promise<Produto | undefined>;
-  updateProduto: (id: string, produtoAtualizado: Omit<Produto, "id">) => Promise<Produto | undefined>;
+  createProduto: (
+    novoProduto: Omit<Produto, "id" | "codigoBarras">
+  ) => Promise<Produto | undefined>;
+  updateProduto: (
+    id: string,
+    produtoAtualizado: Omit<Produto, "id">
+  ) => Promise<Produto | undefined>;
   deleteProduto: (id: string) => Promise<void>;
-  darBaixaEstoquePorVenda: (produtoId: string, quantidade: Number) => Promise<void>;
+  darBaixaEstoquePorVenda: (
+    produtoId: string,
+    quantidade: Number
+  ) => Promise<void>;
   getEstoqueProdutoId: (id: string) => Promise<number>;
 }
 
@@ -54,8 +71,7 @@ const ProdutoContext = createContext<ProdutoContextType>({
   updateProduto: async () => undefined,
   deleteProduto: async () => {},
   darBaixaEstoquePorVenda: async () => {},
-  getEstoqueProdutoId: async () => 0
-
+  getEstoqueProdutoId: async () => 0,
 });
 
 interface ProdutoProviderProps {
@@ -89,51 +105,83 @@ export const ProdutoProvider = ({ children }: ProdutoProviderProps) => {
     }
   };
 
-    const createProduto = async (novoProduto: Omit<Produto, "id">) => {
-      try {
-        const produtoParaEnviar = {
-          nome: novoProduto.nome,
-          descricao: novoProduto.descricao,
-          precoVenda: novoProduto.precoVenda,
-          estoqueMinimo: Number(novoProduto.estoqueMinimo),
-          categoriaId: novoProduto.categoria.id,
-          urlImage: novoProduto.urlImage,
-          codigoBarras: novoProduto.codigoBarras
-        };
+  const createProduto = async (novoProduto: Omit<Produto, "id">) => {
+    try {
+      const produtoParaEnviar = {
+        nome: novoProduto.nome,
+        descricao: novoProduto.descricao,
+        precoVenda: novoProduto.precoVenda,
+        estoqueMinimo: Number(novoProduto.estoqueMinimo),
+        categoriaId: novoProduto.categoria?.id || null,
+        urlImage: novoProduto.urlImage,
+        codigoBarras: novoProduto.codigoBarras,
+      };
 
-        console.log("Produto para enviar:", produtoParaEnviar);
+      console.log("Produto para enviar:", produtoParaEnviar);
 
+      const { data } = await api.post<Produto>(
+        "/produtos/create",
+        produtoParaEnviar
+      );
 
-        const { data } = await api.post<Produto>("/produtos/create", produtoParaEnviar);
-        setProdutos((prev) => [...prev, data]);
-        toast.success("Produto criado com sucesso!");
-        return data;
-      } catch (error) {
-        console.error("Erro ao criar produto:", error);
-        toast.error("Erro ao criar produto");
+      return data;
+    } catch (error: unknown) {
+      console.error("Erro ao criar produto:", error);
+
+      // Mensagem específica se for erro do Axios
+      if (isAxiosError(error)) {
+        const mensagem =
+          error.response?.data?.message || "Erro ao criar produto.";
+        toast.error(mensagem);
+      } else {
+        // Qualquer outro erro inesperado
+        toast.error("Erro inesperado. Tente novamente.");
       }
-    };
 
-  const updateProduto = async (id: string, produtoAtualizado: Omit<Produto, "id">) => {
+      return null; // indica que a criação falhou
+    }
+  };
+
+  const updateProduto = async (
+    id: string,
+    produtoAtualizado: Omit<Produto, "id">
+  ) => {
+    console.log("🧾 Produto recebido:", produtoAtualizado);
+    console.log("🆔 ID recebido:", id);
+
     try {
       const produtoParaEnviar = {
         nome: produtoAtualizado.nome,
         descricao: produtoAtualizado.descricao,
-        precoVenda: Number(produtoAtualizado.precoVenda),
+        precoVenda: produtoAtualizado.precoVenda,
         estoqueMinimo: Number(produtoAtualizado.estoqueMinimo),
-        categoriaId: produtoAtualizado.categoria.id || "categoria_padrao",
+        categoriaId: produtoAtualizado.categoria?.id, // ⚠️ pode estar dando erro aqui
         urlImage: produtoAtualizado.urlImage,
-        codigoBarras: produtoAtualizado.codigoBarras
+        codigoBarras: produtoAtualizado.codigoBarras,
       };
 
-      const { data } = await api.patch<Produto>(`/produtos/${id}`, produtoParaEnviar);
-      console.log("Produto atualizado:", data);
-      setProdutos((prev) => prev.map((p) => (p.id === id ? data : p)));
-      toast.success("Produto atualizado com sucesso!");
+      console.log("📦 Produto para enviar:", produtoParaEnviar);
+
+      const { data } = await api.put<Produto>(
+        `/produtos/${id}`,
+        produtoParaEnviar
+      );
+
       return data;
-    } catch (error) {
-      console.error("Erro ao atualizar produto:", error);
-      toast.error("Erro ao atualizar produto");
+    } catch (error: any) {
+      console.error("❌ Erro capturado no updateProduto:", error);
+
+      if (isAxiosError(error)) {
+        const mensagem =
+          error.response?.data?.message || "Erro ao atualizar produto.";
+        toast.error(mensagem);
+        console.error("📨 Erro Axios:", mensagem);
+      } else {
+        toast.error("Erro inesperado. Tente novamente.");
+        console.error("⚠️ Erro não Axios:", error);
+      }
+
+      return null;
     }
   };
 
@@ -148,11 +196,20 @@ export const ProdutoProvider = ({ children }: ProdutoProviderProps) => {
     }
   };
 
-
-  const darBaixaEstoquePorVenda = async (productId: string, quantity: number) => {
+  const darBaixaEstoquePorVenda = async (
+    productId: string,
+    quantity: number
+  ) => {
     try {
-      await api.patch(`/estoque/movimentacao`, { productId, quantidade: quantity, tipo: 'SAIDA', observacao: "Venda de produto"});
-      toast.success(`Estoque atualizado com sucesso para o produto ${productId}!`);
+      await api.patch(`/estoque/movimentacao`, {
+        productId,
+        quantidade: quantity,
+        tipo: "SAIDA",
+        observacao: "Venda de produto",
+      });
+      toast.success(
+        `Estoque atualizado com sucesso para o produto ${productId}!`
+      );
       fetchProdutos(); // Refresh product list to reflect stock changes
     } catch (error) {
       console.error("Erro ao atualizar estoque:", error);
@@ -160,17 +217,19 @@ export const ProdutoProvider = ({ children }: ProdutoProviderProps) => {
     }
   };
 
-const getEstoqueProdutoId = async (id: string) => {
-  try {
-    const response = await api.get(`/estoque/estoque-produto/${id}`);
-    return response.data.estoque.estoqueTotal; // conforme o backend retorna { estoqueTotal }
-  } catch (error: any) {
-    console.error("Erro ao buscar estoque do produto:", error.response?.data || error.message);
-    // Retorna null ou 0 para evitar quebra do fluxo
-    return 0;
-  }
-};
-
+  const getEstoqueProdutoId = async (id: string) => {
+    try {
+      const response = await api.get(`/estoque/estoque-produto/${id}`);
+      return response.data.estoque.estoqueTotal; // conforme o backend retorna { estoqueTotal }
+    } catch (error: any) {
+      console.error(
+        "Erro ao buscar estoque do produto:",
+        error.response?.data || error.message
+      );
+      // Retorna null ou 0 para evitar quebra do fluxo
+      return 0;
+    }
+  };
 
   useEffect(() => {
     fetchProdutos();
@@ -187,7 +246,7 @@ const getEstoqueProdutoId = async (id: string) => {
         updateProduto,
         deleteProduto,
         darBaixaEstoquePorVenda,
-        getEstoqueProdutoId
+        getEstoqueProdutoId,
       }}
     >
       {children}

@@ -7,9 +7,11 @@ import {
   deleteVendaService,
   cancelVendaService,
   getVendasFiltrarService,
+  deleteAllSalesService
 } from "./sales.service.ts";
 
 import { createVendaSchema } from "./sales.dto.ts";
+import { CustomError } from "../../shared/errors.ts";
 
 // Venda Controllers
 
@@ -72,4 +74,28 @@ export const getVendasFiltrarController = async (req: Request, res: Response) =>
     res.status(500).json({ message: "Erro ao buscar vendas" });
   }
 };
+
+export const deleteAllSalesController = async (req: Request, res: Response) => {
+  try {
+    console.log("Requisição recebida para deletar todas as vendas");
+
+    const deletedCount = await deleteAllSalesService();
+
+    res.status(200).json({ 
+      message: "Todas as vendas foram deletadas.", 
+      deletedCount 
+    });
+  } catch (error: any) {
+    console.error("Erro ao deletar todas as vendas:", error);
+
+    // Se for CustomError, envia o status correto
+    if (error instanceof CustomError) {
+      return res.status(error.statusCode).json({ message: error.message });
+    }
+
+    // Outros erros inesperados
+    res.status(500).json({ message: "Erro interno do servidor." });
+  }
+};
+
 

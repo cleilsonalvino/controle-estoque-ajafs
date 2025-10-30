@@ -1,8 +1,24 @@
 import { type Request, type Response } from "express";
-import { loginService } from "./auth.service.ts";
+import { loginService, getUserDataFromToken } from "./auth.service.ts";
 
 export const loginController = async (req: Request, res: Response) => {
   const { email, senha } = req.body;
   const result = await loginService({ email, senha });
   res.status(200).json(result);
 };
+
+export const loginMeController = async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ message: "Token de autenticação ausente" });
+    }
+
+    const token = authHeader.split(" ")[1];
+    const userData = await getUserDataFromToken(token as string);
+
+    res.status(200).json(userData);
+  } catch (error: any) {
+    res.status(error.status || 500).json({ message: error.message });
+  }
+}

@@ -6,7 +6,8 @@ import {
   updateVendaController,
   deleteVendaController,
   cancelarVendaController,
-  getVendasFiltrarController
+  getVendasFiltrarController,
+  deleteAllSalesController
 } from "./sales.controller.ts";
 
 const salesRouter = Router();
@@ -14,11 +15,14 @@ const salesRouter = Router();
 // Venda Routes
 salesRouter.post("/create", createVendaController);
 salesRouter.get("/filtrar", getVendasFiltrarController);
+salesRouter.delete("/delete-all", deleteAllSalesController);
 salesRouter.get("/", getVendasController);
 salesRouter.get("/:id", getVendaByIdController);
 salesRouter.put("/:id", updateVendaController);
 salesRouter.delete("/:id", deleteVendaController);
 salesRouter.patch("/cancelar/:id", cancelarVendaController);
+
+
 
 
 export default salesRouter;

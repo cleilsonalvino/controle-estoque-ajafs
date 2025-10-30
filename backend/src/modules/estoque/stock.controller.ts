@@ -1,13 +1,12 @@
-import { type Request, type Response } from 'express';
-import { StockService } from './stock.service.ts';
-import { createMovimentacaoSchema } from './stock.dto.ts';
+import { type Request, type Response } from "express";
+import { StockService } from "./stock.service.ts";
+import { createMovimentacaoSchema } from "./stock.dto.ts";
 
 const stockService = new StockService();
 
 export class StockController {
-
   public async createMovimentacao(req: Request, res: Response) {
-    console.log('Creating movimentacao with data:', req.body);
+    console.log("Creating movimentacao with data:", req.body);
     const data = createMovimentacaoSchema.parse(req.body);
     const result = await stockService.createMovimentacao(data);
     res.status(201).json(result);
@@ -15,7 +14,9 @@ export class StockController {
 
   public async getMovimentacoesByProdutoId(req: Request, res: Response) {
     const { produtoId } = req.params;
-    const movimentacoes = await stockService.getMovimentacoesByProdutoId(produtoId as string);
+    const movimentacoes = await stockService.getMovimentacoesByProdutoId(
+      produtoId as string
+    );
     res.status(200).json(movimentacoes);
   }
 
@@ -36,15 +37,17 @@ export class StockController {
   }
 
   public async deleteLote(req: Request, res: Response) {
-    const { loteId, productId } = req.params;
-    await stockService.deleteLote(loteId as string, productId as string);
-    res.status(204).send();
+    try {
+      const { loteId, produtoId } = req.params;
+      await stockService.deleteLote(loteId as string, produtoId as string);
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(error.status || 500).json({ message: error.message });
+    }
   }
 
   public async getLucroMedioEstimado(req: Request, res: Response) {
     const custoMedioEstimado = await stockService.getLucroMedioEstimado();
     res.status(200).json({ custoMedioEstimado });
   }
-
-
 }
