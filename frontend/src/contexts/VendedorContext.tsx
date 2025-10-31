@@ -1,6 +1,7 @@
 
-import { createContext, useContext, useState, ReactNode, useEffect } from "react";
+import { createContext, useContext, useState, ReactNode, useEffect, useCallback } from "react";
 import api from "@/lib/api";
+import { useAuth } from "./useAuth";
 
 export interface Vendedor {
   id: string;
@@ -33,8 +34,9 @@ interface VendedorProviderProps {
 export const VendedorProvider = ({ children }: VendedorProviderProps) => {
   const [vendedores, setVendedores] = useState<Vendedor[]>([]);
   const [loading, setLoading] = useState(false);
+  const { isAuthenticated } = useAuth();
 
-  const fetchVendedores = async () => {
+  const fetchVendedores = useCallback(async () => {
     setLoading(true);
     try {
       const response = await api.get("/vendedores");
@@ -44,29 +46,31 @@ export const VendedorProvider = ({ children }: VendedorProviderProps) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const createVendedor = async (vendedorData: Omit<Vendedor, 'id'>) => {
+  const createVendedor = useCallback(async (vendedorData: Omit<Vendedor, 'id'>) => {
     console.log(vendedorData);
     const response = await api.post("/vendedores/create", vendedorData);
     setVendedores((prev) => [response.data, ...prev]);
     return response.data;
-  };
+  }, []);
 
-  const updateVendedor = async (id: string, vendedorData: Omit<Vendedor, 'id'>) => {
+  const updateVendedor = useCallback(async (id: string, vendedorData: Omit<Vendedor, 'id'>) => {
     const response = await api.put(`/vendedores/${id}`, vendedorData);
     setVendedores((prev) => prev.map((v) => (v.id === id ? response.data : v)));
     return response.data;
-  };
+  }, []);
 
-  const deleteVendedor = async (id: string) => {
+  const deleteVendedor = useCallback(async (id: string) => {
     await api.delete(`/vendedores/${id}`);
     setVendedores((prev) => prev.filter((v) => v.id !== id));
-  };
+  }, []);
 
   useEffect(() => {
-    fetchVendedores();
-  }, []);
+    if (isAuthenticated) {
+      fetchVendedores();
+    }
+  }, [fetchVendedores, isAuthenticated]);
 
   return (
     <VendedorContext.Provider

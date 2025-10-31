@@ -8,6 +8,7 @@ export const createProductSchema = z.object({
   codigoBarras: z.string().optional(),
   estoqueMinimo: z.number().nonnegative().optional().default(0),
   categoriaId: z.string().uuid('ID de categoria inválido').optional().nullable(),
+
 }).strict();
 
 export const updateProductSchema = z.object({

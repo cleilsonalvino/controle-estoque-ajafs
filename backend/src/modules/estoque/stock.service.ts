@@ -5,48 +5,32 @@ import { CustomError } from "../../shared/errors.ts";
 const prisma = new PrismaClient();
 
 export class StockService {
-  public async createMovimentacao(data: CreateMovimentacaoDto) {
-    const {
-      produtoId,
-      tipo,
-      quantidade,
-      observacao,
-      fornecedorId,
-      precoCusto,
-      validade,
-    } = data;
+  // ============================================================
+  // 🔹 CRIA MOVIMENTAÇÃO (ENTRADA / SAÍDA / AJUSTE)
+  // ============================================================
+  public async createMovimentacao(data: CreateMovimentacaoDto, empresaId: string) {
+    const { produtoId, tipo, quantidade, observacao, fornecedorId, precoCusto, validade } = data;
 
     if (!quantidade || isNaN(Number(quantidade))) {
       throw new CustomError("Quantidade inválida", 400);
     }
 
     return prisma.$transaction(async (tx) => {
-      const produto = await tx.produto.findUnique({ where: { id: produtoId } });
+      const produto = await tx.produto.findFirst({
+        where: { id: produtoId, empresaId },
+      });
       if (!produto) throw new CustomError("Produto não encontrado", 404);
 
-      // helper para consumir FIFO
-      const consumirFIFO = async (
-        qtdParaConsumir: number,
-        tipoMov: TipoMovimentacao,
-        obsPadrao: string
-      ) => {
+      // helper FIFO
+      const consumirFIFO = async (qtdParaConsumir: number, tipoMov: TipoMovimentacao, obsPadrao: string) => {
         const lotes = await tx.lote.findMany({
-          where: { produtoId },
-          // garanta que a coluna usada aqui existe e é populada; se "dataCompra" puder ser nula,
-          // prefira "createdAt" ou "id" asc para manter estabilidade do FIFO:
+          where: { produtoId, empresaId },
           orderBy: { criadoEm: "asc" },
         });
 
-        const estoqueTotal = lotes.reduce(
-          (acc, l) => acc + Number(l.quantidadeAtual),
-          0
-        );
-
+        const estoqueTotal = lotes.reduce((acc, l) => acc + Number(l.quantidadeAtual), 0);
         if (estoqueTotal < qtdParaConsumir) {
-          throw new CustomError(
-            "Estoque insuficiente para realizar a saída",
-            400
-          );
+          throw new CustomError("Estoque insuficiente para realizar a saída", 400);
         }
 
         let restante = Number(qtdParaConsumir);
@@ -60,12 +44,14 @@ export class StockService {
             data: { quantidadeAtual: qtdLote - retirar },
           });
 
-          await tx.movimentacaoLote.create({
+          await tx.movimentacao.create({
             data: {
-              loteId: lote.id,
+              produtoId,
               tipo: tipoMov,
               quantidade: retirar,
               observacao: observacao ?? obsPadrao,
+              empresaId,
+              loteId: lote.id,
             },
           });
 
@@ -73,14 +59,11 @@ export class StockService {
         }
       };
 
-      // =============================
-      // ENTRADA (cria novo lote)
-      // =============================
+      const precoCustoAtualizado = data.precoCusto ? data.precoCusto.replace(",", ".") : null;
 
-      const precoCustoAtualizado = data.precoCusto
-        ? data.precoCusto.replace(",", ".")
-        : null;
-
+      // ==============================
+      // 🔸 ENTRADA
+      // ==============================
       if (tipo === TipoMovimentacao.ENTRADA) {
         const novoLote = await tx.lote.create({
           data: {
@@ -89,17 +72,7 @@ export class StockService {
             precoCusto: precoCustoAtualizado ?? 0,
             quantidadeAtual: quantidade,
             validade: validade ? new Date(validade) : null,
-            // se tiver "dataCompra" no schema e não tiver default, descomente:
-            // dataCompra: new Date(),
-          },
-        });
-
-        await tx.movimentacaoLote.create({
-          data: {
-            loteId: novoLote.id,
-            tipo: TipoMovimentacao.ENTRADA,
-            quantidade,
-            observacao: observacao ?? "Entrada via criação de lote",
+            empresaId,
           },
         });
 
@@ -109,66 +82,47 @@ export class StockService {
             tipo,
             quantidade,
             observacao: observacao ?? "Entrada de produto com lote",
+            loteId: novoLote.id,
+            empresaId,
           },
         });
 
         return movimentacaoGeral;
       }
 
-      // =============================
-      // SAÍDA
-      // =============================
+      // ==============================
+      // 🔸 SAÍDA
+      // ==============================
       if (tipo === TipoMovimentacao.SAIDA) {
-        await consumirFIFO(
-          Number(quantidade),
-          TipoMovimentacao.SAIDA,
-          "Saída de produto (FIFO)"
-        );
-
+        await consumirFIFO(Number(quantidade), TipoMovimentacao.SAIDA, "Saída de produto (FIFO)");
         const movimentacaoGeral = await tx.movimentacao.create({
           data: {
             produtoId,
             tipo,
             quantidade,
             observacao: observacao ?? "Saída manual de produto",
+            empresaId,
           },
         });
-
         return movimentacaoGeral;
       }
 
-      // =============================
-      // AJUSTE (+ aumenta, - diminui)
-      // =============================
+      // ==============================
+      // 🔸 AJUSTE
+      // ==============================
       if (tipo === TipoMovimentacao.AJUSTE) {
         const qtd = Number(quantidade);
-
-        if (qtd === 0) {
-          throw new CustomError(
-            "Ajuste com quantidade zero não é permitido",
-            400
-          );
-        }
+        if (qtd === 0) throw new CustomError("Ajuste com quantidade zero não é permitido", 400);
 
         if (qtd > 0) {
-          // AUMENTAR ESTOQUE: por padrão, cria um lote técnico de ajuste
           const loteAjuste = await tx.lote.create({
             data: {
               produtoId,
-              fornecedorId: fornecedorId || null, // pode ser null no ajuste
+              fornecedorId: fornecedorId || null,
               precoCusto: precoCusto ?? 0,
               quantidadeAtual: qtd,
               validade: validade ? new Date(validade) : null,
-              // dataCompra: new Date(),
-            },
-          });
-
-          await tx.movimentacaoLote.create({
-            data: {
-              loteId: loteAjuste.id,
-              tipo: TipoMovimentacao.AJUSTE,
-              quantidade: qtd,
-              observacao: observacao ?? "Ajuste positivo de estoque",
+              empresaId,
             },
           });
 
@@ -178,26 +132,24 @@ export class StockService {
               tipo: TipoMovimentacao.AJUSTE,
               quantidade: qtd,
               observacao: observacao ?? "Ajuste positivo de estoque",
+              loteId: loteAjuste.id,
+              empresaId,
             },
           });
 
           return mov;
         } else {
-          // DIMINUIR ESTOQUE: consome FIFO como se fosse saída
           const qtdAbs = Math.abs(qtd);
-
-          await consumirFIFO(
-            qtdAbs,
-            TipoMovimentacao.AJUSTE,
-            "Ajuste negativo de estoque (FIFO)"
-          );
+          await consumirFIFO(qtdAbs, TipoMovimentacao.AJUSTE, "Ajuste negativo de estoque (FIFO)");
 
           const mov = await tx.movimentacao.create({
             data: {
               produtoId,
               tipo: TipoMovimentacao.AJUSTE,
-              quantidade: qtdAbs, // armazene como positivo ou negativo conforme sua modelagem
+              quantidade: qtdAbs,
               observacao: observacao ?? "Ajuste negativo de estoque",
+              empresaId,
+              loteId: null, // Ajuste negativo não está associado a um lote específico
             },
           });
 
@@ -209,37 +161,35 @@ export class StockService {
     });
   }
 
-  // ============================================
-  // 🔹 Lista movimentações por produto
-  // ============================================
-  public async getMovimentacoesByProdutoId(produtoId: string) {
+  // ============================================================
+  // 🔹 LISTA MOVIMENTAÇÕES POR PRODUTO
+  // ============================================================
+  public async getMovimentacoesByProdutoId(produtoId: string, empresaId: string) {
     return prisma.movimentacao.findMany({
-      where: { produtoId },
+      where: { produtoId, empresaId },
       orderBy: { criadoEm: "desc" },
     });
   }
 
-  // ============================================
-  // 🔹 Lista todas as movimentações
-  // ============================================
-  public async getMovimentacoes() {
+  // ============================================================
+  // 🔹 LISTA TODAS MOVIMENTAÇÕES
+  // ============================================================
+  public async getMovimentacoes(empresaId: string) {
     return prisma.movimentacao.findMany({
+      where: { empresaId },
       orderBy: { criadoEm: "desc" },
       include: {
-        produto: {
-          select: {
-            id: true,
-            nome: true,
-          },
-        },
+        produto: { select: { id: true, nome: true } },
       },
     });
   }
-  public async getValorEstoque() {
+
+  // ============================================================
+  // 🔹 VALOR TOTAL DO ESTOQUE
+  // ============================================================
+  public async getValorEstoque(empresaId: string) {
     const lotes = await prisma.lote.findMany({
-      where: {
-        quantidadeAtual: { gt: 0 },
-      },
+      where: { empresaId, quantidadeAtual: { gt: 0 } },
       include: { produto: true },
     });
 
@@ -256,66 +206,54 @@ export class StockService {
     };
   }
 
-  public async getEstoqueProdutoId(produtoId: string) {
+  // ============================================================
+  // 🔹 ESTOQUE DE UM PRODUTO ESPECÍFICO
+  // ============================================================
+  public async getEstoqueProdutoId(produtoId: string, empresaId: string) {
     const lotes = await prisma.lote.findMany({
-      where: {
-        produtoId,
-        quantidadeAtual: { gt: 0 },
-      },
+      where: { produtoId, empresaId, quantidadeAtual: { gt: 0 } },
     });
 
-    const estoqueTotal = lotes.reduce((total, lote) => {
-      return total + Number(lote.quantidadeAtual);
-    }, 0);
-
+    const estoqueTotal = lotes.reduce((total, lote) => total + Number(lote.quantidadeAtual), 0);
     return { estoqueTotal };
   }
 
-  public async deleteLote(loteId: string, produtoId: string) {
-    // Busca o lote
-    const lote = await prisma.lote.findUnique({ where: { id: loteId } });
-
-    if (!lote) {
-      throw new CustomError("Lote não encontrado.", 404);
-    }
-    if (lote.produtoId !== produtoId) {
+  // ============================================================
+  // 🔹 DELETAR LOTE (e criar movimentação de ajuste)
+  // ============================================================
+  public async deleteLote(loteId: string, produtoId: string, empresaId: string) {
+    const lote = await prisma.lote.findFirst({ where: { id: loteId, empresaId } });
+    if (!lote) throw new CustomError("Lote não encontrado.", 404);
+    if (lote.produtoId !== produtoId)
       throw new CustomError("Lote não pertence ao produto especificado.", 400);
-    }
 
-    const produto = await prisma.produto.findUnique({
-      where: { id: produtoId },
-    });
+    const produto = await prisma.produto.findFirst({ where: { id: produtoId, empresaId } });
 
-
-    // Deleta o lote
     await prisma.lote.delete({ where: { id: loteId } });
 
-    // Cria movimentação de ajuste
     await prisma.movimentacao.create({
       data: {
         observacao: `Lote ${loteId} deletado do produto ${produto?.nome || produtoId}`,
-        produtoId: produtoId,
-        quantidade: lote.quantidadeAtual, // registra a quantidade que estava no lote
+        produtoId,
+        quantidade: lote.quantidadeAtual,
         tipo: TipoMovimentacao.AJUSTE,
+        empresaId,
+        loteId,
       },
     });
   }
 
-  public async getLucroMedioEstimado() {
+  // ============================================================
+  // 🔹 LUCRO MÉDIO ESTIMADO
+  // ============================================================
+  public async getLucroMedioEstimado(empresaId: string) {
     const produtos = await prisma.produto.findMany({
       where: {
-        lote: {
-          some: {
-            quantidadeAtual: { gt: 0 },
-          },
-        },
+        empresaId,
+        lote: { some: { quantidadeAtual: { gt: 0 } } },
       },
       include: {
-        lote: {
-          where: {
-            quantidadeAtual: { gt: 0 },
-          },
-        },
+        lote: { where: { quantidadeAtual: { gt: 0 } } },
       },
     });
 
@@ -324,35 +262,23 @@ export class StockService {
 
     for (const produto of produtos) {
       const lotes = produto.lote;
-      const quantidadeProduto = lotes.reduce(
-        (acc, lote) => acc + Number(lote.quantidadeAtual),
-        0
-      );
-
+      const quantidadeProduto = lotes.reduce((acc, l) => acc + Number(l.quantidadeAtual), 0);
       if (quantidadeProduto === 0) continue;
 
-      // calcula custo médio do produto
       const custoTotal = lotes.reduce(
-        (acc, lote) =>
-          acc + Number(lote.precoCusto) * Number(lote.quantidadeAtual),
+        (acc, l) => acc + Number(l.precoCusto) * Number(l.quantidadeAtual),
         0
       );
       const custoMedio = custoTotal / quantidadeProduto;
 
-      // lucro unitário = preço de venda - custo médio
       const precoVenda = Number(produto.precoVenda) || 0;
       const lucroUnitario = precoVenda - custoMedio;
 
-      // acumula lucro total considerando estoque
       lucroTotal += lucroUnitario * quantidadeProduto;
       quantidadeTotal += quantidadeProduto;
     }
 
-    // lucro médio estimado geral
-    const lucroMedioEstimado =
-      quantidadeTotal > 0 ? lucroTotal / quantidadeTotal : 0;
-
-    // formata para reais (opcional)
+    const lucroMedioEstimado = quantidadeTotal > 0 ? lucroTotal / quantidadeTotal : 0;
     const lucroFormatado = lucroMedioEstimado.toLocaleString("pt-BR", {
       style: "currency",
       currency: "BRL",

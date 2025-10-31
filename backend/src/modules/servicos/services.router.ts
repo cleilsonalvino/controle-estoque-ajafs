@@ -7,22 +7,25 @@ import {
   serviceIdParamSchema,
   listServiceSchema,
 } from "./services.dto.ts";
+import { authMiddleware } from "../../app/middlewares/auth.middleware.ts";
 
-const router = Router();
+const servicoRouter = Router();
 const controller = new ServiceController();
 
-router.post("/create", validate(createServiceSchema), controller.create);
+servicoRouter.use(authMiddleware);
 
-router.get("/", controller.getAll);
+servicoRouter.post("/create", validate(createServiceSchema), controller.create);
 
-router.get("/:id", validate(serviceIdParamSchema), controller.getById);
+servicoRouter.get("/", controller.getAll);
 
-router.patch(
+servicoRouter.get("/:id", validate(serviceIdParamSchema), controller.getById);
+
+servicoRouter.patch(
   "/:id",
   validate(serviceIdParamSchema.merge(updateServiceSchema)),
   controller.update
 );
 
-router.delete("/:id", validate(serviceIdParamSchema), controller.delete);
+servicoRouter.delete("/:id", validate(serviceIdParamSchema), controller.delete);
 
-export const servicesRouter = router;
+export default servicoRouter;

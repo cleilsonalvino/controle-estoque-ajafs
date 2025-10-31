@@ -34,7 +34,7 @@ export function HomePage() {
   const [dashboard, setDashboard] = useState<any>(null);
 
   useEffect(() => {
-    if (user?.papel === "ADMINISTRADOR") {
+    if (user?.user.papel === "ADMINISTRADOR") {
       api.get("/dashboard")
         .then((res) => setDashboard(res.data))
         .catch((err) => console.error(err));
@@ -43,12 +43,12 @@ export function HomePage() {
 
   if (!user) return <div>Carregando informações do usuário...</div>;
 
-  const isAdmin = user.papel?.toLowerCase() === "administrador";
+  const isAdmin = user.user.papel?.toLowerCase() === "administrador";
 
   const accessibleMenuItems = isAdmin
     ? allMenuItems.filter((item) => item.url !== "/")
     : allMenuItems.filter(
-        (item) => item.url !== "/" && user.telasPermitidas?.includes(item.url)
+        (item) => item.url !== "/" && user.user.telasPermitidas?.includes(item.url)
       );
 
   return (
@@ -60,10 +60,10 @@ export function HomePage() {
         transition={{ duration: 0.5 }}
       >
         <h1 className="text-3xl font-bold">
-          Bem-vindo(a), {user.nome.split(" ")[0]}!
+          Bem-vindo(a), {user.user.nome}!
         </h1>
         <p className="text-muted-foreground capitalize">
-          {user.papel.toLowerCase()}
+          {user.user.papel}
         </p>
       </motion.div>
 
@@ -75,19 +75,19 @@ export function HomePage() {
         <CardContent className="grid grid-cols-2 gap-4 text-sm">
           <div>
             <strong>Nome:</strong>
-            <p>{user.nome}</p>
+            <p>{user.user.nome}</p>
           </div>
           <div>
             <strong>Email:</strong>
-            <p>{user.email}</p>
+            <p>{user.user.email}</p>
           </div>
           <div>
             <strong>Status:</strong>
-            <p>{user.ativo ? "Ativo" : "Inativo"}</p>
+            <p>{user.user.ativo ? "Inativo" : "Ativo"}</p>
           </div>
           <div>
             <strong>Criado em:</strong>
-            <p>{new Date(user.criadoEm).toLocaleDateString()}</p>
+            <p>{user.user.criadoEm ?? "--"}</p>
           </div>
         </CardContent>
       </Card>

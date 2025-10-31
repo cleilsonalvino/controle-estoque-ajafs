@@ -1,36 +1,41 @@
-import {type Request, type Response } from "express";
+import { type Response } from "express";
 import {
   createCategoryService,
-    getCategoriesService,
-    getCategoryByIdService,
-    updateCategoryService,
-    deleteCategoryService,
+  getCategoriesService,
+  getCategoryByIdService,
+  updateCategoryService,
+  deleteCategoryService,
 } from "./category.service.ts";
+import type { AuthenticatedRequest } from "../../app/middlewares/auth.middleware.ts";
 
-export const createCategoryController = async (req: Request, res: Response) => {
-  const category = await createCategoryService(req.body);
+export const createCategoryController = async (req: AuthenticatedRequest, res: Response) => {
+  const { empresaId } = req.user!;
+  const category = await createCategoryService(req.body, empresaId);
   res.status(201).json(category);
-}
+};
 
-export const getCategoriesController = async (req: Request, res: Response) => {
-  const categories = await getCategoriesService();
+export const getCategoriesController = async (req: AuthenticatedRequest, res: Response) => {
+  const { empresaId } = req.user!;
+  const categories = await getCategoriesService(empresaId);
   res.status(200).json(categories);
-}
+};
 
-export const getCategoryByIdController = async (req: Request, res: Response) => {
+export const getCategoryByIdController = async (req: AuthenticatedRequest, res: Response) => {
   const { id } = req.params;
-  const category = await getCategoryByIdService(id as string);
+  const { empresaId } = req.user!;
+  const category = await getCategoryByIdService(id as string, empresaId);
   res.status(200).json(category);
-}
+};
 
-export const updateCategoryController = async (req: Request, res: Response) => {
-    const { id } = req.params;
-  const category = await updateCategoryService(id as string, req.body);
-    res.status(200).json(category);
-}
-export const deleteCategoryController = async (req: Request, res: Response) => {
-    const { id } = req.params;
-  await deleteCategoryService(id as string);
-    res.status(204).send();
-}
-
+export const updateCategoryController = async (req: AuthenticatedRequest, res: Response) => {
+  const { id } = req.params;
+  const { empresaId } = req.user!;
+  const category = await updateCategoryService(id as string, req.body, empresaId);
+  res.status(200).json(category);
+};
+export const deleteCategoryController = async (req: AuthenticatedRequest, res: Response) => {
+  const { id } = req.params;
+  const { empresaId } = req.user!;
+  await deleteCategoryService(id as string, empresaId);
+  res.status(204).send();
+};

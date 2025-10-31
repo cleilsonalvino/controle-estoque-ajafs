@@ -10,10 +10,11 @@ import {
   addSupplierToProductService,
 } from "./products.service.ts";
 import { createProductSchema, updateProductSchema } from "./products.dto.ts";
+import type { AuthenticatedRequest } from "../../app/middlewares/auth.middleware.ts";
 
-export const createProductController = async (req: Request, res: Response) => {
-  console.log("Requisição recebida para criar produto:", req.body);
-  
+export const createProductController = async (req: AuthenticatedRequest, res: Response) => {
+  const { empresaId } = req.user!;
+  console.log("Empresa ID no createProductController:", req.body);
   const validation = createProductSchema.safeParse(req.body);
 
   if (!validation.success) {
@@ -23,24 +24,26 @@ export const createProductController = async (req: Request, res: Response) => {
     });
   }
 
-  const product = await createProductService(validation.data);
+  const product = await createProductService(validation.data, empresaId);
   return res.status(201).json(product);
 };
 
-export const getProductsController = async (req: Request, res: Response) => {
-  const products = await getProductsService();
+export const getProductsController = async (req: AuthenticatedRequest, res: Response) => {
+  const { empresaId } = req.user!;
+  const products = await getProductsService(empresaId);
   return res.status(200).json(products);
 };
 
-export const getProductByIdController = async (req: Request, res: Response) => {
+export const getProductByIdController = async (req: AuthenticatedRequest, res: Response) => {
   const { id } = req.params;
-  const product = await getProductByIdService(id as string);
+  const { empresaId } = req.user!;
+  const product = await getProductByIdService(id as string, empresaId);
   return res.status(200).json(product);
 };
 
-export const updateProductController = async (req: Request, res: Response) => {
+export const updateProductController = async (req: AuthenticatedRequest, res: Response) => {
   const { id } = req.params;
-  console.log("ID do produto a ser atualizado:", req.body);
+  const { empresaId } = req.user!;
   const validation = updateProductSchema.safeParse(req.body);
 
   if (!validation.success) {
@@ -50,32 +53,47 @@ export const updateProductController = async (req: Request, res: Response) => {
     });
   }
 
-  const product = await updateProductService(id as string, validation.data);
+  const product = await updateProductService(
+    id as string,
+    validation.data,
+    empresaId
+  );
   return res.status(200).json(product);
 };
 
-export const deleteProductController = async (req: Request, res: Response) => {
+export const deleteProductController = async (req: AuthenticatedRequest, res: Response) => {
   const { id } = req.params;
-  await deleteProductService(id as string);
+  const { empresaId } = req.user!;
+  await deleteProductService(id as string, empresaId);
   return res.status(204).send();
 };
 
 export const addCategoryToProductController = async (
-  req: Request,
+  req: AuthenticatedRequest,
   res: Response
 ) => {
   const { id } = req.params;
+  const { empresaId } = req.user!;
   const { categoryId } = req.body;
-  const product = await addCategoryToProductService(id as string, categoryId);
+  const product = await addCategoryToProductService(
+    id as string,
+    categoryId,
+    empresaId
+  );
   return res.status(200).json(product);
 };
 
 export const addSupplierToProductController = async (
-  req: Request,
+  req: AuthenticatedRequest,
   res: Response
 ) => {
   const { id } = req.params;
+  const { empresaId } = req.user!;
   const { supplierId } = req.body;
-  const product = await addSupplierToProductService(id as string, supplierId);
+  const product = await addSupplierToProductService(
+    id as string,
+    supplierId,
+    empresaId
+  );
   return res.status(200).json(product);
 };

@@ -1,6 +1,7 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
 import api from "@/lib/api";
 import { toast } from "sonner";
+import { useAuth } from "./useAuth";
 
 export interface TipoServico {
   id: string;
@@ -37,8 +38,9 @@ interface TipoServicoProviderProps {
 export const TipoServicoProvider = ({ children }: TipoServicoProviderProps) => {
   const [tiposServicos, setTiposServicos] = useState<TipoServico[]>([]);
   const [loading, setLoading] = useState(false);
+  const { isAuthenticated } = useAuth();
 
-  const fetchTiposServicos = async () => {
+  const fetchTiposServicos = useCallback(async () => {
     try {
       setLoading(true);
       const { data } = await api.get<TipoServico[]>("/servicos");
@@ -49,9 +51,9 @@ export const TipoServicoProvider = ({ children }: TipoServicoProviderProps) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const createTipoServico = async (newTipoServico: Omit<TipoServico, "id">) => {
+  const createTipoServico = useCallback(async (newTipoServico: Omit<TipoServico, "id">) => {
     try {
       const { data } = await api.post<TipoServico>("/servicos/create", newTipoServico);
       setTiposServicos((prev) => [...prev, data]);
@@ -61,9 +63,9 @@ export const TipoServicoProvider = ({ children }: TipoServicoProviderProps) => {
       console.error("Erro ao criar tipo de serviço:", error);
       toast.error("Erro ao criar tipo de serviço");
     }
-  };
+  }, []);
 
-  const updateTipoServico = async (id: string, updatedTipoServico: Omit<TipoServico, "id">) => {
+  const updateTipoServico = useCallback(async (id: string, updatedTipoServico: Omit<TipoServico, "id">) => {
     try {
       const { data } = await api.patch<TipoServico>(`/servicos/${id}`, updatedTipoServico);
       setTiposServicos((prev) => prev.map((ts) => (ts.id === id ? data : ts)));
@@ -73,9 +75,9 @@ export const TipoServicoProvider = ({ children }: TipoServicoProviderProps) => {
       console.error("Erro ao atualizar tipo de serviço:", error);
       toast.error("Erro ao atualizar tipo de serviço");
     }
-  };
+  }, []);
 
-  const deleteTipoServico = async (id: string) => {
+  const deleteTipoServico = useCallback(async (id: string) => {
     try {
       await api.delete(`/servicos/${id}`);
       setTiposServicos((prev) => prev.filter((ts) => ts.id !== id));
@@ -84,11 +86,13 @@ export const TipoServicoProvider = ({ children }: TipoServicoProviderProps) => {
       console.error("Erro ao deletar tipo de serviço:", error);
       toast.error("Erro ao deletar tipo de serviço");
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchTiposServicos();
-  }, []);
+    if (isAuthenticated) {
+      fetchTiposServicos();
+    }
+  }, [fetchTiposServicos, isAuthenticated]);
 
   return (
     <TipoServicoContext.Provider

@@ -54,7 +54,7 @@ const Suppliers = () => {
       await fetchSuppliers();
     };
 
-    // Roda ao abrir a rota
+  // Roda ao abrir a rota
     fetchAll();
 
     // Atualiza ao voltar foco na aba

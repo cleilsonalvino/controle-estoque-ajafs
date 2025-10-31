@@ -1,6 +1,7 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
 import api from "@/lib/api";
 import { toast } from "sonner";
+import { useAuth } from "./useAuth";
 
 export interface Category {
   id: string;
@@ -8,6 +9,7 @@ export interface Category {
   descricao: string;
   criadoEm?: Date;
   atualizadoEm?: Date;
+  
 }
 
 interface CategoryContextType {
@@ -35,8 +37,9 @@ interface CategoryProviderProps {
 export const CategoryProvider = ({ children }: CategoryProviderProps) => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
+  const { isAuthenticated } = useAuth();
 
-  const fetchCategories = async () => {
+  const fetchCategories = useCallback(async () => {
     try {
       setLoading(true);
       const { data } = await api.get<Category[]>("/categorias");
@@ -47,9 +50,9 @@ export const CategoryProvider = ({ children }: CategoryProviderProps) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const createCategory = async (newCategory: Omit<Category, "id" | "criadoEm" | "atualizadoEm">) => {
+  const createCategory = useCallback(async (newCategory: Omit<Category, "id" | "criadoEm" | "atualizadoEm">) => {
     try {
       const { data } = await api.post<Category>("/categorias/create", newCategory);
       setCategories((prev) => [...prev, data]);
@@ -59,9 +62,9 @@ export const CategoryProvider = ({ children }: CategoryProviderProps) => {
       console.error("Erro ao criar categoria:", error);
       toast.error("Erro ao criar categoria");
     }
-  };
+  }, []);
 
-  const updateCategory = async (id: string, updatedCategory: Omit<Category, "id">) => {
+  const updateCategory = useCallback(async (id: string, updatedCategory: Omit<Category, "id">) => {
     try {
       const { data } = await api.put<Category>(`/categorias/${id}`, updatedCategory);
       setCategories((prev) => prev.map((c) => (c.id === id ? data : c)));
@@ -71,9 +74,9 @@ export const CategoryProvider = ({ children }: CategoryProviderProps) => {
       console.error("Erro ao atualizar categoria:", error);
       toast.error("Erro ao atualizar categoria");
     }
-  };
+  }, []);
 
-  const deleteCategory = async (id: string) => {
+  const deleteCategory = useCallback(async (id: string) => {
     try {
       await api.delete(`/categorias/${id}`);
       setCategories((prev) => prev.filter((c) => c.id !== id));
@@ -82,11 +85,13 @@ export const CategoryProvider = ({ children }: CategoryProviderProps) => {
       console.error("Erro ao deletar categoria:", error);
       toast.error("Erro ao deletar categoria");
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchCategories();
-  }, []);
+    if (isAuthenticated) {
+      fetchCategories();
+    }
+  }, [fetchCategories, isAuthenticated]);
 
   return (
     <CategoryContext.Provider

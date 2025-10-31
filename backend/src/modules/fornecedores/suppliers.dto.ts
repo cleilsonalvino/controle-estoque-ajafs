@@ -7,6 +7,7 @@ export const createSupplierSchema = z.object({
   contato: z.string().optional().nullable(),
   telefone: z.string().optional().nullable(),
   endereco: z.string().optional().nullable(),
+  empresaId: z.string().uuid(),
 });
 
 export const updateSupplierSchema = z.object({
@@ -15,4 +16,5 @@ export const updateSupplierSchema = z.object({
   telefone: z.string().optional().nullable(),
   descricao: z.string().optional().nullable(),
   atualizadoEm: z.date().optional().default(new Date()),
+  
 });

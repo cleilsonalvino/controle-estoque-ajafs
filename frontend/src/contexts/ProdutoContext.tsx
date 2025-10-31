@@ -4,10 +4,12 @@ import {
   useState,
   useEffect,
   ReactNode,
+  useCallback,
 } from "react";
 import api from "@/lib/api"; // já configurado no seu projeto
 import { toast } from "sonner"; // opcional, se quiser mostrar notificações
 import { isAxiosError } from "axios";
+import { useAuth } from "./useAuth";
 
 export interface Lote {
   id: string;
@@ -81,8 +83,9 @@ interface ProdutoProviderProps {
 export const ProdutoProvider = ({ children }: ProdutoProviderProps) => {
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [loading, setLoading] = useState(false);
+  const { isAuthenticated } = useAuth();
 
-  const fetchProdutos = async () => {
+  const fetchProdutos = useCallback(async () => {
     try {
       setLoading(true);
       const { data } = await api.get<Produto[]>("/produtos");
@@ -93,9 +96,9 @@ export const ProdutoProvider = ({ children }: ProdutoProviderProps) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const getProdutoById = async (id: string) => {
+  const getProdutoById = useCallback(async (id: string) => {
     try {
       const { data } = await api.get<Produto>(`/produtos/${id}`);
       return data;
@@ -103,89 +106,92 @@ export const ProdutoProvider = ({ children }: ProdutoProviderProps) => {
       console.error("Erro ao buscar produto:", error);
       toast.error("Erro ao buscar produto");
     }
-  };
+  }, []);
 
-  const createProduto = async (novoProduto: Omit<Produto, "id">) => {
-    try {
-      const produtoParaEnviar = {
-        nome: novoProduto.nome,
-        descricao: novoProduto.descricao,
-        precoVenda: novoProduto.precoVenda,
-        estoqueMinimo: Number(novoProduto.estoqueMinimo),
-        categoriaId: novoProduto.categoria?.id || null,
-        urlImage: novoProduto.urlImage,
-        codigoBarras: novoProduto.codigoBarras,
-      };
+  const createProduto = useCallback(
+    async (novoProduto: Omit<Produto, "id">) => {
+      try {
+        const produtoParaEnviar = {
+          nome: novoProduto.nome,
+          descricao: novoProduto.descricao,
+          precoVenda: novoProduto.precoVenda,
+          estoqueMinimo: Number(novoProduto.estoqueMinimo),
+          categoriaId: novoProduto.categoria?.id || null,
+          urlImage: novoProduto.urlImage,
+          codigoBarras: novoProduto.codigoBarras,
+        };
 
-      console.log("Produto para enviar:", produtoParaEnviar);
+        console.log("Produto para enviar:", produtoParaEnviar);
 
-      const { data } = await api.post<Produto>(
-        "/produtos/create",
-        produtoParaEnviar
-      );
+        const { data } = await api.post<Produto>(
+          "/produtos/create",
+          produtoParaEnviar
+        );
 
-      return data;
-    } catch (error: unknown) {
-      console.error("Erro ao criar produto:", error);
+        return data;
+      } catch (error: unknown) {
+        console.error("Erro ao criar produto:", error);
 
-      // Mensagem específica se for erro do Axios
-      if (isAxiosError(error)) {
-        const mensagem =
-          error.response?.data?.message || "Erro ao criar produto.";
-        toast.error(mensagem);
-      } else {
-        // Qualquer outro erro inesperado
-        toast.error("Erro inesperado. Tente novamente.");
+        // Mensagem específica se for erro do Axios
+        if (isAxiosError(error)) {
+          const mensagem =
+            error.response?.data?.message || "Erro ao criar produto.";
+          toast.error(mensagem);
+        } else {
+          // Qualquer outro erro inesperado
+          toast.error("Erro inesperado. Tente novamente.");
+        }
+
+        return null; // indica que a criação falhou
       }
+    },
+    []
+  );
 
-      return null; // indica que a criação falhou
-    }
-  };
+  const updateProduto = useCallback(
+    async (id: string, produtoAtualizado: Omit<Produto, "id">) => {
+      console.log("🧾 Produto recebido:", produtoAtualizado);
+      console.log("🆔 ID recebido:", id);
 
-  const updateProduto = async (
-    id: string,
-    produtoAtualizado: Omit<Produto, "id">
-  ) => {
-    console.log("🧾 Produto recebido:", produtoAtualizado);
-    console.log("🆔 ID recebido:", id);
+      try {
+        const produtoParaEnviar = {
+          nome: produtoAtualizado.nome,
+          descricao: produtoAtualizado.descricao,
+          precoVenda: produtoAtualizado.precoVenda,
+          estoqueMinimo: Number(produtoAtualizado.estoqueMinimo),
+          categoriaId: produtoAtualizado.categoria?.id, // ⚠️ pode estar dando erro aqui
+          urlImage: produtoAtualizado.urlImage,
+          codigoBarras: produtoAtualizado.codigoBarras,
+        };
 
-    try {
-      const produtoParaEnviar = {
-        nome: produtoAtualizado.nome,
-        descricao: produtoAtualizado.descricao,
-        precoVenda: produtoAtualizado.precoVenda,
-        estoqueMinimo: Number(produtoAtualizado.estoqueMinimo),
-        categoriaId: produtoAtualizado.categoria?.id, // ⚠️ pode estar dando erro aqui
-        urlImage: produtoAtualizado.urlImage,
-        codigoBarras: produtoAtualizado.codigoBarras,
-      };
+        console.log("📦 Produto para enviar:", produtoParaEnviar);
 
-      console.log("📦 Produto para enviar:", produtoParaEnviar);
+        const { data } = await api.put<Produto>(
+          `/produtos/${id}`,
+          produtoParaEnviar
+        );
 
-      const { data } = await api.put<Produto>(
-        `/produtos/${id}`,
-        produtoParaEnviar
-      );
+        return data;
+      } catch (error: any) {
+        console.error("❌ Erro capturado no updateProduto:", error);
 
-      return data;
-    } catch (error: any) {
-      console.error("❌ Erro capturado no updateProduto:", error);
+        if (isAxiosError(error)) {
+          const mensagem =
+            error.response?.data?.message || "Erro ao atualizar produto.";
+          toast.error(mensagem);
+          console.error("📨 Erro Axios:", mensagem);
+        } else {
+          toast.error("Erro inesperado. Tente novamente.");
+          console.error("⚠️ Erro não Axios:", error);
+        }
 
-      if (isAxiosError(error)) {
-        const mensagem =
-          error.response?.data?.message || "Erro ao atualizar produto.";
-        toast.error(mensagem);
-        console.error("📨 Erro Axios:", mensagem);
-      } else {
-        toast.error("Erro inesperado. Tente novamente.");
-        console.error("⚠️ Erro não Axios:", error);
+        return null;
       }
+    },
+    []
+  );
 
-      return null;
-    }
-  };
-
-  const deleteProduto = async (id: string) => {
+  const deleteProduto = useCallback(async (id: string) => {
     try {
       await api.delete(`/produtos/delete/${id}`);
       setProdutos((prev) => prev.filter((p) => p.id !== id));
@@ -194,30 +200,30 @@ export const ProdutoProvider = ({ children }: ProdutoProviderProps) => {
       console.error("Erro ao deletar produto:", error);
       toast.error("Erro ao deletar produto");
     }
-  };
+  }, []);
 
-  const darBaixaEstoquePorVenda = async (
-    productId: string,
-    quantity: number
-  ) => {
-    try {
-      await api.patch(`/estoque/movimentacao`, {
-        productId,
-        quantidade: quantity,
-        tipo: "SAIDA",
-        observacao: "Venda de produto",
-      });
-      toast.success(
-        `Estoque atualizado com sucesso para o produto ${productId}!`
-      );
-      fetchProdutos(); // Refresh product list to reflect stock changes
-    } catch (error) {
-      console.error("Erro ao atualizar estoque:", error);
-      toast.error("Erro ao atualizar estoque");
-    }
-  };
+  const darBaixaEstoquePorVenda = useCallback(
+    async (productId: string, quantity: number) => {
+      try {
+        await api.patch(`/estoque/movimentacao`, {
+          productId,
+          quantidade: quantity,
+          tipo: "SAIDA",
+          observacao: "Venda de produto",
+        });
+        toast.success(
+          `Estoque atualizado com sucesso para o produto ${productId}!`
+        );
+        fetchProdutos(); // Refresh product list to reflect stock changes
+      } catch (error) {
+        console.error("Erro ao atualizar estoque:", error);
+        toast.error("Erro ao atualizar estoque");
+      }
+    },
+    [fetchProdutos]
+  );
 
-  const getEstoqueProdutoId = async (id: string) => {
+  const getEstoqueProdutoId = useCallback(async (id: string) => {
     try {
       const response = await api.get(`/estoque/estoque-produto/${id}`);
       return response.data.estoque.estoqueTotal; // conforme o backend retorna { estoqueTotal }
@@ -229,11 +235,13 @@ export const ProdutoProvider = ({ children }: ProdutoProviderProps) => {
       // Retorna null ou 0 para evitar quebra do fluxo
       return 0;
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchProdutos();
-  }, []);
+    if (isAuthenticated) {
+      fetchProdutos();
+    }
+  }, [fetchProdutos, isAuthenticated]);
 
   return (
     <ProdutoContext.Provider

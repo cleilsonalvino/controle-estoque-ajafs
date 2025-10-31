@@ -123,18 +123,14 @@ const Settings = () => {
     resolver: zodResolver(userSchema),
     defaultValues: { telasPermitidas: [] },
   });
+useEffect(() => {
+  if (empresa) {
+    // Resetar só se os dados realmente mudaram
+    resetEmpresaForm(empresa);
+  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [empresa?.id]);
 
-  // --- CORREÇÃO APLICADA AQUI ---
-  useEffect(() => {
-    fetchEmpresa();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // O array DEVE estar vazio para executar apenas no "mount"
-
-  useEffect(() => {
-    if (empresa) {
-      resetEmpresaForm(empresa);
-    }
-  }, [empresa, resetEmpresaForm]);
 
   const handleCepBlur = async (cep: string) => {
     const cleanCep = cep.replace(/\D/g, "");

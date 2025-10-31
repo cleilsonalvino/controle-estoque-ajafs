@@ -11,6 +11,7 @@ export const createVendaSchema = z.object({
   desconto: z.number({invalid_type_error: "Desconto inválido"}).nonnegative({message: "Desconto não pode ser negativo"}).optional(),
   lucroEstimado: z.number({invalid_type_error: "Lucro estimado inválido"}).nonnegative({message: "Lucro estimado não pode ser negativo"}).optional(),
   observacoes: z.string({invalid_type_error: "Observações inválidas"}).optional(),
+  
   itens: z.array(
     z.object({
       produtoId: z.string(),
@@ -18,6 +19,7 @@ export const createVendaSchema = z.object({
       precoUnitario: z.number(),
     })
   ),
+  
 });
 
 // ================================

@@ -6,32 +6,56 @@ import {
   updateCategoriaServicoService,
   deleteCategoriaServicoService,
 } from "./categoria-servico.service.ts";
+import type { AuthenticatedRequest } from "../../app/middlewares/auth.middleware.ts";
 
-export const createCategoriaServicoController = async (req: Request, res: Response) => {
-  const categoria = await createCategoriaServicoService(req.body);
+export const createCategoriaServicoController = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
+  const { empresaId } = req.user!;
+  const categoria = await createCategoriaServicoService(req.body, empresaId);
   res.status(201).json(categoria);
-}
+};
 
-export const getCategoriasServicosController = async (_req: Request, res: Response) => {
-  const categorias = await getCategoriasServicosService();
+export const getCategoriasServicosController = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
+  const { empresaId } = req.user!;
+  const categorias = await getCategoriasServicosService(empresaId);
   res.status(200).json(categorias);
-}
+};
 
-export const getCategoriaServicoByIdController = async (req: Request, res: Response) => {
+export const getCategoriaServicoByIdController = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
   const { id } = req.params;
-  const categoria = await getCategoriaServicoByIdService(id as string);
+  const { empresaId } = req.user!;
+  const categoria = await getCategoriaServicoByIdService(id as string, empresaId);
   res.status(200).json(categoria);
-}
+};
 
-export const updateCategoriaServicoController = async (req: Request, res: Response) => {
+export const updateCategoriaServicoController = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
   const { id } = req.params;
-  const categoria = await updateCategoriaServicoService(id as string, req.body);
+  const { empresaId } = req.user!;
+  const categoria = await updateCategoriaServicoService(
+    id as string,
+    req.body,
+    empresaId
+  );
   res.status(200).json(categoria);
-}
+};
 
-export const deleteCategoriaServicoController = async (req: Request, res: Response) => {
+export const deleteCategoriaServicoController = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
   const { id } = req.params;
-  await deleteCategoriaServicoService(id as string);
+  const { empresaId } = req.user!;
+  await deleteCategoriaServicoService(id as string, empresaId);
   res.status(204).send();
-}
-
+};

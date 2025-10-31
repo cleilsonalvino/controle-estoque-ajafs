@@ -1,78 +1,43 @@
-import { type Request, type Response } from 'express';
-import { EmpresaService } from './empresa.service.ts';
-import { CreateEmpresaSchema, UpdateEmpresaSchema } from './empresa.dto.ts';
-import { Prisma } from '@prisma/client';
-import z from 'zod';
+import { type Request, type Response } from "express";
+import { empresaService } from "./empresa.service.ts";
+import type { AuthenticatedRequest } from "../../app/middlewares/auth.middleware.ts";
 
-const empresaService = new EmpresaService();
-
-export const createEmpresaController = async (req: Request, res: Response) => {
-  try {
-    console.log("Body recebido:", req.body);
-
-    // Validação Zod
-    const data = CreateEmpresaSchema.parse(req.body);
-    console.log("Dados validados:", data);
-
-    // Criação no banco
-    const empresa = await empresaService.create(data);
-    res.status(201).json(empresa);
-  } catch (error) {
-    console.error("Erro ao criar empresa:", error);
-
-    // Se for erro de Zod, você pode detalhar os issues
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({ message: "Erro de validação", issues: error.errors });
-    }
-
-    // Se for erro do Prisma (ex: violação de unique)
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      if (error.code === "P2002") {
-        return res.status(400).json({ message: "CNPJ ou email já existe no banco" });
-      }
-    }
-
-    // Qualquer outro erro
-    res.status(500).json({ message: "Erro interno do servidor" });
-  }
-};
-
-export const getEmpresasController = async (req: Request, res: Response) => {
-  try {
-    const empresas = await empresaService.findAll();
+export const empresaController = {
+  // GET /empresas - Acessível apenas por super-admin (lógica de RBAC a ser implementada)
+  async getAll(req: AuthenticatedRequest, res: Response) {
+    const empresas = await empresaService.getAll();
     res.json(empresas);
-  } catch (error) {
-    res.status(500).json({ message: (error as Error).message });
-  }
-};
+  },
 
-export const getEmpresaByIdController = async (req: Request, res: Response) => {
-  try {
-    const empresa = await empresaService.findOne(req.params.id as string);
-    if (!empresa) {
-      return res.status(404).json({ message: 'Empresa not found' });
-    }
+  // POST /empresas - Rota pública ou de super-admin para criar novas empresas
+  async create(req: AuthenticatedRequest, res: Response) {
+    const empresa = await empresaService.create(req.body);
+    res.status(201).json(empresa);
+  },
+
+  // GET /empresas/:id - Usuário só pode ver sua própria empresa
+  async getById(req: AuthenticatedRequest, res: Response) {
+    const { id } = req.params;
+    const { empresaId } = req.user!;
+    const empresa = await empresaService.getById(id as string, empresaId);
     res.json(empresa);
-  } catch (error) {
-    res.status(500).json({ message: (error as Error).message });
-  }
-};
+  },
 
-export const updateEmpresaController = async (req: Request, res: Response) => {
-  try {
-    const data = UpdateEmpresaSchema.parse(req.body);
-    const empresa = await empresaService.update(req.params.id as string, data);
+  // PUT /empresas/:id - Usuário só pode atualizar sua própria empresa
+  async update(req: AuthenticatedRequest, res: Response) {
+    const { id } = req.params;
+    const { empresaId } = req.user!;
+    const empresa = await empresaService.update(
+      id as string,
+      req.body,
+      empresaId
+    );
     res.json(empresa);
-  } catch (error) {
-    res.status(400).json({ message: (error as Error).message });
-  }
-};
+  },
 
-export const deleteEmpresaController = async (req: Request, res: Response) => {
-  try {
+  // DELETE /empresas/:id - Acessível apenas por super-admin
+  async remove(req: AuthenticatedRequest, res: Response) {
     await empresaService.remove(req.params.id as string);
     res.status(204).send();
-  } catch (error) {
-    res.status(500).json({ message: (error as Error).message });
-  }
+  },
 };

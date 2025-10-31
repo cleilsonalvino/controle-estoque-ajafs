@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authMiddleware } from "../../app/middlewares/auth.ts";
+import { authMiddleware } from "../../app/middlewares/auth.middleware.ts";
 import {
   createUserController,
   getUsersController,
@@ -9,6 +9,8 @@ import {
 } from "./users.controller.ts";
 
 const usersRouter = Router();
+
+usersRouter.use(authMiddleware);
 
 usersRouter.post("/", createUserController);
 usersRouter.get("/", authMiddleware, getUsersController);

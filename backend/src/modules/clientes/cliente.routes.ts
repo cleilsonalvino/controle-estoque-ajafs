@@ -6,13 +6,16 @@ import {
   updateClienteController,
   deleteClienteController,
 } from './cliente.controller.ts';
+import { authMiddleware } from '../../app/middlewares/auth.middleware.ts';
 
-const router = Router();
+const clienteRouter = Router();
 
-router.post('/create', createClienteController);
-router.get('/', getClientesController);
-router.get('/:id', getClienteByIdController);
-router.patch('/:id', updateClienteController);
-router.delete('/:id', deleteClienteController);
+clienteRouter.use(authMiddleware);
 
-export const clientesRouter = router;
+clienteRouter.post('/create', createClienteController);
+clienteRouter.get('/', getClientesController);
+clienteRouter.get('/:id', getClienteByIdController);
+clienteRouter.patch('/:id', updateClienteController);
+clienteRouter.delete('/:id', deleteClienteController);
+
+export default clienteRouter;

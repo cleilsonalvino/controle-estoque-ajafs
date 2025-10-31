@@ -1,34 +1,20 @@
-import { Router } from 'express';
-import { StockController } from './stock.controller.ts';
+import { Router } from "express";
+import { StockController } from "./stock.controller.ts";
+import { authMiddleware } from "../../app/middlewares/auth.middleware.ts";
+
+const estoqueRouter = Router();
+const controller = new StockController();
+
+estoqueRouter.use(authMiddleware); // 🔐 todas as rotas exigem login
 
 
-const router = Router();
-const stockController = new StockController();
 
-router.post(
-  '/movimentacao',
-  stockController.createMovimentacao
-);
+estoqueRouter.post("/movimentacoes", controller.createMovimentacao.bind(controller));
+estoqueRouter.get("/movimentacoes", controller.getMovimentacoes.bind(controller));
+estoqueRouter.get("/movimentacoes/:produtoId", controller.getMovimentacoesByProdutoId.bind(controller));
+estoqueRouter.get("/valor-estoque", controller.getValorEstoque.bind(controller));
+estoqueRouter.get("/estoque/:produtoId", controller.getEstoqueProdutoId.bind(controller));
+estoqueRouter.delete("/lote/:loteId/produto/:produtoId", controller.deleteLote.bind(controller));
+estoqueRouter.get("/lucro", controller.getLucroMedioEstimado.bind(controller));
 
-router.get(
-  '/movimentacoes/:produtoId',
-  stockController.getMovimentacoesByProdutoId
-);
-
-router.get(
-  '/movimentacoes',
-  stockController.getMovimentacoes
-);
-
-router.get('/valor-estoque', stockController.getValorEstoque);
-
-router.get('/custo-medio-estimado', stockController.getLucroMedioEstimado);
-
-
-router.get('/estoque-produto/:produtoId', stockController.getEstoqueProdutoId);
-
-
-router.delete('/deletar-lote/:loteId/produto/:produtoId', stockController.deleteLote);
-
-
-export default router;
+export default estoqueRouter;

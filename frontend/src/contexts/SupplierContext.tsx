@@ -1,6 +1,7 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
 import api from "@/lib/api";
 import { toast } from "sonner";
+import { useAuth } from "./useAuth";
 
 export interface Supplier {
   id: string;
@@ -38,8 +39,9 @@ interface SupplierProviderProps {
 export const SupplierProvider = ({ children }: SupplierProviderProps) => {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(false);
+  const { isAuthenticated } = useAuth();
 
-  const fetchSuppliers = async () => {
+  const fetchSuppliers = useCallback(async () => {
     try {
       setLoading(true);
       const { data } = await api.get<Supplier[]>("/fornecedores");
@@ -50,9 +52,9 @@ export const SupplierProvider = ({ children }: SupplierProviderProps) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const createSupplier = async (newSupplier: Omit<Supplier, "id">) => {
+  const createSupplier = useCallback(async (newSupplier: Omit<Supplier, "id">) => {
     try {
       const { data } = await api.post<Supplier>("/fornecedores/create", newSupplier);
       setSuppliers((prev) => [...prev, data]);
@@ -62,9 +64,9 @@ export const SupplierProvider = ({ children }: SupplierProviderProps) => {
       console.error("Erro ao criar fornecedor:", error);
       toast.error("Erro ao criar fornecedor");
     }
-  };
+  }, []);
 
-  const updateSupplier = async (id: string, updatedSupplier: Omit<Supplier, "id">) => {
+  const updateSupplier = useCallback(async (id: string, updatedSupplier: Omit<Supplier, "id">) => {
     try {
       const { data } = await api.put<Supplier>(`/fornecedores/${id}`, updatedSupplier);
       setSuppliers((prev) => prev.map((s) => (s.id === id ? data : s)));
@@ -74,9 +76,9 @@ export const SupplierProvider = ({ children }: SupplierProviderProps) => {
       console.error("Erro ao atualizar fornecedor:", error);
       toast.error("Erro ao atualizar fornecedor");
     }
-  };
+  }, []);
 
-  const deleteSupplier = async (id: string) => {
+  const deleteSupplier = useCallback(async (id: string) => {
     try {
       await api.delete(`/fornecedores/${id}`);
       setSuppliers((prev) => prev.filter((s) => s.id !== id));
@@ -85,11 +87,13 @@ export const SupplierProvider = ({ children }: SupplierProviderProps) => {
       console.error("Erro ao deletar fornecedor:", error);
       toast.error("Erro ao deletar fornecedor");
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchSuppliers();
-  }, []);
+    if (isAuthenticated) {
+      fetchSuppliers();
+    }
+  }, [fetchSuppliers, isAuthenticated]);
 
   return (
     <SupplierContext.Provider

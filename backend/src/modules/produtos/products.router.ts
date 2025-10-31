@@ -8,8 +8,11 @@ import {
   addCategoryToProductController,
   addSupplierToProductController,
 } from "./products.controller.ts";
+import { authMiddleware } from "../../app/middlewares/auth.middleware.ts";
 
 const productsRouter = Router();
+
+productsRouter.use(authMiddleware);
 
 productsRouter.post("/create", createProductController);
 productsRouter.get("/", getProductsController);

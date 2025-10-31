@@ -8,10 +8,11 @@ import {
 } from "./suppliers.service.ts";
 
 import { createSupplierSchema, updateSupplierSchema } from "./suppliers.dto.ts";
+import type { AuthenticatedRequest } from "../../app/middlewares/auth.middleware.ts";
 
-export const createSupplierController = async (req: Request, res: Response) => {
-  console.log("Requisição recebida para criar fornecedor:", req.body);
 
+export const createSupplierController = async (req: AuthenticatedRequest, res: Response) => {
+  const { empresaId } = req.user!;
   const validation = createSupplierSchema.safeParse(req.body);
 
   if (!validation.success) {
@@ -21,23 +22,26 @@ export const createSupplierController = async (req: Request, res: Response) => {
     });
   }
 
-  const supplier = await createSupplierService(req.body);
+  const supplier = await createSupplierService(req.body, empresaId);
   res.status(201).json(supplier);
 };
 
-export const getSuppliersController = async (req: Request, res: Response) => {
-  const suppliers = await getSuppliersService();
+export const getSuppliersController = async (req: AuthenticatedRequest, res: Response) => {
+  const { empresaId } = req.user!;
+  const suppliers = await getSuppliersService(empresaId);
   res.status(200).json(suppliers);
 };
 
-export const getSupplierByIdController = async (req: Request, res: Response) => {
+export const getSupplierByIdController = async (req: AuthenticatedRequest, res: Response) => {
   const { id } = req.params;
-  const supplier = await getSupplierByIdService(id as string);
+  const { empresaId } = req.user!;
+  const supplier = await getSupplierByIdService(id as string, empresaId);
   res.status(200).json(supplier);
 };
 
-export const updateSupplierController = async (req: Request, res: Response) => {
+export const updateSupplierController = async (req: AuthenticatedRequest, res: Response) => {
   const { id } = req.params;
+  const { empresaId } = req.user!;
 
   const validation = updateSupplierSchema.safeParse(req.body);
 
@@ -48,12 +52,13 @@ export const updateSupplierController = async (req: Request, res: Response) => {
     });
   }
 
-  const supplier = await updateSupplierService(id as string, req.body);
+  const supplier = await updateSupplierService(id as string, req.body, empresaId);
   res.status(200).json(supplier);
 };
 
-export const deleteSupplierController = async (req: Request, res: Response) => {
+export const deleteSupplierController = async (req: AuthenticatedRequest, res: Response) => {
   const { id } = req.params;
-  await deleteSupplierService(id as string);
+  const { empresaId } = req.user!;
+  await deleteSupplierService(id as string, empresaId);
   res.status(204).send();
 };

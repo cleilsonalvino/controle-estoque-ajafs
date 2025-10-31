@@ -1,44 +1,40 @@
-import { PrismaClient } from "@prisma/client";
+import { Prisma, PrismaClient } from "@prisma/client";
 import { CustomError } from "../../shared/errors.ts";
 
 const prisma = new PrismaClient();
 
-import { Prisma } from "@prisma/client";
-
-export const createProductService = async (data: any) => {
-  console.log("Dados recebidos para criação do produto:", data);
-
-  // Verifica se já existe produto com o mesmo nome
-  const product = await prisma.produto.findUnique({
-    where: { nome: data.nome, },
+export const createProductService = async (data: any, empresaId: string) => {
+  // Verifica se já existe produto com o mesmo nome ou código de barras na mesma empresa
+  const existingProduct = await prisma.produto.findFirst({
+    where: {
+      empresaId,
+      OR: [{ nome: data.nome }, { codigoBarras: data.codigoBarras }],
+    },
   });
 
-  const productCodigo = await prisma.produto.findUnique({
-    where: { codigoBarras: data.codigoBarras, },
-  });
-
-  if (productCodigo) {
-    throw new CustomError("O código de barras desse Produto já está em uso.", 400);
+  if (existingProduct) {
+    if (existingProduct.nome === data.nome) {
+      throw new CustomError("O nome desse Produto já está em uso.", 400);
+    }
+    if (existingProduct.codigoBarras === data.codigoBarras) {
+      throw new CustomError(
+        "O código de barras desse Produto já está em uso.",
+        400
+      );
+    }
   }
 
-  if (product) {
-    throw new CustomError("O nome desse Produto já está em uso.", 400);
-  }
-
-  // Função para gerar código de barras EAN-13 válido
   const criarBarCode = () => {
     const prefix = "789";
     const randomDigits = Array.from({ length: 9 }, () =>
       Math.floor(Math.random() * 10)
     ).join("");
     const partialCode = prefix + randomDigits;
-
     let sum = 0;
     for (let i = 0; i < partialCode.length; i++) {
       const digit = parseInt(partialCode.charAt(i), 10);
       sum += i % 2 === 0 ? digit : digit * 3;
     }
-
     const mod = sum % 10;
     const checkDigit = mod === 0 ? 0 : 10 - mod;
     return partialCode + checkDigit.toString();
@@ -46,18 +42,10 @@ export const createProductService = async (data: any) => {
 
   const codigoBarras = data.codigoBarras?.trim() || criarBarCode();
 
-  // Converte precoVenda e estoqueMinimo para Decimal
-  const precoVendaDecimal = new Prisma.Decimal(data.precoVenda || "0");
-  const estoqueMinimoDecimal = new Prisma.Decimal(data.estoqueMinimo || "0");
-
   const createProduct = await prisma.produto.create({
     data: {
-      nome: data.nome,
-      descricao: data.descricao,
-      precoVenda: precoVendaDecimal,
-      urlImage: data.urlImage,
-      estoqueMinimo: estoqueMinimoDecimal,
-      categoriaId: data.categoriaId,
+      ...data,
+      empresaId,
       codigoBarras,
     },
   });
@@ -65,60 +53,56 @@ export const createProductService = async (data: any) => {
   return createProduct;
 };
 
-
-
-
-export const getProductsService = async () => {
-const products = await prisma.produto.findMany({
-  include: {
-    categoria: true,
-    fornecedor: true, // fornecedor direto do produto
-    lote: {
-      include: {
-        fornecedor: true, // fornecedor do lote
+export const getProductsService = async (empresaId: string) => {
+  const products = await prisma.produto.findMany({
+    where: { empresaId },
+    include: {
+      categoria: true,
+      fornecedor: true,
+      lote: {
+        include: {
+          fornecedor: true,
+        },
       },
     },
-  },
-});
-
-// Adiciona quantidade total em estoque
-const productsWithTotal = products.map((p) => ({
-  ...p,
-  quantidadeTotal: p.lote.reduce(
-    (acc, lote) => acc + Number(lote.quantidadeAtual),
-    0
-  ),
-}));
-
-const productsWithTotalCosted = productsWithTotal.map((p) => {
-  let totalValor = 0;
-  let totalQuantidade = 0;
-
-  p.lote.forEach((lote) => {
-    const precoCusto = Number(lote.precoCusto) || 0;
-    const quantidadeAtual = Number(lote.quantidadeAtual) || 0;
-    totalValor += precoCusto * quantidadeAtual;
-    totalQuantidade += quantidadeAtual;
   });
 
-  const custoMedio = totalQuantidade > 0 ? totalValor / totalQuantidade : 0;
-
-  return {
+  const productsWithTotal = products.map((p) => ({
     ...p,
-    custoMedio,
-  };
-});
+    quantidadeTotal: p.lote.reduce(
+      (acc, lote) => acc + Number(lote.quantidadeAtual),
+      0
+    ),
+  }));
 
+  const productsWithTotalCosted = productsWithTotal.map((p) => {
+    let totalValor = 0;
+    let totalQuantidade = 0;
 
+    p.lote.forEach((lote) => {
+      const precoCusto = Number(lote.precoCusto) || 0;
+      const quantidadeAtual = Number(lote.quantidadeAtual) || 0;
+      totalValor += precoCusto * quantidadeAtual;
+      totalQuantidade += quantidadeAtual;
+    });
 
-return productsWithTotalCosted;
+    const custoMedio = totalQuantidade > 0 ? totalValor / totalQuantidade : 0;
 
+    return {
+      ...p,
+      custoMedio,
+    };
+  });
+
+  return productsWithTotalCosted;
 };
 
-
-export const getProductByIdService = async (id: string) => {
-  const product = await prisma.produto.findUnique({
-    where: { id },
+export const getProductByIdService = async (id: string, empresaId: string) => {
+  const product = await prisma.produto.findFirst({
+    where: { id, empresaId },
+    include: {
+      lote: true,
+    },
   });
   if (!product) {
     throw new CustomError("Produto não encontrado", 404);
@@ -126,40 +110,26 @@ export const getProductByIdService = async (id: string) => {
   return product;
 };
 
-export const updateProductService = async (id: string, data: any) => {
-  const productData = await prisma.produto.findUnique({
-    where: { id },
-  });
-
-  if (!productData) {
-    throw new CustomError("Produto não encontrado", 404);
-  }
+export const updateProductService = async (
+  id: string,
+  data: any,
+  empresaId: string
+) => {
+  await getProductByIdService(id, empresaId);
 
   const product = await prisma.produto.update({
-    where: { id },
+    where: { id, empresaId },
     data,
   });
 
   return product;
 };
 
-
-
-export const deleteProductService = async (id: string) => {
-  if (!id) {
-    throw new CustomError("ID do produto é obrigatório", 400);
-  }
-
-  const product = await prisma.produto.findUnique({
-    where: { id },
-  });
-
-  if (!product) {
-    throw new CustomError("Produto não encontrado", 404);
-  }
+export const deleteProductService = async (id: string, empresaId: string) => {
+  await getProductByIdService(id, empresaId);
 
   const deletedProduct = await prisma.produto.delete({
-    where: { id },
+    where: { id, empresaId },
   });
 
   return deletedProduct;
@@ -167,18 +137,13 @@ export const deleteProductService = async (id: string) => {
 
 export const addCategoryToProductService = async (
   productId: string,
-  categoryId: string
+  categoryId: string,
+  empresaId: string
 ) => {
-  const product = await prisma.produto.findUnique({
-    where: { id: productId },
-  });
+  await getProductByIdService(productId, empresaId);
 
-  if (!product) {
-    throw new CustomError("Produto não encontrado", 404);
-  }
-
-  const category = await prisma.categoriaProduto.findUnique({
-    where: { id: categoryId },
+  const category = await prisma.categoriaProduto.findFirst({
+    where: { id: categoryId, empresaId },
   });
 
   if (!category) {
@@ -186,7 +151,7 @@ export const addCategoryToProductService = async (
   }
 
   const updatedProduct = await prisma.produto.update({
-    where: { id: productId },
+    where: { id: productId, empresaId },
     data: {
       categoria: {
         connect: { id: categoryId },
@@ -199,18 +164,13 @@ export const addCategoryToProductService = async (
 
 export const addSupplierToProductService = async (
   productId: string,
-  supplierId: string
+  supplierId: string,
+  empresaId: string
 ) => {
-  const product = await prisma.produto.findUnique({
-    where: { id: productId },
-  });
+  await getProductByIdService(productId, empresaId);
 
-  if (!product) {
-    throw new CustomError("Produto não encontrado", 404);
-  }
-
-  const supplier = await prisma.fornecedor.findUnique({
-    where: { id: supplierId },
+  const supplier = await prisma.fornecedor.findFirst({
+    where: { id: supplierId, empresaId },
   });
 
   if (!supplier) {
@@ -218,7 +178,7 @@ export const addSupplierToProductService = async (
   }
 
   const updatedProduct = await prisma.produto.update({
-    where: { id: productId },
+    where: { id: productId, empresaId },
     data: {
       fornecedor: {
         connect: { id: supplierId },
@@ -228,3 +188,4 @@ export const addSupplierToProductService = async (
 
   return updatedProduct;
 };
+

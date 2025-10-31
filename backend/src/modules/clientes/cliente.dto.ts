@@ -7,6 +7,7 @@ export const ClienteSchema = z.object({
   cpf: z.string().max(11, 'CPF inválido').optional().nullable(),
   telefone: z.string().max(11, 'Telefone inválido').optional(),
   endereco: z.string().optional(),
+  
 });
 
 export type ClienteDto = z.infer<typeof ClienteSchema>;

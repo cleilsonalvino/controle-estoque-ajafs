@@ -7,15 +7,18 @@ import {
   deleteVendaController,
   cancelarVendaController,
   getVendasFiltrarController,
-  deleteAllSalesController
+  //deleteAllSalesController
 } from "./sales.controller.ts";
+import { authMiddleware } from "../../app/middlewares/auth.middleware.ts";
 
 const salesRouter = Router();
+
+salesRouter.use(authMiddleware);
 
 // Venda Routes
 salesRouter.post("/create", createVendaController);
 salesRouter.get("/filtrar", getVendasFiltrarController);
-salesRouter.delete("/delete-all", deleteAllSalesController);
+//salesRouter.delete("/delete-all", deleteAllSalesController);
 salesRouter.get("/", getVendasController);
 salesRouter.get("/:id", getVendaByIdController);
 salesRouter.put("/:id", updateVendaController);

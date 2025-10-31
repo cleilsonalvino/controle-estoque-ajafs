@@ -1,7 +1,8 @@
 
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
 import api from "@/lib/api";
 import { toast } from "sonner";
+import { useAuth } from "./useAuth";
 
 export interface ServiceCategory {
   id: string;
@@ -33,8 +34,9 @@ interface ServiceCategoryProviderProps {
 export const ServiceCategoryProvider = ({ children }: ServiceCategoryProviderProps) => {
   const [serviceCategories, setServiceCategories] = useState<ServiceCategory[]>([]);
   const [loading, setLoading] = useState(false);
+  const { isAuthenticated } = useAuth();
 
-  const fetchServiceCategories = async () => {
+  const fetchServiceCategories = useCallback(async () => {
     try {
       setLoading(true);
       const { data } = await api.get<ServiceCategory[]>("/categorias-servicos");
@@ -45,9 +47,9 @@ export const ServiceCategoryProvider = ({ children }: ServiceCategoryProviderPro
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const createServiceCategory = async (newCategory: Omit<ServiceCategory, "id">) => {
+  const createServiceCategory = useCallback(async (newCategory: Omit<ServiceCategory, "id">) => {
     try {
       const { data } = await api.post<ServiceCategory>("/categorias-servicos/create", newCategory);
       setServiceCategories((prev) => [...prev, data]);
@@ -57,9 +59,9 @@ export const ServiceCategoryProvider = ({ children }: ServiceCategoryProviderPro
       console.error("Erro ao criar categoria de serviço:", error);
       toast.error("Erro ao criar categoria de serviço");
     }
-  };
+  }, []);
 
-  const updateServiceCategory = async (id: string, updatedCategory: Omit<ServiceCategory, "id">) => {
+  const updateServiceCategory = useCallback(async (id: string, updatedCategory: Omit<ServiceCategory, "id">) => {
     try {
       const { data } = await api.put<ServiceCategory>(`/categorias-servicos/${id}`, updatedCategory);
       setServiceCategories((prev) => prev.map((c) => (c.id === id ? data : c)));
@@ -69,9 +71,9 @@ export const ServiceCategoryProvider = ({ children }: ServiceCategoryProviderPro
       console.error("Erro ao atualizar categoria de serviço:", error);
       toast.error("Erro ao atualizar categoria de serviço");
     }
-  };
+  }, []);
 
-  const deleteServiceCategory = async (id: string) => {
+  const deleteServiceCategory = useCallback(async (id: string) => {
     try {
       await api.delete(`/categorias-servicos/${id}`);
       setServiceCategories((prev) => prev.filter((c) => c.id !== id));
@@ -80,11 +82,13 @@ export const ServiceCategoryProvider = ({ children }: ServiceCategoryProviderPro
       console.error("Erro ao deletar categoria de serviço:", error);
       toast.error("Erro ao deletar categoria de serviço");
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchServiceCategories();
-  }, []);
+    if (isAuthenticated) {
+      fetchServiceCategories();
+    }
+  }, [fetchServiceCategories, isAuthenticated]);
 
   return (
     <ServiceCategoryContext.Provider

@@ -6,13 +6,16 @@ import {
   updateVendedorController,
   deleteVendedorController,
 } from './vendedores.controller.ts';
+import { authMiddleware } from '../../app/middlewares/auth.middleware.ts';
 
-const router = Router();
+const vendedoresRouter = Router();
 
-router.post('/create', createVendedorController);
-router.get('/', getVendedoresController);
-router.get('/:id', getVendedorByIdController);
-router.patch('/:id', updateVendedorController);
-router.delete('/:id', deleteVendedorController);
+vendedoresRouter.use(authMiddleware);
 
-export const vendedoresRouter = router;
+vendedoresRouter.post('/create', createVendedorController);
+vendedoresRouter.get('/', getVendedoresController);
+vendedoresRouter.get('/:id', getVendedorByIdController);
+vendedoresRouter.patch('/:id', updateVendedorController);
+vendedoresRouter.delete('/:id', deleteVendedorController);
+
+export default vendedoresRouter;

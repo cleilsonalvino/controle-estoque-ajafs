@@ -11,7 +11,7 @@ generator client {
 }
 
 // ================================
-// Usuários (opcional)
+// Usuários
 // ================================
 model Usuario {
   id              String   @id @default(uuid())
@@ -23,11 +23,15 @@ model Usuario {
   ativo           Boolean  @default(true)
   criadoEm        DateTime @default(now())
   atualizadoEm    DateTime @updatedAt
+  empresaId       String
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
 }
 
 enum Papel {
   ADMINISTRADOR
   USUARIO
+  SUPER_ADMIN
 }
 
 // ================================
@@ -35,32 +39,40 @@ enum Papel {
 // ================================
 model Produto {
   id            String   @id @default(uuid())
-  nome          String   @unique
-  codigoBarras  String?  @unique
+  nome          String
+  codigoBarras  String?
   descricao     String?
   precoVenda    Decimal  @default(0) @db.Decimal(14, 2)
   estoqueMinimo Decimal? @db.Decimal(14, 3)
   urlImage      String?
   categoriaId   String?
   fornecedorId  String?
+  empresaId     String
   criadoEm      DateTime @default(now())
   atualizadoEm  DateTime @updatedAt
 
+  @@unique([empresaId, nome])
+  @@unique([empresaId, codigoBarras])
+
+  empresa       Empresa           @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   categoria     CategoriaProduto? @relation(fields: [categoriaId], references: [id], onDelete: Cascade)
   fornecedor    Fornecedor?       @relation(fields: [fornecedorId], references: [id], onDelete: Cascade)
   movimentacoes Movimentacao[]
   itensVenda    ItemVenda[]
-
-  lote Lote[]
+  lote          Lote[]
 }
 
 model CategoriaProduto {
   id           String   @id @default(uuid())
-  nome         String   @unique
+  nome         String
   descricao    String?
+  empresaId    String
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
 
+  @@unique([empresaId, nome])
+
+  empresa  Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   produtos Produto[]
 }
 
@@ -80,8 +92,12 @@ model Movimentacao {
   quantidade Decimal          @db.Decimal(14, 3)
   observacao String?
   criadoEm   DateTime         @default(now())
+  loteId     String?
+  empresaId  String
 
   produto Produto @relation(fields: [produtoId], references: [id], onDelete: Cascade)
+  lote    Lote?    @relation(fields: [loteId], references: [id], onDelete: Cascade)
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
 }
 
 // ================================
@@ -92,14 +108,18 @@ model Fornecedor {
   nome         String
   endereco     String?
   contato      String?
-  email        String?  @unique
+  email        String?
   telefone     String?
+  empresaId    String
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
 
-  produtos Produto[]
+  @@unique([empresaId, email])
+  @@unique([empresaId, nome])
 
-  lote Lote[]
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  produtos Produto[]
+  lote     Lote[]
 }
 
 // ================================
@@ -107,23 +127,25 @@ model Fornecedor {
 // ================================
 model Venda {
   id             String   @id @default(uuid())
-  numero         String   @unique
-  clienteId      String? // FK para Cliente
-  vendedorId     String? // FK para Vendedor
-  criadoEm       DateTime @default(now())
-  atualizadoEm   DateTime @updatedAt
+  numero         String
+  clienteId      String?
+  vendedorId     String?
+  empresaId      String
   total          Decimal  @db.Decimal(14, 2)
   status         String   @default("Concluída")
   tipoVenda      String   @default("Produto")
-  formaPagamento String? // Pix, Cartão, Dinheiro
+  formaPagamento String?
   desconto       Decimal? @db.Decimal(14, 2)
   lucroEstimado  Decimal? @db.Decimal(14, 2)
   observacoes    String?
+  criadoEm       DateTime @default(now())
+  atualizadoEm   DateTime @updatedAt
 
-  // Relações
+  @@unique([empresaId, numero])
 
-  cliente     Cliente?      @relation(fields: [clienteId], references: [id])
-  vendedor    Vendedor?     @relation(fields: [vendedorId], references: [id])
+  empresa     Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  cliente     Cliente? @relation(fields: [clienteId], references: [id])
+  vendedor    Vendedor? @relation(fields: [vendedorId], references: [id])
   itens       ItemVenda[]
   ItemServico ItemServico[]
 }
@@ -137,9 +159,11 @@ model ItemVenda {
   produtoId     String
   quantidade    Decimal @db.Decimal(14, 3)
   precoUnitario Decimal @db.Decimal(14, 2)
+  empresaId     String
 
   venda   Venda   @relation(fields: [vendaId], references: [id], onDelete: Cascade)
   produto Produto @relation(fields: [produtoId], references: [id], onDelete: Cascade)
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
 }
 
 // ================================
@@ -148,14 +172,19 @@ model ItemVenda {
 model Cliente {
   id           String   @id @default(uuid())
   nome         String
-  cpf          String?  @unique
-  email        String?  @unique
+  cpf          String?
+  email        String?
   telefone     String?
   endereco     String?
+  empresaId    String
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
 
-  vendas Venda[]
+  @@unique([empresaId, cpf])
+  @@unique([empresaId, email])
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  vendas  Venda[]
 }
 
 // ================================
@@ -164,40 +193,52 @@ model Cliente {
 model Vendedor {
   id           String   @id @default(uuid())
   nome         String
-  email        String?  @unique
+  email        String?
   meta         Decimal? @db.Decimal(14, 2)
+  empresaId    String
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
 
-  vendas Venda[]
+  @@unique([empresaId, email])
+  @@unique([empresaId, nome])
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  vendas  Venda[]
 }
 
-//======================
+// ================================
 // Serviços
-//======================
-
+// ================================
 model Servico {
   id             String   @id @default(uuid())
-  nome           String   @unique
+  nome           String
   descricao      String?
   precoCusto     Decimal  @default(0) @db.Decimal(14, 2)
   precoVenda     Decimal  @default(0) @db.Decimal(14, 2)
-  duracaoMinutos Int? // opcional, tempo estimado do serviço
+  duracaoMinutos Int?
   categoriaId    String?
+  empresaId      String
   criadoEm       DateTime @default(now())
   atualizadoEm   DateTime @updatedAt
 
+  @@unique([empresaId, nome])
+
+  empresa      Empresa           @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   categoria    CategoriaServico? @relation(fields: [categoriaId], references: [id], onDelete: Cascade)
-  itensServico ItemServico[] // relação com a venda
+  itensServico ItemServico[]
 }
 
 model CategoriaServico {
   id           String   @id @default(uuid())
-  nome         String   @unique
+  nome         String
   descricao    String?
+  empresaId    String
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
 
+  @@unique([empresaId, nome])
+
+  empresa  Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   servicos Servico[]
 }
 
@@ -207,19 +248,21 @@ model ItemServico {
   servicoId     String
   quantidade    Int     @default(1)
   precoUnitario Decimal @db.Decimal(14, 2)
+  empresaId     String
 
   venda   Venda   @relation(fields: [vendaId], references: [id], onDelete: Cascade)
   servico Servico @relation(fields: [servicoId], references: [id], onDelete: Cascade)
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
 }
 
-//======================
+// ================================
 // Lotes
-//======================
-
+// ================================
 model Lote {
   id              String    @id @default(uuid())
   produtoId       String
   fornecedorId    String?
+  empresaId       String
   precoCusto      Decimal   @db.Decimal(14, 2)
   quantidadeAtual Decimal   @db.Decimal(14, 3)
   dataCompra      DateTime  @default(now())
@@ -227,47 +270,50 @@ model Lote {
   criadoEm        DateTime  @default(now())
   atualizadoEm    DateTime  @updatedAt
 
-  produto       Produto            @relation(fields: [produtoId], references: [id], onDelete: Cascade)
-  fornecedor    Fornecedor?        @relation(fields: [fornecedorId], references: [id], onDelete: SetNull)
-  movimentacoes MovimentacaoLote[]
+  empresa       Empresa     @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  produto       Produto     @relation(fields: [produtoId], references: [id], onDelete: Cascade)
+  fornecedor    Fornecedor? @relation(fields: [fornecedorId], references: [id], onDelete: SetNull)
+  movimentacoes Movimentacao[]
 }
 
-model MovimentacaoLote {
-  id         String           @id @default(uuid())
-  loteId     String
-  tipo       TipoMovimentacao
-  quantidade Decimal          @db.Decimal(14, 3)
-  observacao String?
-  criadoEm   DateTime         @default(now())
-
-  lote Lote @relation(fields: [loteId], references: [id], onDelete: Cascade)
-}
-
-//================
-//Empresa
-//================
-
+// ================================
+// Empresa (matriz do sistema)
+// ================================
 model Empresa {
-  id            String  @id @default(uuid())
+  id            String   @id @default(uuid())
   nome          String
-  cnpj          String  @unique
+  cnpj          String   @unique
   telefone      String
-  email         String? @unique
+  email         String?  @unique
   razaoSocial   String
   nomeFantasia  String
-  inscEstadual  String
-  inscMunicipal String
-  cnae          String
+  inscEstadual  String?
+  inscMunicipal String?
+  cnae          String?
 
-  // Endereço diretamente na empresa
-  cep         String
-  estado      String
-  cidade      String
-  endereco    String
-  numero      String
-  complemento String?
-  bairro      String
+  cep           String
+  estado        String
+  cidade        String
+  endereco      String
+  numero        String
+  complemento   String?
+  bairro        String
 
-  criadoEm     DateTime @default(now())
-  atualizadoEm DateTime @updatedAt
+  criadoEm      DateTime @default(now())
+  atualizadoEm  DateTime @updatedAt
+
+  // Relações
+  usuarios           Usuario[]
+  produtos           Produto[]
+  fornecedores       Fornecedor[]
+  clientes           Cliente[]
+  vendedores         Vendedor[]
+  movimentacoes      Movimentacao[]
+  categoriasProduto  CategoriaProduto[]
+  categoriasServico  CategoriaServico[]
+  servicos           Servico[]
+  vendas             Venda[]
+  itensVendas        ItemVenda[]
+  itensServicos      ItemServico[]
+  lotes              Lote[]
 }

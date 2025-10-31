@@ -6,8 +6,11 @@ import {
   updateSupplierController,
   deleteSupplierController,
 } from "./suppliers.controller.ts";
+import { authMiddleware } from "../../app/middlewares/auth.middleware.ts";
 
 const suppliersRouter = Router();
+
+suppliersRouter.use(authMiddleware);
 
 suppliersRouter.post("/create", createSupplierController);
 suppliersRouter.get("/", getSuppliersController);

@@ -3,9 +3,10 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 export class DashboardService {
-  // Dados gerais do sistema
-  static async getOverview() {
+  static async getOverview(empresaId: string) {
     try {
+      const where = { empresaId };
+
       const [
         totalProdutos,
         totalVendas,
@@ -14,21 +15,21 @@ export class DashboardService {
         totalServicos,
         totalVendedores,
       ] = await Promise.all([
-        prisma.produto.count(),
-        prisma.venda.count(),
-        prisma.cliente.count(),
-        prisma.fornecedor.count(),
-        prisma.servico.count(),
-        prisma.vendedor.count(),
+        prisma.produto.count({ where }),
+        prisma.venda.count({ where }),
+        prisma.cliente.count({ where }),
+        prisma.fornecedor.count({ where }),
+        prisma.servico.count({ where }),
+        prisma.vendedor.count({ where }),
       ]);
 
-      // Total de estoque (somando todos os lotes)
       const estoqueGeral = await prisma.lote.aggregate({
+        where,
         _sum: { quantidadeAtual: true },
       });
 
-      // Últimas 5 vendas
       const ultimasVendas = await prisma.venda.findMany({
+        where,
         orderBy: { criadoEm: "desc" },
         take: 5,
         select: {
@@ -41,8 +42,10 @@ export class DashboardService {
       });
 
       const produtos = await prisma.produto.findMany({
+        where,
         include: {
           lote: {
+            where: { empresaId },
             select: { quantidadeAtual: true },
           },
         },
@@ -77,3 +80,4 @@ export class DashboardService {
     }
   }
 }
+

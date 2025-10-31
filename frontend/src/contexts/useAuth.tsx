@@ -1,87 +1,134 @@
-import { createContext, useContext, useState, useEffect, useCallback } from "react";
-import api from "../lib/api"; // Corrigido: usando caminho relativo
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+} from "react";
+import api from "@/lib/api";
 
-// Defina uma interface para o seu objeto de usuário
 interface User {
-  id: string;
-  nome: string;
-  email: string;
-  papel: string;
-  telasPermitidas: string[]; // O mais importante!
-  criadoEm: string;
-  ativo: boolean;
+  user: {
+    id: string;
+    nome: string;
+    email: string;
+    papel: string;
+    telasPermitidas: string[];
+    ativo: boolean;
+    criadoEm: string;
+    empresaId?: string; // 🔹 Agora inclui o ID da empresa
+  };
 }
 
-const AuthContext = createContext({
-  user: null as User | null,
+interface AuthContextType {
+  user: User | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  login: (email: string, senha: string) => Promise<boolean>;
+  logout: () => void;
+}
+
+const AuthContext = createContext<AuthContextType>({
+  user: null,
   isAuthenticated: false,
-  isLoading: true, // NOVO ESTADO: Começa como true
-  login: async (_email: string, _password: string) => false,
+  isLoading: true,
+  login: async () => false,
   logout: () => {},
 });
 
-export const AuthProvider = ({ children }) => {
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(true); // NOVO ESTADO
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Função para buscar dados do perfil do usuário
+  // ======================================================
+  // 🔹 Busca o perfil do usuário logado
+  // ======================================================
   const fetchUserProfile = useCallback(async () => {
     try {
       const { data } = await api.get("/auth/me");
-      setUser(data);
-      setIsAuthenticated(true);
+
+      if (data && data.user?.id && data.user?.empresa?.id) {
+        setUser(data);
+        setIsAuthenticated(true);
+      } else {
+        console.warn("Resposta incompleta da API /auth/me", data);
+        setIsAuthenticated(false);
+        setUser(null);
+      }
     } catch (error) {
-      console.error("Falha ao buscar perfil do usuário, fazendo logout.", error);
-      logout();
+      console.error("Falha ao buscar perfil do usuário:", error);
+      setIsAuthenticated(false);
+      setUser(null);
     } finally {
-      setIsLoading(false); // NOVO: Termina o carregamento
+      setIsLoading(false);
     }
   }, []);
 
-  // Carregar usuário ao abrir o app
+  // ======================================================
+  // 🔹 Verifica token no carregamento inicial
+  // ======================================================
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-      fetchUserProfile();
-    } else {
-      setIsLoading(false); // NOVO: Se não há token, não está carregando
-    }
-  }, [fetchUserProfile]);
+  const token = localStorage.getItem("token");
+  if (token) {
+    api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+    fetchUserProfile();
+  } else {
+    // Evita chamadas desnecessárias sem token
+    setIsAuthenticated(false);
+    setIsLoading(false);
+  }
+}, [fetchUserProfile]);
 
-  const login = async (email: any, senha: any) => {
-    setIsLoading(true); // NOVO: Inicia o carregamento ao tentar logar
+
+  // ======================================================
+  // 🔹 Login
+  // ======================================================
+  const login = async (email: string, senha: string) => {
+    setIsLoading(true);
     try {
       const { data } = await api.post("/auth/login", { email, senha });
-      const token = data.token;
-      localStorage.setItem("token", token);
-      api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-      
-      await fetchUserProfile(); // Busca os dados (que vai setar isLoading=false no final)
-      
+
+      if (!data.token) throw new Error("Token não retornado pela API.");
+
+      // Armazena token e configura Axios
+      localStorage.setItem("token", data.token);
+      api.defaults.headers.common["Authorization"] = `Bearer ${data.token}`;
+
+      // Busca o perfil do usuário
+      await fetchUserProfile();
+
       return true;
     } catch (error) {
       console.error("Erro no login:", error);
-      setIsLoading(false); // NOVO: Para de carregar se o login falhar
+      logout();
       return false;
+    } finally {
+      setIsLoading(false);
     }
   };
 
+  // ======================================================
+  // 🔹 Logout
+  // ======================================================
   const logout = () => {
     localStorage.removeItem("token");
     delete api.defaults.headers.common["Authorization"];
-    setIsAuthenticated(false);
     setUser(null);
-    setIsLoading(false); // NOVO: Garante que não está carregando
+    setIsAuthenticated(false);
+    setIsLoading(false);
   };
 
+  // ======================================================
+  // 🔹 Retorno do contexto
+  // ======================================================
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, isLoading, login, logout }}>
+    <AuthContext.Provider
+      value={{ user, isAuthenticated, isLoading, login, logout }}
+    >
       {children}
     </AuthContext.Provider>
   );
 };
 
 export const useAuth = () => useContext(AuthContext);
-

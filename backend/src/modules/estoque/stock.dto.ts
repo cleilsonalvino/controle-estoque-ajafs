@@ -14,6 +14,7 @@ export const createMovimentacaoSchema = z
       .union([z.string({invalid_type_error: "Data de validade inválida"}).datetime(), z.string().date(), z.date()])
       .optional()
       .nullable(),
+      
   })
   .superRefine((data, ctx) => {
     if (data.tipo === TipoMovimentacao.ENTRADA) {

@@ -1,49 +1,33 @@
-import { PrismaClient } from '@prisma/client';
-import { type CreateEmpresaDto, type UpdateEmpresaDto } from './empresa.dto.ts';
+import { PrismaClient } from "@prisma/client";
+import { CustomError } from "../../shared/errors.ts";
 
 const prisma = new PrismaClient();
 
-export class EmpresaService {
-  async create(data: CreateEmpresaDto) {
-    return await prisma.empresa.create({
-      data: {
-        nome: data.nome,
-        razaoSocial: data.razaoSocial,
-        nomeFantasia: data.nomeFantasia,
-        inscEstadual: data.inscEstadual,
-        inscMunicipal: data.inscMunicipal,
-        telefone: data.telefone,
-        numero: data.numero,
-        complemento: data.complemento ?? null,
-        email: data.email ?? null,
-        cnae: data.cnae,
-        cnpj: data.cnpj,
-        cep: data.cep,
-        estado: data.estado,
-        cidade: data.cidade,
-        endereco: data.endereco,
-        bairro: data.bairro,
-      },
-    });
+export const empresaService = {
+  // Esta função provavelmente deve ser restrita a um super-admin
+  getAll: async () => prisma.empresa.findMany(),
 
-  }
+  // A criação de empresa é um processo sensível, pode não pertencer a um usuário comum
+  create: async (data: any) => prisma.empresa.create({ data }),
 
-  async findAll() {
-    return await prisma.empresa.findMany();
-  }
+  getById: async (id: string, empresaId: string) => {
+    if (id !== empresaId) {
+      throw new CustomError("Acesso não autorizado.", 403);
+    }
+    const empresa = await prisma.empresa.findUnique({ where: { id } });
+    if (!empresa) {
+      throw new CustomError("Empresa não encontrada", 404);
+    }
+    return empresa;
+  },
 
-  async findOne(id: string) {
-    return await prisma.empresa.findUnique({ where: { id } });
-  }
+  update: async (id: string, data: any, empresaId: string) => {
+    if (id !== empresaId) {
+      throw new CustomError("Acesso não autorizado.", 403);
+    }
+    return prisma.empresa.update({ where: { id }, data });
+  },
 
-  async update(id: string, data: UpdateEmpresaDto) {
-    const updateData = Object.fromEntries(
-      Object.entries(data).filter(([, value]) => value !== undefined)
-    );
-    return await prisma.empresa.update({ where: { id }, data: updateData });
-  }
-
-  async remove(id: string) {
-    return await prisma.empresa.delete({ where: { id } });
-  }
-}
+  // Esta função provavelmente deve ser restrita a um super-admin
+  remove: async (id: string) => prisma.empresa.delete({ where: { id } }),
+};

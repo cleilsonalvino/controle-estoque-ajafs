@@ -1,18 +1,15 @@
-import { Router } from 'express';
-import {
-  createEmpresaController,
-  getEmpresasController,
-  getEmpresaByIdController,
-  updateEmpresaController,
-  deleteEmpresaController,
-} from './empresa.controller.ts';
+import { Router } from 'express'
+import { empresaController } from './empresa.controller.ts'
+import { authMiddleware } from '../../app/middlewares/auth.middleware.ts'
 
-const router = Router();
+const empresaRouter = Router()
 
-router.post('/create', createEmpresaController);
-router.get('/', getEmpresasController);
-router.get('/:id', getEmpresaByIdController);
-router.patch('/:id', updateEmpresaController);
-router.delete('/:id', deleteEmpresaController);
+empresaRouter.use(authMiddleware)
 
-export const empresaRouter = router;
+empresaRouter.get('/', empresaController.getAll)
+empresaRouter.post('/', empresaController.create)
+empresaRouter.get('/:id', empresaController.getById)
+empresaRouter.put('/:id', empresaController.update)
+empresaRouter.delete('/:id', empresaController.remove)
+
+export default empresaRouter

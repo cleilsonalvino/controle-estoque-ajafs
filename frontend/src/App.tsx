@@ -32,6 +32,7 @@ import Vendedores from "./pages/Vendedores";
 import TiposServicos from "./pages/TiposServicos";
 import EstoqueDashboard from "./pages/EstoqueDashboard";
 import { PermissionGuard } from "./components/PermissionGuard";
+import SuperAdminEmpresas from "./pages/admin/SuperAdmin";
 //import { TitleBar } from "./components/TitleBar";
 
 const queryClient = new QueryClient();
@@ -59,8 +60,11 @@ const App = () => (
 
                               {/* Routes protected by authentication */}
                               <Route element={<ProtectedRoute />}>
+                                
                                 {/* === GROUP 1: Routes WITH Sidebar === */}
                                 <Route path="/" element={<Layout />}>
+                                  
+                                  
                                   <Route
                                     index
                                     element={<HomePage />}
@@ -72,6 +76,12 @@ const App = () => (
                                         <EstoqueDashboard />
                                       </PermissionGuard>
                                     }
+                                  />
+                                  <Route
+                                    index
+                                    element={<PermissionGuard permissionKey="admin">
+                                      <SuperAdminEmpresas />
+                                    </PermissionGuard>}
                                   />
                                   <Route
                                     path="/products"

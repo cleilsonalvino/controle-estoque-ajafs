@@ -31,18 +31,22 @@ export const AppSidebar = () => {
   const navigate = useNavigate();
 
   const visibleMenuItems = useMemo(() => {
-    if (isLoading || !user?.telasPermitidas) {
+    if (isLoading || !user) {
       return [];
     }
 
-    console.log("🔑 Permissões:", user.telasPermitidas);
+    const isAdmin = user.user.papel?.toLowerCase() === "administrador";
 
-    if (user.papel === "ADMINISTRADOR" || user.telasPermitidas.includes("ADMINISTRADOR")) {
+    if (isAdmin) {
       return allMenuItems;
     }
 
+    if (!user.user.telasPermitidas) {
+      return [];
+    }
+
     return allMenuItems.filter((item) =>
-      user.telasPermitidas.includes(item.url)
+      user.user.telasPermitidas.includes(item.url)
     );
   }, [user, isLoading]);
 

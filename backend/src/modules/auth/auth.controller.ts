@@ -17,8 +17,11 @@ export const loginMeController = async (req: Request, res: Response) => {
     const token = authHeader.split(" ")[1];
     const userData = await getUserDataFromToken(token as string);
 
-    res.status(200).json(userData);
+    res.status(200).json({
+      message: "Usuário autenticado com sucesso",
+      user: userData,
+    });
   } catch (error: any) {
     res.status(error.status || 500).json({ message: error.message });
   }
-}
+};

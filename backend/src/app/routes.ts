@@ -6,11 +6,11 @@ import salesRouter from "../modules/vendas/sales.router.ts";
 import authRouter from "../modules/auth/auth.router.ts";
 import categorysRouter from "../modules/categorias/category.routes.ts";
 import stockRouter from "../modules/estoque/stock.router.ts";
-import { vendedoresRouter } from "../modules/vendedores/vendedores.router.ts";
-import { clientesRouter } from "../modules/clientes/cliente.routes.ts";
-import { servicesRouter } from "../modules/servicos/services.router.ts";
+import vendedoresRouter from "../modules/vendedores/vendedores.router.ts";
+import clientesRouter from "../modules/clientes/cliente.routes.ts";
+import servicesRouter from "../modules/servicos/services.router.ts";
 import categoriaServicoRouter from "../modules/categorias-servicos/categoria-servico.router.ts";
-import { empresaRouter } from "../modules/empresa/empresa.router.ts";
+import empresaRouter from "../modules/empresa/empresa.router.ts";
 import Dashboardrouter from "../modules/dashboard/dashboard.router.ts";
 
 const router = Router();

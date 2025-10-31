@@ -1,6 +1,7 @@
 
-import { createContext, useContext, useState, ReactNode, useEffect } from "react";
+import { createContext, useContext, useState, ReactNode, useEffect, useCallback } from "react";
 import api from "@/lib/api";
+import { useAuth } from "./useAuth";
 
 export interface Cliente {
   id: string;
@@ -35,8 +36,9 @@ interface ClienteProviderProps {
 export const ClienteProvider = ({ children }: ClienteProviderProps) => {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [loading, setLoading] = useState(false);
+  const { isAuthenticated } = useAuth();
 
-  const fetchClientes = async () => {
+  const fetchClientes = useCallback(async () => {
     setLoading(true);
     try {
       const response = await api.get("/clientes");
@@ -46,29 +48,31 @@ export const ClienteProvider = ({ children }: ClienteProviderProps) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const createCliente = async (clienteData: Omit<Cliente, 'id'>) => {
+  const createCliente = useCallback(async (clienteData: Omit<Cliente, 'id'>) => {
     console.log(clienteData);
     const response = await api.post("/clientes/create", clienteData);
     setClientes((prev) => [response.data, ...prev]);
     return response.data;
-  };
+  }, []);
 
-  const updateCliente = async (id: string, clienteData: Omit<Cliente, 'id'>) => {
+  const updateCliente = useCallback(async (id: string, clienteData: Omit<Cliente, 'id'>) => {
     const response = await api.put(`/clientes/${id}`, clienteData);
     setClientes((prev) => prev.map((c) => (c.id === id ? response.data : c)));
     return response.data;
-  };
+  }, []);
 
-  const deleteCliente = async (id: string) => {
+  const deleteCliente = useCallback(async (id: string) => {
     await api.delete(`/clientes/${id}`);
     setClientes((prev) => prev.filter((c) => c.id !== id));
-  };
+  }, []);
 
   useEffect(() => {
-    fetchClientes();
-  }, []);
+    if (isAuthenticated) {
+      fetchClientes();
+    }
+  }, [fetchClientes, isAuthenticated]);
 
   return (
     <ClienteContext.Provider

@@ -5,9 +5,11 @@ import {
   useState,
   ReactNode,
   useEffect,
+  useCallback,
 } from "react";
 import axios from "@/lib/api"; // seu axios configurado
 import { Produto } from "./ProdutoContext";
+import { useAuth } from "./useAuth";
 
 export interface SaleItem {
   id: string;
@@ -78,8 +80,9 @@ export const SalesProvider = ({ children }: SalesProviderProps) => {
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(false);
   const [products, setProducts] = useState<Produto[]>([]);
+  const { isAuthenticated } = useAuth();
 
-  const fetchSales = async () => {
+  const fetchSales = useCallback(async () => {
     setLoading(true);
     try {
       const response = await axios.get("/vendas");
@@ -89,51 +92,56 @@ export const SalesProvider = ({ children }: SalesProviderProps) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     try {
       const response = await axios.get("/produtos");
       setProducts(response.data);
     } catch (err) {
       console.error("Erro ao buscar produtos:", err);
     }
-  };
+  }, []);
 
-  const createSale = async (saleData: SaleData) => {
+  const createSale = useCallback(async (saleData: SaleData) => {
     try {
       const response = await axios.post("/vendas/create", saleData);
       setSales((prev) => [response.data, ...prev]);
       return response.data;
     } catch (err) {
       console.error(err.response?.data.message);
-      throw err; 
+      throw err;
     }
-  };
+  }, []);
 
-  const updateSale = async (id: string, cliente: string, itens: SaleItem[]) => {
-    const response = await axios.put(`/vendas/${id}`, { cliente, itens });
-    setSales((prev) => prev.map((s) => (s.id === id ? response.data : s)));
-    return response.data;
-  };
+  const updateSale = useCallback(
+    async (id: string, cliente: string, itens: SaleItem[]) => {
+      const response = await axios.put(`/vendas/${id}`, { cliente, itens });
+      setSales((prev) => prev.map((s) => (s.id === id ? response.data : s)));
+      return response.data;
+    },
+    []
+  );
 
-  const deleteSale = async (id: string) => {
+  const deleteSale = useCallback(async (id: string) => {
     await axios.delete(`/vendas/${id}`);
     setSales((prev) => prev.filter((s) => s.id !== id));
-  };
+  }, []);
 
-  const cancelSale = async (id: string) => {
+  const cancelSale = useCallback(async (id: string) => {
     await axios.patch(`/vendas/cancelar/${id}`);
     setSales((prev) =>
       prev.map((s) => (s.id === id ? { ...s, status: "Cancelada" } : s))
     );
-  };
+  }, []);
 
   // Carrega as vendas ao montar o provider
   useEffect(() => {
-    fetchSales();
-    fetchProducts();
-  }, []);
+    if (isAuthenticated) {
+      fetchSales();
+      fetchProducts();
+    }
+  }, [fetchSales, fetchProducts, isAuthenticated]);
 
   return (
     <SalesContext.Provider

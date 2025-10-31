@@ -26,10 +26,10 @@ export const PermissionGuard = ({ permissionKey, children }: PermissionGuardProp
   // 🔑 Compatibilidade com os dois formatos de permissão
   // (ex: "products" ou "/products")
   const hasPermission =
-    user.telasPermitidas?.includes(permissionKey) ||
-    user.telasPermitidas?.includes(`/${permissionKey}`) ||
-    user.telasPermitidas?.includes("ADMINISTRADOR") ||
-    user.papel === "ADMINISTRADOR";
+    user.user.telasPermitidas?.includes(permissionKey) ||
+    user.user.telasPermitidas?.includes(`/${permissionKey}`) ||
+    user.user.telasPermitidas?.includes("ADMINISTRADOR") ||
+    user.user.papel === "ADMINISTRADOR";
 
   // 🚫 Sem permissão → redireciona pra home
   if (!hasPermission) {

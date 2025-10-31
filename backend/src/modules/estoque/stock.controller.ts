@@ -1,53 +1,107 @@
-import { type Request, type Response } from "express";
+import { type Response } from "express";
 import { StockService } from "./stock.service.ts";
 import { createMovimentacaoSchema } from "./stock.dto.ts";
+import { type AuthenticatedRequest } from "../../app/middlewares/auth.middleware.ts";
 
 const stockService = new StockService();
 
 export class StockController {
-  public async createMovimentacao(req: Request, res: Response) {
-    console.log("Creating movimentacao with data:", req.body);
-    const data = createMovimentacaoSchema.parse(req.body);
-    const result = await stockService.createMovimentacao(data);
-    res.status(201).json(result);
+  // ============================================================
+  // 🔹 Criação de Movimentação
+  // ============================================================
+  public async createMovimentacao(req: AuthenticatedRequest, res: Response) {
+    try {
+      const data = createMovimentacaoSchema.parse(req.body);
+      const empresaId = req.user!.empresaId;
+
+      const result = await stockService.createMovimentacao(data, empresaId);
+      res.status(201).json(result);
+    } catch (error: any) {
+      res.status(error.status || 500).json({ message: error.message });
+    }
   }
 
-  public async getMovimentacoesByProdutoId(req: Request, res: Response) {
-    const { produtoId } = req.params;
-    const movimentacoes = await stockService.getMovimentacoesByProdutoId(
-      produtoId as string
-    );
-    res.status(200).json(movimentacoes);
+  // ============================================================
+  // 🔹 Lista movimentações de um produto
+  // ============================================================
+  public async getMovimentacoesByProdutoId(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { produtoId } = req.params;
+      const empresaId = req.user!.empresaId;
+
+      const movimentacoes = await stockService.getMovimentacoesByProdutoId(produtoId as string, empresaId);
+      res.status(200).json(movimentacoes);
+    } catch (error: any) {
+      res.status(error.status || 500).json({ message: error.message });
+    }
   }
 
-  public async getMovimentacoes(req: Request, res: Response) {
-    const movimentacoes = await stockService.getMovimentacoes();
-    res.status(200).json(movimentacoes);
+  // ============================================================
+  // 🔹 Lista todas as movimentações
+  // ============================================================
+  public async getMovimentacoes(req: AuthenticatedRequest, res: Response) {
+    try {
+      const empresaId = req.user!.empresaId;
+      const movimentacoes = await stockService.getMovimentacoes(empresaId);
+      res.status(200).json(movimentacoes);
+    } catch (error: any) {
+      res.status(error.status || 500).json({ message: error.message });
+    }
   }
 
-  public async getValorEstoque(req: Request, res: Response) {
-    const valorEstoque = await stockService.getValorEstoque();
-    res.status(200).json({ valorEstoque });
+  // ============================================================
+  // 🔹 Valor total do estoque
+  // ============================================================
+  public async getValorEstoque(req: AuthenticatedRequest, res: Response) {
+    try {
+      const empresaId = req.user!.empresaId;
+      const valorEstoque = await stockService.getValorEstoque(empresaId);
+      res.status(200).json(valorEstoque);
+    } catch (error: any) {
+      res.status(error.status || 500).json({ message: error.message });
+    }
   }
 
-  public async getEstoqueProdutoId(req: Request, res: Response) {
-    const { produtoId } = req.params;
-    const estoque = await stockService.getEstoqueProdutoId(produtoId as string);
-    res.status(200).json({ estoque });
+  // ============================================================
+  // 🔹 Estoque de um produto específico
+  // ============================================================
+  public async getEstoqueProdutoId(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { produtoId } = req.params;
+      const empresaId = req.user!.empresaId;
+
+      const estoque = await stockService.getEstoqueProdutoId(produtoId as string, empresaId);
+      res.status(200).json(estoque);
+    } catch (error: any) {
+      res.status(error.status || 500).json({ message: error.message });
+    }
   }
 
-  public async deleteLote(req: Request, res: Response) {
+  // ============================================================
+  // 🔹 Excluir lote
+  // ============================================================
+  public async deleteLote(req: AuthenticatedRequest, res: Response) {
     try {
       const { loteId, produtoId } = req.params;
-      await stockService.deleteLote(loteId as string, produtoId as string);
+      const empresaId = req.user!.empresaId;
+
+      await stockService.deleteLote(loteId as string, produtoId as string, empresaId);
       res.status(204).send();
     } catch (error: any) {
       res.status(error.status || 500).json({ message: error.message });
     }
   }
 
-  public async getLucroMedioEstimado(req: Request, res: Response) {
-    const custoMedioEstimado = await stockService.getLucroMedioEstimado();
-    res.status(200).json({ custoMedioEstimado });
+  // ============================================================
+  // 🔹 Lucro médio estimado
+  // ============================================================
+  public async getLucroMedioEstimado(req: AuthenticatedRequest, res: Response) {
+    try {
+      const empresaId = req.user!.empresaId;
+      const lucro = await stockService.getLucroMedioEstimado(empresaId);
+      res.status(200).json(lucro);
+    } catch (error: any) {
+      res.status(error.status || 500).json({ message: error.message });
+    }
   }
 }

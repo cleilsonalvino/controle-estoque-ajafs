@@ -5,6 +5,7 @@ export const VendedorSchema = z.object({
   nome: z.string().min(3, 'O nome deve ter no mínimo 3 caracteres'),
   email: z.string().email('Email inválido').optional().nullable(),
   meta: z.number().positive('A meta deve ser um número positivo').optional().nullable(),
+  
 });
 
 export type VendedorDto = z.infer<typeof VendedorSchema>;

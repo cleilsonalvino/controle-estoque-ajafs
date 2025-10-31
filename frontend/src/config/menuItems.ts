@@ -10,6 +10,7 @@ import {
   Wrench,
   Layers,
   Home,
+  Ampersand,
 } from "lucide-react";
 
 export const allMenuItems = [
@@ -51,4 +52,5 @@ export const allMenuItems = [
   { key: "clientes", title: "Clientes", url: "/clientes", icon: Users },
   { key: "vendedores", title: "Vendedores", url: "/vendedores", icon: Users },
   { key: "settings", title: "Configurações", url: "/settings", icon: Settings },
+  { key: "super_admin", title: "Admin", url: "/super-admin", icon: Ampersand }
 ];

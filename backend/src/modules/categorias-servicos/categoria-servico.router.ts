@@ -6,8 +6,11 @@ import {
   updateCategoriaServicoController,
   deleteCategoriaServicoController,
 } from "./categoria-servico.controller.ts";
+import { authMiddleware } from "../../app/middlewares/auth.middleware.ts";
 
 const categoriaServicoRouter = Router();
+
+categoriaServicoRouter.use(authMiddleware);
 
 categoriaServicoRouter.post("/create", createCategoriaServicoController);
 categoriaServicoRouter.get("/", getCategoriasServicosController);
