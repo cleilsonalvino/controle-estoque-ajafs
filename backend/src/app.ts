@@ -15,6 +15,10 @@ app.use(express.json());
 
 app.use("/api", router);
 
+app.get("/api", (req, res) => {
+    res.send("API is running");
+});
+
 
 app.use(errorHandler);
 
