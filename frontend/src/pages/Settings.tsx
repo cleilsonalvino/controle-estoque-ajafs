@@ -27,7 +27,7 @@ import { Separator } from "@/components/ui/separator";
 import { useEmpresa, Empresa } from "@/contexts/EmpresaContext";
 import { toast as sonnerToast } from "sonner";
 import api from "@/lib/api";
-import { availableScreens } from "@/config/menuItems";
+import { allMenuItems } from "@/config/menuItems";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -466,32 +466,34 @@ const Settings = () => {
                   control={controlUser}
                   render={({ field }) => (
                     <>
-                      {availableScreens.map((screen) => (
-                        <div
-                          key={screen.key}
-                          className="flex items-center space-x-2"
-                        >
-                          <Checkbox
-                            id={screen.key}
-                            checked={field.value?.includes(screen.key)}
-                            onCheckedChange={(checked) => {
-                              return checked
-                                ? field.onChange([...field.value, screen.key])
-                                : field.onChange(
-                                    field.value?.filter(
-                                      (value) => value !== screen.key
-                                    )
-                                  );
-                            }}
-                          />
-                          <Label
-                            htmlFor={screen.key}
-                            className="cursor-pointer"
+                      {allMenuItems
+                        .filter((item) => item.url !== "/") // Não permite dar permissão para a Home
+                        .map((item) => (
+                          <div
+                            key={item.key} // A key interna ainda é útil para o React
+                            className="flex items-center space-x-2"
                           >
-                            {screen.title}
-                          </Label>
-                        </div>
-                      ))}
+                            <Checkbox
+                              id={item.url} // ID deve ser único
+                              checked={field.value?.includes(item.url)} // Compara com a URL
+                              onCheckedChange={(checked) => {
+                                return checked
+                                  ? field.onChange([...field.value, item.url]) // Adiciona a URL
+                                  : field.onChange(
+                                      field.value?.filter(
+                                        (value) => value !== item.url // Remove a URL
+                                      )
+                                    );
+                              }}
+                            />
+                            <Label
+                              htmlFor={item.url} // Associa com o ID
+                              className="cursor-pointer"
+                            >
+                              {item.title}
+                            </Label>
+                          </div>
+                        ))}
                     </>
                   )}
                 />

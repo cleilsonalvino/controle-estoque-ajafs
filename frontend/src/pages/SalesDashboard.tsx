@@ -586,7 +586,7 @@ const SalesDashboard = () => {
         // Alterado de filteredSales
         s.numero,
         new Date(s.criadoEm).toLocaleDateString("pt-BR"),
-        getClienteDisplay(s),
+        s.cliente.cpf ?? "Cliente não informado",
         s.status,
         s.formaPagamento ?? "N/A",
         fmtBRL(toNumber(s.total)),

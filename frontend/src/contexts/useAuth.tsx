@@ -8,6 +8,8 @@ interface User {
   email: string;
   papel: string;
   telasPermitidas: string[]; // O mais importante!
+  criadoEm: string;
+  ativo: boolean;
 }
 
 const AuthContext = createContext({

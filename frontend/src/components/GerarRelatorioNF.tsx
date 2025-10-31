@@ -28,10 +28,12 @@ const GerarRelatorioNF = () => {
   });
 
   const handleGeneratePDF = () => {
-    // Filtro das vendas com base nos critérios definidos
+    // Filtra as vendas conforme os filtros definidos
     const filteredSales = sales.filter((sale) => {
       const saleDate = new Date(sale.criadoEm);
-      const startDate = filters.dataInicio ? new Date(filters.dataInicio) : null;
+      const startDate = filters.dataInicio
+        ? new Date(filters.dataInicio)
+        : null;
       const endDate = filters.dataFim ? new Date(filters.dataFim) : null;
 
       if (startDate) startDate.setHours(0, 0, 0, 0);
@@ -51,33 +53,134 @@ const GerarRelatorioNF = () => {
       );
     });
 
-    // Gerar PDF
-    const doc = new jsPDF();
+    // Inicia o PDF no formato paisagem (melhor para tabelas grandes)
+    const doc = new jsPDF({
+      orientation: "landscape",
+      unit: "mm",
+      format: "a4",
+    });
+    const pageWidth = doc.internal.pageSize.getWidth();
 
-    doc.setFontSize(14);
-    doc.text("Relatório de Notas Fiscais", 14, 15);
+    // ====== CABEÇALHO ======
+    doc.setFillColor(255, 204, 0); // Amarelo AJAFS
+    doc.rect(0, 0, pageWidth, 25, "F");
 
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(18);
+    doc.setTextColor(40, 40, 40);
+    doc.text("Relatório de Notas Fiscais", pageWidth / 2, 15, {
+      align: "center",
+    });
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(80, 80, 80);
+    doc.text(
+      `Gerado em ${new Date().toLocaleDateString(
+        "pt-BR"
+      )} às ${new Date().toLocaleTimeString("pt-BR")}`,
+      pageWidth - 65,
+      20
+    );
+
+    // ====== TABELA ======
     autoTable(doc, {
-      startY: 25,
+      startY: 35,
       head: [
-        ["Número", "Data", "Cliente", "Vendedor", "Forma de Pagamento", "Valor Total"],
+        [
+          "Número",
+          "Produto(s)",
+          "Data",
+          "Cliente",
+          "CPF",
+          "Vendedor",
+          "Forma de Pagamento",
+          "Valor Total (R$)",
+        ],
       ],
       body: filteredSales.map((sale) => [
         sale.numero,
-        new Date(sale.criadoEm).toLocaleDateString(),
+        sale.itens?.map((item) => item.produto?.nome).join(", ") || "—",
+        new Date(sale.criadoEm).toLocaleDateString("pt-BR"),
         sale.cliente?.nome || "N/A",
+        sale.cliente?.cpf || "N/A",
         sale.vendedor?.nome || "N/A",
-        sale.formaPagamento,
-        `R$ ${Number(sale.total).toFixed(2)}`,
+        sale.formaPagamento || "—",
+        Number(sale.total || 0).toLocaleString("pt-BR", {
+          minimumFractionDigits: 2,
+        }),
       ]),
-      styles: { fontSize: 10, cellPadding: 3 },
-      headStyles: { fillColor: [255, 204, 0] }, // Amarelo (padrão AJAFS)
+      styles: {
+        fontSize: 9,
+        cellPadding: 3,
+        valign: "middle",
+        lineColor: [230, 230, 230],
+        lineWidth: 0.1,
+      },
+      headStyles: {
+        fillColor: [255, 204, 0],
+        textColor: [40, 40, 40],
+        fontStyle: "bold",
+        halign: "center",
+      },
+      bodyStyles: {
+        textColor: [60, 60, 60],
+      },
+      alternateRowStyles: {
+        fillColor: [250, 250, 250],
+      },
+      columnStyles: {
+        7: { halign: "right" },
+      },
+      margin: { top: 30, left: 10, right: 10 },
+      didDrawPage: (data) => {
+        const pageCount = doc.internal.pages.length;
+        const currentPage = (doc.internal as any).getCurrentPageInfo().pageNumber; 
+        doc.setFontSize(9);
+        doc.setTextColor(130);
+        doc.text(`Página ${currentPage} de ${pageCount}`, pageWidth - 25, 200);
+        doc.text("AJAFS - Relatórios Empresariais", 10, 200);
+      },
     });
 
-    doc.save("relatorio_nf.pdf");
+    // ====== RESUMO FINAL ======
+    const totalGeral = filteredSales.reduce(
+      (acc, sale) => acc + Number(sale.total || 0),
+      0
+    );
+    const posY = (doc as any).lastAutoTable.finalY + 10;
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    doc.text("Resumo Geral", 14, posY);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.text(
+      `Total de vendas incluídas: ${filteredSales.length}`,
+      14,
+      posY + 6
+    );
+    doc.text(
+      `Valor total acumulado: R$ ${totalGeral.toLocaleString("pt-BR", {
+        minimumFractionDigits: 2,
+      })}`,
+      14,
+      posY + 12
+    );
+
+    // ====== MARCA D'ÁGUA (opcional) ======
+    doc.setFontSize(40);
+    doc.setTextColor(240, 240, 240);
+    doc.text("AJAFS", pageWidth / 2, 150, { align: "center", angle: 45 });
+
+    // ====== SALVAR ======
+    doc.save(`relatorio_nf_${new Date().toISOString().slice(0, 10)}.pdf`);
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     const { id, value } = e.target;
     setFilters((prev) => ({ ...prev, [id]: value }));
   };

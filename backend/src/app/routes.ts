@@ -11,6 +11,7 @@ import { clientesRouter } from "../modules/clientes/cliente.routes.ts";
 import { servicesRouter } from "../modules/servicos/services.router.ts";
 import categoriaServicoRouter from "../modules/categorias-servicos/categoria-servico.router.ts";
 import { empresaRouter } from "../modules/empresa/empresa.router.ts";
+import Dashboardrouter from "../modules/dashboard/dashboard.router.ts";
 
 const router = Router();
 
@@ -26,5 +27,6 @@ router.use("/clientes", clientesRouter);
 router.use("/servicos", servicesRouter);
 router.use("/categorias-servicos", categoriaServicoRouter);
 router.use("/empresa", empresaRouter);
+router.use("/dashboard", Dashboardrouter);
 
 export default router;

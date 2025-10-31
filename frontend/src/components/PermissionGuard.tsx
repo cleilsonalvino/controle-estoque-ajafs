@@ -28,8 +28,8 @@ export const PermissionGuard = ({ permissionKey, children }: PermissionGuardProp
   const hasPermission =
     user.telasPermitidas?.includes(permissionKey) ||
     user.telasPermitidas?.includes(`/${permissionKey}`) ||
-    user.telasPermitidas?.includes("admin") ||
-    user.papel === "ADMIN";
+    user.telasPermitidas?.includes("ADMINISTRADOR") ||
+    user.papel === "ADMINISTRADOR";
 
   // 🚫 Sem permissão → redireciona pra home
   if (!hasPermission) {

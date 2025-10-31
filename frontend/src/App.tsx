@@ -4,7 +4,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Layout } from "@/components/Layout";
-import Dashboard from "./pages/Dashboard";
+import { HomePage } from "./pages/HomePage";
+//import Dashboard from "./pages/Dashboard";
 import Products from "./pages/Products";
 import Movements from "./pages/Movements";
 import Suppliers from "./pages/Suppliers";
@@ -29,6 +30,7 @@ import { EmpresaProvider } from "./contexts/EmpresaContext";
 import Clientes from "./pages/Clientes";
 import Vendedores from "./pages/Vendedores";
 import TiposServicos from "./pages/TiposServicos";
+import EstoqueDashboard from "./pages/EstoqueDashboard";
 import { PermissionGuard } from "./components/PermissionGuard";
 //import { TitleBar } from "./components/TitleBar";
 
@@ -61,9 +63,13 @@ const App = () => (
                                 <Route path="/" element={<Layout />}>
                                   <Route
                                     index
+                                    element={<HomePage />}
+                                  />
+                                  <Route
+                                    path="/estoque"
                                     element={
-                                      <PermissionGuard permissionKey="dashboard">
-                                        <Dashboard />
+                                      <PermissionGuard permissionKey="estoque">
+                                        <EstoqueDashboard />
                                       </PermissionGuard>
                                     }
                                   />

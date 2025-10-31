@@ -307,9 +307,7 @@ export const getVendasService = async () => {
           vendaId: true,
         },
       },
-      cliente: {
-        select: { nome: true, id: true }, // retorna só o nome (sem id)
-      },
+      cliente: true,
       vendedor: {
         select: {
           nome: true,
