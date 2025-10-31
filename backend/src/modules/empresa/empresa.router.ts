@@ -1,6 +1,6 @@
 import { Router } from 'express'
-import { empresaController } from './empresa.controller.ts'
-import { authMiddleware } from '../../app/middlewares/auth.middleware.ts'
+import { empresaController } from './empresa.controller'
+import { authMiddleware } from '../../app/middlewares/auth.middleware'
 
 const empresaRouter = Router()
 

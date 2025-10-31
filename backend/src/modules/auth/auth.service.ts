@@ -1,7 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import { compare } from "bcrypt";
 import jwt from "jsonwebtoken";
-import { CustomError } from "../../shared/errors.ts";
+import { CustomError } from "../../shared/errors";
 
 const prisma = new PrismaClient();
 

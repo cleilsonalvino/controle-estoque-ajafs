@@ -1,6 +1,6 @@
 import { Prisma, PrismaClient } from "@prisma/client";
-import { type CreateServiceDto, type UpdateServiceDto } from "./services.dto.ts";
-import { CustomError } from "../../shared/errors.ts";
+import { type CreateServiceDto, type UpdateServiceDto } from "./services.dto";
+import { CustomError } from "../../shared/errors";
 
 const prisma = new PrismaClient();
 

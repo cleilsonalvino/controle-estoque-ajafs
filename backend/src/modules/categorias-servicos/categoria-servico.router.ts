@@ -5,8 +5,8 @@ import {
   getCategoriaServicoByIdController,
   updateCategoriaServicoController,
   deleteCategoriaServicoController,
-} from "./categoria-servico.controller.ts";
-import { authMiddleware } from "../../app/middlewares/auth.middleware.ts";
+} from "./categoria-servico.controller";
+import { authMiddleware } from "../../app/middlewares/auth.middleware";
 
 const categoriaServicoRouter = Router();
 

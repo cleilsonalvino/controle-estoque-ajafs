@@ -1,17 +1,17 @@
 import { Router } from "express";
-import usersRouter from "../modules/usuarios/users.router.ts";
-import suppliersRouter from "../modules/fornecedores/suppliers.router.ts";
-import productsRouter from "../modules/produtos/products.router.ts";
-import salesRouter from "../modules/vendas/sales.router.ts";
-import authRouter from "../modules/auth/auth.router.ts";
-import categorysRouter from "../modules/categorias/category.routes.ts";
-import stockRouter from "../modules/estoque/stock.router.ts";
-import vendedoresRouter from "../modules/vendedores/vendedores.router.ts";
-import clientesRouter from "../modules/clientes/cliente.routes.ts";
-import servicesRouter from "../modules/servicos/services.router.ts";
-import categoriaServicoRouter from "../modules/categorias-servicos/categoria-servico.router.ts";
-import empresaRouter from "../modules/empresa/empresa.router.ts";
-import Dashboardrouter from "../modules/dashboard/dashboard.router.ts";
+import usersRouter from "../modules/usuarios/users.router";
+import suppliersRouter from "../modules/fornecedores/suppliers.router";
+import productsRouter from "../modules/produtos/products.router";
+import salesRouter from "../modules/vendas/sales.router";
+import authRouter from "../modules/auth/auth.router";
+import categorysRouter from "../modules/categorias/category.routes";
+import stockRouter from "../modules/estoque/stock.router";
+import vendedoresRouter from "../modules/vendedores/vendedores.router";
+import clientesRouter from "../modules/clientes/cliente.routes";
+import servicesRouter from "../modules/servicos/services.router";
+import categoriaServicoRouter from "../modules/categorias-servicos/categoria-servico.router";
+import empresaRouter from "../modules/empresa/empresa.router";
+import Dashboardrouter from "../modules/dashboard/dashboard.router";
 
 const router = Router();
 

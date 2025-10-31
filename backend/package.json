@@ -1,18 +1,19 @@
 {
-  "type": "module",
+  "type": "commonjs",
   "name": "backend",
   "version": "1.0.0",
   "description": "API para controle de estoque, vendas e finanças usando Express e Prisma",
   "main": "dist/index.js",
   "scripts": {
-    "dev": "nodemon --watch \"src/**/*.ts\" --exec \"npx ts-node --esm\" src/index.ts",
-    "start": "node dist/index.js",
+    "dev:server": "nodemon",
+    "dev:console": "node -r tsconfig-paths/register -r sucrase/register src/index.ts",
     "migrate": "npx prisma migrate dev",
     "generate": "npx prisma generate",
     "studio": "npx prisma studio",
-    "seed": "npx prisma db seed"
+    "seed": "npx prisma db seed",
+    "build": "tsc"
   },
-    "prisma": {
+  "prisma": {
     "seed": "ts-node prisma/seed.ts"
   },
   "keywords": [
@@ -48,7 +49,9 @@
     "@types/node": "^22.7.4",
     "nodemon": "^3.1.10",
     "prisma": "^6.17.0",
+    "sucrase": "^3.35.0",
     "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
     "typescript": "^5.9.3"
   }
 }

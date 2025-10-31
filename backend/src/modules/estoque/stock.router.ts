@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { StockController } from "./stock.controller.ts";
-import { authMiddleware } from "../../app/middlewares/auth.middleware.ts";
+import { StockController } from "./stock.controller";
+import { authMiddleware } from "../../app/middlewares/auth.middleware";
 
 const estoqueRouter = Router();
 const controller = new StockController();

@@ -1,6 +1,6 @@
 import { PrismaClient } from "@prisma/client";
-import { CustomError } from "../../shared/errors.ts";
-import { type CreateVendedorDto, type UpdateVendedorDto } from "./vendedores.dto.ts";
+import { CustomError } from "../../shared/errors";
+import { type CreateVendedorDto, type UpdateVendedorDto } from "./vendedores.dto";
 
 const prisma = new PrismaClient();
 

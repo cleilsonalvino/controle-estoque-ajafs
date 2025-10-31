@@ -1,6 +1,6 @@
 import { type Request, type Response } from 'express';
-import { ClienteService } from './cliente.service.ts';
-import { CreateClienteSchema, UpdateClienteSchema } from './cliente.dto.ts';
+import { ClienteService } from './cliente.service';
+import { CreateClienteSchema, UpdateClienteSchema } from './cliente.dto';
 import type { AuthenticatedRequest } from '../../app/middlewares/auth.middleware.ts';
 
 

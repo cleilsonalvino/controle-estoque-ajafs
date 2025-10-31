@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { generalSchema } from '../../shared/dto.ts';
+import { generalSchema } from '../../shared/dto';
 
 // Schema para criação de um novo serviço
 export const createServiceSchema = z.object({

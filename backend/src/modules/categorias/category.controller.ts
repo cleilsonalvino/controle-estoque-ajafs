@@ -5,8 +5,8 @@ import {
   getCategoryByIdService,
   updateCategoryService,
   deleteCategoryService,
-} from "./category.service.ts";
-import type { AuthenticatedRequest } from "../../app/middlewares/auth.middleware.ts";
+} from "./category.service";
+import type { AuthenticatedRequest } from "../../app/middlewares/auth.middleware";
 
 export const createCategoryController = async (req: AuthenticatedRequest, res: Response) => {
   const { empresaId } = req.user!;

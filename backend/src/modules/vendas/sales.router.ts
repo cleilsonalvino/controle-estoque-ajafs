@@ -8,8 +8,8 @@ import {
   cancelarVendaController,
   getVendasFiltrarController,
   //deleteAllSalesController
-} from "./sales.controller.ts";
-import { authMiddleware } from "../../app/middlewares/auth.middleware.ts";
+} from "./sales.controller";
+import { authMiddleware } from "../../app/middlewares/auth.middleware";
 
 const salesRouter = Router();
 

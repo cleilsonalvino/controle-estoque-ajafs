@@ -1,13 +1,13 @@
 import { type Request, type Response } from "express";
-import { createUserSchema } from "./users.dto.ts";
+import { createUserSchema } from "./users.dto";
 import {
   createUserService,
   getUsersService,
   getUserByIdService,
   updateUserService,
   deleteUserService,
-} from "./users.service.ts";
-import type { AuthenticatedRequest } from "../../app/middlewares/auth.middleware.ts";
+} from "./users.service";
+import type { AuthenticatedRequest } from "../../app/middlewares/auth.middleware";
 
 export const createUserController = async (req: AuthenticatedRequest, res: Response) => {
   const { empresaId } = req.user!;

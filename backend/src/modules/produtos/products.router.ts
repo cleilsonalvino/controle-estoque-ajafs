@@ -7,8 +7,8 @@ import {
   deleteProductController,
   addCategoryToProductController,
   addSupplierToProductController,
-} from "./products.controller.ts";
-import { authMiddleware } from "../../app/middlewares/auth.middleware.ts";
+} from "./products.controller";
+import { authMiddleware } from "../../app/middlewares/auth.middleware";
 
 const productsRouter = Router();
 

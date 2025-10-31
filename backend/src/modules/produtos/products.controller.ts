@@ -8,9 +8,9 @@ import {
   deleteProductService,
   addCategoryToProductService,
   addSupplierToProductService,
-} from "./products.service.ts";
-import { createProductSchema, updateProductSchema } from "./products.dto.ts";
-import type { AuthenticatedRequest } from "../../app/middlewares/auth.middleware.ts";
+} from "./products.service";
+import { createProductSchema, updateProductSchema } from "./products.dto";
+import type { AuthenticatedRequest } from "../../app/middlewares/auth.middleware";
 
 export const createProductController = async (req: AuthenticatedRequest, res: Response) => {
   const { empresaId } = req.user!;

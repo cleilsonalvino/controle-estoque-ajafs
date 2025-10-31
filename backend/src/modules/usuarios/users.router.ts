@@ -1,12 +1,12 @@
 import { Router } from "express";
-import { authMiddleware } from "../../app/middlewares/auth.middleware.ts";
+import { authMiddleware } from "../../app/middlewares/auth.middleware";
 import {
   createUserController,
   getUsersController,
   getUserByIdController,
   updateUserController,
   deleteUserController,
-} from "./users.controller.ts";
+} from "./users.controller";
 
 const usersRouter = Router();
 

@@ -1,6 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { hash } from "bcrypt";
-import { CustomError } from "../../shared/errors.ts";
+import { CustomError } from "../../shared/errors";
 
 const prisma = new PrismaClient();
 

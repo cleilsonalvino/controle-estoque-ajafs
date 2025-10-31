@@ -6,8 +6,8 @@ import {
     getCategoryByIdController,
     updateCategoryController,
     deleteCategoryController,
-} from "./category.controller.ts";
-import { authMiddleware } from "../../app/middlewares/auth.middleware.ts";
+} from "./category.controller";
+import { authMiddleware } from "../../app/middlewares/auth.middleware";
 
 const categorysRouter = Router();
 

@@ -5,8 +5,8 @@ import {
   getClienteByIdController,
   updateClienteController,
   deleteClienteController,
-} from './cliente.controller.ts';
-import { authMiddleware } from '../../app/middlewares/auth.middleware.ts';
+} from './cliente.controller';
+import { authMiddleware } from '../../app/middlewares/auth.middleware';
 
 const clienteRouter = Router();
 

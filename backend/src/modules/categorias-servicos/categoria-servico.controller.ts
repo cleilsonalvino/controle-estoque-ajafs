@@ -5,8 +5,8 @@ import {
   getCategoriaServicoByIdService,
   updateCategoriaServicoService,
   deleteCategoriaServicoService,
-} from "./categoria-servico.service.ts";
-import type { AuthenticatedRequest } from "../../app/middlewares/auth.middleware.ts";
+} from "./categoria-servico.service";
+import type { AuthenticatedRequest } from "../../app/middlewares/auth.middleware";
 
 export const createCategoriaServicoController = async (
   req: AuthenticatedRequest,

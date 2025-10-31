@@ -5,8 +5,8 @@ import {
   getSupplierByIdController,
   updateSupplierController,
   deleteSupplierController,
-} from "./suppliers.controller.ts";
-import { authMiddleware } from "../../app/middlewares/auth.middleware.ts";
+} from "./suppliers.controller";
+import { authMiddleware } from "../../app/middlewares/auth.middleware";
 
 const suppliersRouter = Router();
 

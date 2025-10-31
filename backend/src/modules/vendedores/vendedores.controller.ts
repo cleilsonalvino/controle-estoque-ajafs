@@ -1,10 +1,10 @@
 import { type Request, type Response } from "express";
-import { VendedorService } from "./vendedores.service.ts";
+import { VendedorService } from "./vendedores.service";
 import {
   CreateVendedorSchema,
   UpdateVendedorSchema,
-} from "./vendedores.dto.ts";
-import type { AuthenticatedRequest } from "../../app/middlewares/auth.middleware.ts";
+} from "./vendedores.dto";
+import type { AuthenticatedRequest } from "../../app/middlewares/auth.middleware";
 
 const vendedorService = new VendedorService();
 

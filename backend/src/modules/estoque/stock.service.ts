@@ -1,6 +1,6 @@
 import { PrismaClient, TipoMovimentacao } from "@prisma/client";
-import { type CreateMovimentacaoDto } from "./stock.dto.ts";
-import { CustomError } from "../../shared/errors.ts";
+import { type CreateMovimentacaoDto } from "./stock.dto";
+import { CustomError } from "../../shared/errors";
 
 const prisma = new PrismaClient();
 

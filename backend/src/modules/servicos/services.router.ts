@@ -1,13 +1,13 @@
 import { Router } from "express";
-import { ServiceController } from "./services.controller.ts";
-import { validate } from "../../app/middlewares/validate.ts";
+import { ServiceController } from "./services.controller";
+import { validate } from "../../app/middlewares/validate";
 import {
   createServiceSchema,
   updateServiceSchema,
   serviceIdParamSchema,
   listServiceSchema,
-} from "./services.dto.ts";
-import { authMiddleware } from "../../app/middlewares/auth.middleware.ts";
+} from "./services.dto";
+import { authMiddleware } from "../../app/middlewares/auth.middleware";
 
 const servicoRouter = Router();
 const controller = new ServiceController();

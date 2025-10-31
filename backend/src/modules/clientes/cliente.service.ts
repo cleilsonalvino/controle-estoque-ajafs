@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { type CreateClienteDto, type UpdateClienteDto } from './cliente.dto.ts';
+import { type CreateClienteDto, type UpdateClienteDto } from './cliente.dto';
 
 const prisma = new PrismaClient();
 

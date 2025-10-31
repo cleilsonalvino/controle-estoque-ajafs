@@ -5,10 +5,10 @@ import {
   getSupplierByIdService,
   updateSupplierService,
   deleteSupplierService,
-} from "./suppliers.service.ts";
+} from "./suppliers.service";
 
-import { createSupplierSchema, updateSupplierSchema } from "./suppliers.dto.ts";
-import type { AuthenticatedRequest } from "../../app/middlewares/auth.middleware.ts";
+import { createSupplierSchema, updateSupplierSchema } from "./suppliers.dto";
+import type { AuthenticatedRequest } from "../../app/middlewares/auth.middleware";
 
 
 export const createSupplierController = async (req: AuthenticatedRequest, res: Response) => {

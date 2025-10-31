@@ -1,6 +1,6 @@
 import { type Request, type Response } from "express";
-import { DashboardService } from "./dashboard.service.ts";
-import type { AuthenticatedRequest } from "../../app/middlewares/auth.middleware.ts";
+import { DashboardService } from "./dashboard.service";
+import type { AuthenticatedRequest } from "../../app/middlewares/auth.middleware";
 
 export class DashboardController {
   static async getOverview(req: AuthenticatedRequest, res: Response) {

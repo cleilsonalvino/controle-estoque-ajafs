@@ -3,8 +3,8 @@ import "dotenv/config";
 import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
-import router from "./app/routes.ts";
-import { errorHandler } from "./app/middlewares/error.ts";
+import router from "./app/routes";
+import { errorHandler } from "./app/middlewares/error";
 
 const app = express();
 

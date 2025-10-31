@@ -7,10 +7,10 @@ import {
   deleteVendaService,
   cancelVendaService,
   getVendasFiltrarService,
-} from "./sales.service.ts";
-import { createVendaSchema } from "./sales.dto.ts";
-import { CustomError } from "../../shared/errors.ts";
-import type { AuthenticatedRequest } from "../../app/middlewares/auth.middleware.ts";
+} from "./sales.service";
+import { createVendaSchema } from "./sales.dto";
+import { CustomError } from "../../shared/errors";
+import type { AuthenticatedRequest } from "../../app/middlewares/auth.middleware";
 
 /**
  * ======================================================

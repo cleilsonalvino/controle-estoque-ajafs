@@ -1,10 +1,10 @@
 import { type Request, type Response } from "express";
-import { ServiceService } from "./services.service.ts";
+import { ServiceService } from "./services.service";
 import {
   type CreateServiceDto,
   type UpdateServiceDto,
-} from "./services.dto.ts";
-import type { AuthenticatedRequest } from "../../app/middlewares/auth.middleware.ts";
+} from "./services.dto";
+import type { AuthenticatedRequest } from "../../app/middlewares/auth.middleware";
 
 const serviceService = new ServiceService();
 

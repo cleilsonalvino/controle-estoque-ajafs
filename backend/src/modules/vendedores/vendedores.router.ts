@@ -5,8 +5,8 @@ import {
   getVendedorByIdController,
   updateVendedorController,
   deleteVendedorController,
-} from './vendedores.controller.ts';
-import { authMiddleware } from '../../app/middlewares/auth.middleware.ts';
+} from './vendedores.controller';
+import { authMiddleware } from '../../app/middlewares/auth.middleware';
 
 const vendedoresRouter = Router();
 

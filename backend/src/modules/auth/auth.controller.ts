@@ -1,5 +1,5 @@
 import { type Request, type Response } from "express";
-import { loginService, getUserDataFromToken } from "./auth.service.ts";
+import { loginService, getUserDataFromToken } from "./auth.service";
 
 export const loginController = async (req: Request, res: Response) => {
   const { email, senha } = req.body;

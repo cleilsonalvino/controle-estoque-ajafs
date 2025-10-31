@@ -1,7 +1,7 @@
 import { type Response } from "express";
-import { StockService } from "./stock.service.ts";
-import { createMovimentacaoSchema } from "./stock.dto.ts";
-import { type AuthenticatedRequest } from "../../app/middlewares/auth.middleware.ts";
+import { StockService } from "./stock.service";
+import { createMovimentacaoSchema } from "./stock.dto";
+import { type AuthenticatedRequest } from "../../app/middlewares/auth.middleware";
 
 const stockService = new StockService();
 

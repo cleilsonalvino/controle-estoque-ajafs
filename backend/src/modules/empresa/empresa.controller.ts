@@ -1,6 +1,6 @@
 import { type Request, type Response } from "express";
-import { empresaService } from "./empresa.service.ts";
-import type { AuthenticatedRequest } from "../../app/middlewares/auth.middleware.ts";
+import { empresaService } from "./empresa.service";
+import type { AuthenticatedRequest } from "../../app/middlewares/auth.middleware";
 
 export const empresaController = {
   // GET /empresas - Acessível apenas por super-admin (lógica de RBAC a ser implementada)
