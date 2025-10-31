@@ -53,8 +53,8 @@ export const EmpresaProvider = ({ children }: EmpresaProviderProps) => {
   const fetchEmpresa = async () => {
     try {
       setLoading(true);
-      //const { data } = await api.get<Empresa>("/empresa");
-      //setEmpresa(data);
+      const { data } = await api.get<Empresa>("/empresa");
+      setEmpresa(data);
     } catch (error) {
       console.error("Erro ao buscar dados da empresa:", error);
       // It's okay if it fails, it might not exist yet
