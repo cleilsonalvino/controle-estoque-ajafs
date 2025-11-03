@@ -7,6 +7,7 @@ import {
   deleteVendaController,
   cancelarVendaController,
   getVendasFiltrarController,
+  createServiceSaleController
   //deleteAllSalesController
 } from "./sales.controller";
 import { authMiddleware } from "../../app/middlewares/auth.middleware";
@@ -17,7 +18,9 @@ salesRouter.use(authMiddleware);
 
 // Venda Routes
 salesRouter.post("/create", createVendaController);
+salesRouter.post("/create-sales-services", createServiceSaleController);
 salesRouter.get("/filtrar", getVendasFiltrarController);
+
 //salesRouter.delete("/delete-all", deleteAllSalesController);
 salesRouter.get("/", getVendasController);
 salesRouter.get("/:id", getVendaByIdController);

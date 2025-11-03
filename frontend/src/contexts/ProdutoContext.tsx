@@ -34,6 +34,10 @@ export interface Produto {
   quantidadeTotal: number;
   estoqueMinimo: string;
   custoMedio?: string;
+  marca?: {
+    id: string;
+    nome: string;
+  };
   categoria: {
     id: string;
     nome?: string;
@@ -62,6 +66,8 @@ interface ProdutoContextType {
     quantidade: Number
   ) => Promise<void>;
   getEstoqueProdutoId: (id: string) => Promise<number>;
+  fetchMarcaProduto: () => Promise<any[]>;
+  createMarcaProduto: (nome: string) => Promise<any>;
 }
 
 const ProdutoContext = createContext<ProdutoContextType>({
@@ -74,6 +80,8 @@ const ProdutoContext = createContext<ProdutoContextType>({
   deleteProduto: async () => {},
   darBaixaEstoquePorVenda: async () => {},
   getEstoqueProdutoId: async () => 0,
+  fetchMarcaProduto: async () => [],
+  createMarcaProduto: async () => {},
 });
 
 interface ProdutoProviderProps {
@@ -98,6 +106,22 @@ export const ProdutoProvider = ({ children }: ProdutoProviderProps) => {
     }
   }, []);
 
+  const fetchMarcaProduto = useCallback(async () => {
+    const { data } = await api.get("/produtos/marcas-produtos");
+    return data;
+  }, []);
+
+  const createMarcaProduto = useCallback(async (nome: string) => {
+    try {
+      const { data } = await api.post("/produtos/create-marca-produto", { nome });
+      return data;
+    } catch (error) {
+      console.error("Erro ao criar marca:", error);
+      toast.error("Erro ao criar marca");
+    }
+  }, []);
+
+
   const getProdutoById = useCallback(async (id: string) => {
     try {
       const { data } = await api.get<Produto>(`/produtos/${id}`);
@@ -117,6 +141,7 @@ export const ProdutoProvider = ({ children }: ProdutoProviderProps) => {
           precoVenda: novoProduto.precoVenda,
           estoqueMinimo: Number(novoProduto.estoqueMinimo),
           categoriaId: novoProduto.categoria?.id || null,
+          marcaId: novoProduto.marca?.id || null,
           urlImage: novoProduto.urlImage,
           codigoBarras: novoProduto.codigoBarras,
         };
@@ -255,6 +280,8 @@ export const ProdutoProvider = ({ children }: ProdutoProviderProps) => {
         deleteProduto,
         darBaixaEstoquePorVenda,
         getEstoqueProdutoId,
+        fetchMarcaProduto,
+        createMarcaProduto,
       }}
     >
       {children}

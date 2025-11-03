@@ -33,6 +33,7 @@ import TiposServicos from "./pages/TiposServicos";
 import EstoqueDashboard from "./pages/EstoqueDashboard";
 import { PermissionGuard } from "./components/PermissionGuard";
 import SuperAdminEmpresas from "./pages/admin/SuperAdmin";
+import { ServiceSalesProvider } from "./contexts/ServiceSalesContext";
 //import { TitleBar } from "./components/TitleBar";
 
 const queryClient = new QueryClient();
@@ -48,143 +49,141 @@ const App = () => (
         <AuthProvider>
           <EmpresaProvider>
             <SalesProvider>
-              <SupplierProvider>
-                <CategoryProvider>
-                  <ServiceCategoryProvider>
-                    <ProdutoProvider>
-                      <ClienteProvider>
-                        <VendedorProvider>
-                          <TipoServicoProvider>
-                            <Routes>
-                              <Route path="/login" element={<LoginPage />} />
+              <ServiceSalesProvider>
+                <SupplierProvider>
+                  <CategoryProvider>
+                    <ServiceCategoryProvider>
+                      <ProdutoProvider>
+                        <ClienteProvider>
+                          <VendedorProvider>
+                            <TipoServicoProvider>
+                              <Routes>
+                                <Route path="/login" element={<LoginPage />} />
 
-                              {/* Routes protected by authentication */}
-                              <Route element={<ProtectedRoute />}>
-                                
-                                {/* === GROUP 1: Routes WITH Sidebar === */}
-                                <Route path="/" element={<Layout />}>
-                                  
-                                  
+                                {/* Routes protected by authentication */}
+                                <Route element={<ProtectedRoute />}>
+                                  {/* === GROUP 1: Routes WITH Sidebar === */}
+                                  <Route path="/" element={<Layout />}>
+                                    <Route index element={<HomePage />} />
+                                    <Route
+                                      path="/estoque"
+                                      element={
+                                        <PermissionGuard permissionKey="estoque">
+                                          <EstoqueDashboard />
+                                        </PermissionGuard>
+                                      }
+                                    />
+                                    <Route
+                                      index
+                                      element={
+                                        <PermissionGuard permissionKey="admin">
+                                          <SuperAdminEmpresas />
+                                        </PermissionGuard>
+                                      }
+                                    />
+                                    <Route
+                                      path="/products"
+                                      element={
+                                        <PermissionGuard permissionKey="products">
+                                          <Products />
+                                        </PermissionGuard>
+                                      }
+                                    />
+                                    <Route
+                                      path="/movements"
+                                      element={
+                                        <PermissionGuard permissionKey="movements">
+                                          <Movements />
+                                        </PermissionGuard>
+                                      }
+                                    />
+                                    <Route
+                                      path="/suppliers"
+                                      element={
+                                        <PermissionGuard permissionKey="suppliers">
+                                          <Suppliers />
+                                        </PermissionGuard>
+                                      }
+                                    />
+                                    <Route
+                                      path="/categories"
+                                      element={
+                                        <PermissionGuard permissionKey="categories">
+                                          <Categories />
+                                        </PermissionGuard>
+                                      }
+                                    />
+                                    <Route
+                                      path="/service-categories"
+                                      element={
+                                        <PermissionGuard permissionKey="service-categories">
+                                          <ServiceCategories />
+                                        </PermissionGuard>
+                                      }
+                                    />
+                                    <Route
+                                      path="/tipos-servicos"
+                                      element={
+                                        <PermissionGuard permissionKey="tipos-servicos">
+                                          <TiposServicos />
+                                        </PermissionGuard>
+                                      }
+                                    />
+                                    <Route
+                                      path="/dashboard-sales"
+                                      element={
+                                        <PermissionGuard permissionKey="dashboard-sales">
+                                          <SalesDashboard />
+                                        </PermissionGuard>
+                                      }
+                                    />
+                                    <Route
+                                      path="/clientes"
+                                      element={
+                                        <PermissionGuard permissionKey="clientes">
+                                          <Clientes />
+                                        </PermissionGuard>
+                                      }
+                                    />
+                                    <Route
+                                      path="/vendedores"
+                                      element={
+                                        <PermissionGuard permissionKey="vendedores">
+                                          <Vendedores />
+                                        </PermissionGuard>
+                                      }
+                                    />
+                                    <Route
+                                      path="/settings"
+                                      element={
+                                        <PermissionGuard permissionKey="settings">
+                                          <Settings />
+                                        </PermissionGuard>
+                                      }
+                                    />
+                                  </Route>
+
+                                  {/* === GROUP 2: Route WITHOUT Sidebar (PDV) === */}
                                   <Route
-                                    index
-                                    element={<HomePage />}
-                                  />
-                                  <Route
-                                    path="/estoque"
+                                    path="/sales"
                                     element={
-                                      <PermissionGuard permissionKey="estoque">
-                                        <EstoqueDashboard />
-                                      </PermissionGuard>
-                                    }
-                                  />
-                                  <Route
-                                    index
-                                    element={<PermissionGuard permissionKey="admin">
-                                      <SuperAdminEmpresas />
-                                    </PermissionGuard>}
-                                  />
-                                  <Route
-                                    path="/products"
-                                    element={
-                                      <PermissionGuard permissionKey="products">
-                                        <Products />
-                                      </PermissionGuard>
-                                    }
-                                  />
-                                  <Route
-                                    path="/movements"
-                                    element={
-                                      <PermissionGuard permissionKey="movements">
-                                        <Movements />
-                                      </PermissionGuard>
-                                    }
-                                  />
-                                  <Route
-                                    path="/suppliers"
-                                    element={
-                                      <PermissionGuard permissionKey="suppliers">
-                                        <Suppliers />
-                                      </PermissionGuard>
-                                    }
-                                  />
-                                  <Route
-                                    path="/categories"
-                                    element={
-                                      <PermissionGuard permissionKey="categories">
-                                        <Categories />
-                                      </PermissionGuard>
-                                    }
-                                  />
-                                  <Route
-                                    path="/service-categories"
-                                    element={
-                                      <PermissionGuard permissionKey="service-categories">
-                                        <ServiceCategories />
-                                      </PermissionGuard>
-                                    }
-                                  />
-                                  <Route
-                                    path="/tipos-servicos"
-                                    element={
-                                      <PermissionGuard permissionKey="tipos-servicos">
-                                        <TiposServicos />
-                                      </PermissionGuard>
-                                    }
-                                  />
-                                  <Route
-                                    path="/dashboard-sales"
-                                    element={
-                                      <PermissionGuard permissionKey="dashboard-sales">
-                                        <SalesDashboard />
-                                      </PermissionGuard>
-                                    }
-                                  />
-                                  <Route
-                                    path="/clientes"
-                                    element={
-                                      <PermissionGuard permissionKey="clientes">
-                                        <Clientes />
-                                      </PermissionGuard>
-                                    }
-                                  />
-                                  <Route
-                                    path="/vendedores"
-                                    element={
-                                      <PermissionGuard permissionKey="vendedores">
-                                        <Vendedores />
-                                      </PermissionGuard>
-                                    }
-                                  />
-                                  <Route
-                                    path="/settings"
-                                    element={
-                                      <PermissionGuard permissionKey="settings">
-                                        <Settings />
+                                      <PermissionGuard permissionKey="sales">
+                                        <Sales />
                                       </PermissionGuard>
                                     }
                                   />
                                 </Route>
 
-                                {/* === GROUP 2: Route WITHOUT Sidebar (PDV) === */}
-                                <Route
-                                  path="/sales"
-                                  element={
-                                    <PermissionGuard permissionKey="sales">
-                                      <Sales />
-                                    </PermissionGuard>
-                                  }
-                                />
-                              </Route>
-
-                              <Route path="*" element={<NotFound />} />
-                            </Routes>
-                          </TipoServicoProvider>
-                        </VendedorProvider>
-                      </ClienteProvider>
-                    </ProdutoProvider>
-                  </ServiceCategoryProvider>
-                </CategoryProvider>
-              </SupplierProvider>
+                                <Route path="*" element={<NotFound />} />
+                              </Routes>
+                            </TipoServicoProvider>
+                          </VendedorProvider>
+                        </ClienteProvider>
+                      </ProdutoProvider>
+                    </ServiceCategoryProvider>
+                  </CategoryProvider>
+                </SupplierProvider>
+              </ServiceSalesProvider>
             </SalesProvider>
           </EmpresaProvider>
         </AuthProvider>

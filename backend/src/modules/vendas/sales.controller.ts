@@ -7,6 +7,7 @@ import {
   deleteVendaService,
   cancelVendaService,
   getVendasFiltrarService,
+  createSaleServicesService
 } from "./sales.service";
 import { createVendaSchema } from "./sales.dto";
 import { CustomError } from "../../shared/errors";
@@ -39,6 +40,24 @@ export const createVendaController = async (req: AuthenticatedRequest, res: Resp
     res.status(error.status || 500).json({ message: error.message });
   }
 };
+
+
+export const createServiceSaleController = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const {empresaId} = req.user!;
+    console.log("Empresa ID no createServiceSaleController:", empresaId);
+    if (!empresaId) {
+      return res.status(401).json({ message: "Usuário sem empresa associada" });
+    }
+    console.log("Requisição para criar venda de serviço:", req.body);
+    const venda = await createSaleServicesService(req.body, empresaId);
+    res.status(201).json(venda);
+  } catch (error: any) {
+    res.status(error.statusCode || 500).json({ message: error.message });
+  }
+};
+
+
 
 /**
  * ======================================================

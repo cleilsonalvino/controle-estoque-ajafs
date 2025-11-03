@@ -9,7 +9,7 @@ estoqueRouter.use(authMiddleware); // 🔐 todas as rotas exigem login
 
 
 
-estoqueRouter.post("/movimentacoes", controller.createMovimentacao.bind(controller));
+estoqueRouter.post("/movimentacao", controller.createMovimentacao.bind(controller));
 estoqueRouter.get("/movimentacoes", controller.getMovimentacoes.bind(controller));
 estoqueRouter.get("/movimentacoes/:produtoId", controller.getMovimentacoesByProdutoId.bind(controller));
 estoqueRouter.get("/valor-estoque", controller.getValorEstoque.bind(controller));

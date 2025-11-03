@@ -8,6 +8,7 @@ export const createProductSchema = z.object({
   codigoBarras: z.string().optional(),
   estoqueMinimo: z.number().nonnegative().optional().default(0),
   categoriaId: z.string().uuid('ID de categoria inválido').optional().nullable(),
+  marcaId: z.string().uuid('ID de produto inválido').optional().nullable(),
 
 }).strict();
 
@@ -19,6 +20,7 @@ export const updateProductSchema = z.object({
   codigoBarras: z.string().optional().nullable(),
   estoqueMinimo: z.number().nonnegative().optional(),
   categoriaId: z.string().uuid().optional(),
+  marcaId: z.string().uuid().optional(),
 });
 
 export type createProductDto = z.infer<typeof createProductSchema>;

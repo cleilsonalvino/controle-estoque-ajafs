@@ -48,11 +48,9 @@ model Produto {
   categoriaId   String?
   fornecedorId  String?
   empresaId     String
+  marcaId       String?
   criadoEm      DateTime @default(now())
   atualizadoEm  DateTime @updatedAt
-
-  @@unique([empresaId, nome])
-  @@unique([empresaId, codigoBarras])
 
   empresa       Empresa           @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   categoria     CategoriaProduto? @relation(fields: [categoriaId], references: [id], onDelete: Cascade)
@@ -60,7 +58,25 @@ model Produto {
   movimentacoes Movimentacao[]
   itensVenda    ItemVenda[]
   lote          Lote[]
+  marca         Marca?            @relation(fields: [marcaId], references: [id], onDelete: Cascade)
+
+  @@unique([empresaId, nome])
+  @@unique([empresaId, codigoBarras])
 }
+
+model Marca {
+  id       String     @id @default(uuid())
+  nome     String
+  produtos Produto[]
+
+  empresaId String
+
+
+  empresa       Empresa           @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@unique([empresaId, nome])
+}
+
 
 model CategoriaProduto {
   id           String   @id @default(uuid())
@@ -147,7 +163,7 @@ model Venda {
   cliente     Cliente? @relation(fields: [clienteId], references: [id])
   vendedor    Vendedor? @relation(fields: [vendedorId], references: [id])
   itens       ItemVenda[]
-  ItemServico ItemServico[]
+  tipoServicos tipoServico[]
 }
 
 // ================================
@@ -225,7 +241,7 @@ model Servico {
 
   empresa      Empresa           @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   categoria    CategoriaServico? @relation(fields: [categoriaId], references: [id], onDelete: Cascade)
-  itensServico ItemServico[]
+  tiposServicos tipoServico[]
 }
 
 model CategoriaServico {
@@ -242,7 +258,7 @@ model CategoriaServico {
   servicos Servico[]
 }
 
-model ItemServico {
+model tipoServico {
   id            String  @id @default(uuid())
   vendaId       String
   servicoId     String
@@ -254,6 +270,7 @@ model ItemServico {
   servico Servico @relation(fields: [servicoId], references: [id], onDelete: Cascade)
   empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
 }
+
 
 // ================================
 // Lotes
@@ -314,6 +331,7 @@ model Empresa {
   servicos           Servico[]
   vendas             Venda[]
   itensVendas        ItemVenda[]
-  itensServicos      ItemServico[]
+  tipoServicos      tipoServico[]
   lotes              Lote[]
+  marcas             Marca[]
 }

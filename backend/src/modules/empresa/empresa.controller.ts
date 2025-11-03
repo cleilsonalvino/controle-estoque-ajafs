@@ -11,6 +11,7 @@ export const empresaController = {
 
   // POST /empresas - Rota pública ou de super-admin para criar novas empresas
   async create(req: AuthenticatedRequest, res: Response) {
+    console.log("Requisição para criar empresa:", req.body);
     const empresa = await empresaService.create(req.body);
     res.status(201).json(empresa);
   },

@@ -53,6 +53,17 @@ export const createProductService = async (data: any, empresaId: string) => {
   return createProduct;
 };
 
+export const createMarcaProdutoService = async (nome: string, empresaId: string) => {
+  const marca = await prisma.marca.create({
+    data: {
+      nome,
+      empresaId,
+    },
+  });
+  return marca;
+}
+
+
 export const getProductsService = async (empresaId: string) => {
   const products = await prisma.produto.findMany({
     where: { empresaId },
@@ -63,6 +74,11 @@ export const getProductsService = async (empresaId: string) => {
         include: {
           fornecedor: true,
         },
+      },
+      marca: {
+        select:{
+          nome: true
+        }
       },
     },
   });
@@ -96,6 +112,13 @@ export const getProductsService = async (empresaId: string) => {
 
   return productsWithTotalCosted;
 };
+
+export const getMarcaProdutosService = async (empresaId: string) => {
+  const marcas = await prisma.marca.findMany({
+    where: { empresaId },
+  });
+  return marcas;
+}
 
 export const getProductByIdService = async (id: string, empresaId: string) => {
   const product = await prisma.produto.findFirst({

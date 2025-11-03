@@ -100,6 +100,59 @@ export const createVendaService = async (data: any, empresaId: string) => {
   });
 };
 
+export const createSaleServicesService = async (data: any, empresaId: string) => {
+  if (!data.vendedorId) throw new CustomError("O vendedor é obrigatório.", 400);
+  if (!data.itens || data.itens.length === 0)
+    throw new CustomError("A venda de serviço precisa conter ao menos um item.", 400);
+
+  // Verifica se os serviços existem e pertencem à empresa
+  for (const item of data.itens) {
+    const servico = await prisma.servico.findFirst({
+      where: { id: item.servicoId, empresaId },
+      select: { nome: true },
+    });
+    if (!servico) {
+      throw new CustomError(`Serviço não encontrado para o item informado.`, 404);
+    }
+  }
+
+  // Calcula o total
+  const total = data.itens.reduce(
+    (sum: number, item: any) =>
+      sum + Number(item.precoUnitario) * Number(item.quantidade || 1),
+    0
+  );
+
+  // Cria a venda e os itens dentro de uma transação
+  return prisma.$transaction(async (tx) => {
+    const venda = await tx.venda.create({
+      data: {
+        numero: `SRV-${Date.now()}`,
+        clienteId: data.clienteId || null,
+        vendedorId: data.vendedorId,
+        total,
+        formaPagamento: data.formaPagamento || "Dinheiro",
+        desconto: data.desconto || 0,
+        status: "Concluída",
+        empresaId,
+      },
+    });
+
+    await tx.tipoServico.createMany({
+      data: data.itens.map((item: any) => ({
+        vendaId: venda.id,
+        servicoId: item.servicoId,
+        quantidade: item.quantidade || 1,
+        precoUnitario: item.precoUnitario,
+        empresaId,
+      })),
+    });
+
+    return venda;
+  });
+};
+  
+
 /**
  * ======================================================
  * UPDATE VENDA
@@ -333,6 +386,9 @@ export const getVendasFiltrarService = async (filtros: any, empresaId: string) =
       fim.setHours(23, 59, 59, 999);
       where.criadoEm.lte = fim;
     }
+  }
+  if(filtros.tipoVenda && filtros.tipoVenda !== "todos"){
+    where.tipoVenda = filtros.tipoVenda;
   }
 
   return prisma.venda.findMany({

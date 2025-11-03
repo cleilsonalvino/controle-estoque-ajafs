@@ -11,6 +11,8 @@ export interface TipoServico {
   precoVenda: number | 0;
   duracaoMinutos: number | 0;
   categoriaId: string | null;
+  criadoEm?: Date;
+  atualizadoEm?: Date;
 }
 
 interface TipoServicoContextType {

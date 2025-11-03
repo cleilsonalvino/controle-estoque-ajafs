@@ -10,8 +10,15 @@ import {
   Clock,
   DollarSign,
   Layers,
+  Upload,
 } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -35,7 +42,7 @@ import {
 } from "@/components/ui/select";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 const TiposServicos = () => {
@@ -49,37 +56,17 @@ const TiposServicos = () => {
   } = useTiposServicos();
 
   const { serviceCategories, fetchServiceCategories } = useServiceCategories();
-
-  const [showAddDialog, setShowAddDialog] = useState(false);
-  const [editingTipoServico, setEditingTipoServico] = useState<TipoServico | null>(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [sortOption, setSortOption] = useState<"A-Z" | "Z-A" | "recentes">("recentes");
+  const navigate = useNavigate();
   const location = useLocation();
 
-  // === REFRESH AUTOMÁTICO ===
-  useEffect(() => {
-    const fetchAll = async () => {
-      await Promise.all([fetchServiceCategories(), fetchTiposServicos()]);
-    };
-
-    // Roda ao abrir a rota
-    fetchAll();
-
-    // Atualiza ao voltar foco na aba
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        fetchAll().then(() => {
-          toast.info("Dados atualizados automaticamente");
-        });
-      }
-    };
-
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
-  }, [location.pathname]);
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [editingTipoServico, setEditingTipoServico] =
+    useState<TipoServico | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortOption, setSortOption] = useState<"A-Z" | "Z-A" | "recentes">(
+    "recentes"
+  );
+  const [filterCategory, setFilterCategory] = useState<string>("");
 
   // === FORM ===
   const [formData, setFormData] = useState({
@@ -88,50 +75,82 @@ const TiposServicos = () => {
     precoCusto: 0.0,
     precoVenda: 0.0,
     duracaoMinutos: 0,
-    categoriaId: null,
+    categoriaId: "",
   });
+
+  // === REFRESH AUTOMÁTICO ===
+  useEffect(() => {
+    const fetchAll = async () => {
+      await Promise.all([fetchServiceCategories(), fetchTiposServicos()]);
+    };
+    fetchAll();
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        fetchAll().then(() => toast.info("Dados atualizados automaticamente"));
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () =>
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [location.pathname]);
 
   // === FILTRAGEM E ORDENAÇÃO ===
   const filteredTiposServicos = tiposServicos
-    .filter(
-      (s) =>
+    .filter((s) => {
+      const matchesSearch =
         s.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        s.descricao.toLowerCase().includes(searchTerm.toLowerCase())
-    )
+        s.descricao.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCategory = filterCategory
+        ? s.categoriaId === filterCategory
+        : true;
+      return matchesSearch && matchesCategory;
+    })
     .sort((a, b) => {
       if (sortOption === "A-Z") return a.nome.localeCompare(b.nome);
       if (sortOption === "Z-A") return b.nome.localeCompare(a.nome);
+      if (sortOption === "recentes")
+        return new Date(b.criadoEm).getTime() - new Date(a.criadoEm).getTime();
       return 0;
     });
 
   // === CRUD ===
   const handleAdd = async () => {
-    if (!formData.nome) return;
+    if (!formData.nome.trim())
+      return toast.error("O nome do serviço é obrigatório.");
+    if (formData.precoVenda <= 0)
+      return toast.error("Informe um preço de venda válido.");
+
     await createTipoServico({
       ...formData,
       precoCusto: Number(formData.precoCusto),
       precoVenda: Number(formData.precoVenda),
       duracaoMinutos: Number(formData.duracaoMinutos),
     });
-    await fetchTiposServicos(); // refaz o fetch após criar
+    await fetchTiposServicos();
     resetForm();
   };
 
   const handleUpdate = async () => {
     if (!editingTipoServico) return;
+    if (!formData.nome.trim())
+      return toast.error("O nome do serviço é obrigatório.");
+
     await updateTipoServico(editingTipoServico.id, {
       ...formData,
       precoCusto: Number(formData.precoCusto),
       precoVenda: Number(formData.precoVenda),
       duracaoMinutos: Number(formData.duracaoMinutos),
+      
     });
-    await fetchTiposServicos(); // refaz o fetch após editar
+    await fetchTiposServicos();
     resetForm();
   };
 
   const handleDelete = async (id: string) => {
     await deleteTipoServico(id);
-    await fetchTiposServicos(); // refaz o fetch após deletar
+    await fetchTiposServicos();
   };
 
   const resetForm = () => {
@@ -141,7 +160,7 @@ const TiposServicos = () => {
       precoCusto: 0.0,
       precoVenda: 0.0,
       duracaoMinutos: 0,
-      categoriaId: null,
+      categoriaId: "",
     });
     setEditingTipoServico(null);
     setShowAddDialog(false);
@@ -165,18 +184,42 @@ const TiposServicos = () => {
     const doc = new jsPDF();
     doc.text("Relatório de Tipos de Serviços", 14, 15);
     autoTable(doc, {
-      head: [["Serviço", "Descrição", "Custo", "Venda", "Duração", "Categoria"]],
+      head: [
+        ["Serviço", "Descrição", "Custo", "Venda", "Duração", "Categoria"],
+      ],
       body: filteredTiposServicos.map((s) => [
         s.nome,
         s.descricao,
-        s.precoCusto,
-        s.precoVenda,
-        s.duracaoMinutos,
+        `R$ ${Number(s.precoCusto).toFixed(2)}`,
+        `R$ ${Number(s.precoVenda).toFixed(2)}`,
+        `${s.duracaoMinutos || 0} min`,
         serviceCategories.find((c) => c.id === s.categoriaId)?.nome || "—",
       ]),
       startY: 20,
     });
     doc.save("tipos_de_servicos.pdf");
+  };
+
+  // === EXPORTAÇÃO CSV ===
+  const exportCSV = () => {
+    const rows = filteredTiposServicos.map((s) => ({
+      Nome: s.nome,
+      Descrição: s.descricao,
+      "Preço Custo": s.precoCusto,
+      "Preço Venda": s.precoVenda,
+      Duração: s.duracaoMinutos,
+      Categoria:
+        serviceCategories.find((c) => c.id === s.categoriaId)?.nome || "—",
+    }));
+    const csv = [
+      Object.keys(rows[0]).join(","),
+      ...rows.map((r) => Object.values(r).join(",")),
+    ].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "tipos_de_servicos.csv";
+    link.click();
   };
 
   // === MÉTRICAS ===
@@ -202,6 +245,9 @@ const TiposServicos = () => {
           <Button variant="outline" onClick={exportPDF}>
             <FileDown className="h-4 w-4 mr-2" /> PDF
           </Button>
+          <Button variant="outline" onClick={exportCSV}>
+            <Upload className="h-4 w-4 mr-2" /> CSV
+          </Button>
           <Button
             onClick={() => setShowAddDialog(true)}
             className="bg-gradient-to-r from-blue-600 to-purple-600 text-white"
@@ -209,6 +255,22 @@ const TiposServicos = () => {
             <Plus className="h-4 w-4 mr-2" /> Novo Serviço
           </Button>
         </div>
+      </div>
+
+      {/* === FILTRO POR CATEGORIA === */}
+      <div className="flex flex-wrap gap-4 items-center">
+        <Select value={filterCategory} onValueChange={setFilterCategory}>
+          <SelectTrigger className="w-64">
+            <SelectValue placeholder="Filtrar por categoria" />
+          </SelectTrigger>
+          <SelectContent>
+            {serviceCategories.map((cat) => (
+              <SelectItem key={cat.id} value={cat.id}>
+                {cat.nome}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* === MÉTRICAS === */}
@@ -225,8 +287,12 @@ const TiposServicos = () => {
         <Card className="bg-green-50 border-none shadow-sm">
           <CardContent className="flex justify-between items-center p-4">
             <div>
-              <p className="text-sm text-green-800">Média de Preço de Serviço</p>
-              <h2 className="text-2xl font-bold">R$ {mediaPrecoVenda}</h2>
+              <p className="text-sm text-green-800">
+                Média de Preço de Serviço
+              </p>
+              <h2 className="text-2xl font-bold">
+                R$ {mediaPrecoVenda.toFixed(2)}
+              </h2>
             </div>
             <DollarSign className="text-green-600 w-8 h-8" />
           </CardContent>
@@ -235,7 +301,9 @@ const TiposServicos = () => {
           <CardContent className="flex justify-between items-center p-4">
             <div>
               <p className="text-sm text-orange-800">Duração Média</p>
-              <h2 className="text-2xl font-bold">{mediaDuracao} min</h2>
+              <h2 className="text-2xl font-bold">
+                {mediaDuracao.toFixed(0)} min
+              </h2>
             </div>
             <Clock className="text-orange-600 w-8 h-8" />
           </CardContent>
@@ -280,12 +348,22 @@ const TiposServicos = () => {
             >
               <CardHeader>
                 <div className="flex justify-between items-start">
-                  <CardTitle className="text-lg font-semibold truncate">{s.nome}</CardTitle>
+                  <CardTitle className="text-lg font-semibold truncate">
+                    {s.nome}
+                  </CardTitle>
                   <div className="flex gap-2">
-                    <Button variant="ghost" size="icon" onClick={() => openEditDialog(s)}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => openEditDialog(s)}
+                    >
                       <Edit className="h-4 w-4 text-blue-600" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(s.id)}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDelete(s.id)}
+                    >
                       <Trash2 className="h-4 w-4 text-red-600" />
                     </Button>
                   </div>
@@ -296,18 +374,35 @@ const TiposServicos = () => {
               </CardHeader>
               <CardContent className="space-y-2">
                 <p className="text-sm text-green-600 font-semibold">
-                  Preço Venda: R$ {s.precoVenda ?? "—"}
+                  Preço Venda:{" "}
+                  {s.precoVenda ? `R$ ${Number(s.precoVenda).toFixed(2)}` : "—"}
                 </p>
                 <p className="text-sm text-red-500">
-                  Custo: R$ {s.precoCusto ?? "—"}
+                  Custo:{" "}
+                  {s.precoCusto ? `R$ ${Number(s.precoCusto).toFixed(2)}` : "—"}
                 </p>
                 <p className="text-xs text-muted-foreground">
                   Duração: {s.duracaoMinutos || "—"} min
                 </p>
                 <p className="text-xs text-muted-foreground">
                   Categoria:{" "}
-                  {serviceCategories.find((c) => c.id === s.categoriaId)?.nome || "—"}
+                  {serviceCategories.find((c) => c.id === s.categoriaId)
+                    ?.nome || "—"}
                 </p>
+
+                {Number(s.precoVenda) - Number(s.precoCusto) > 50 && (
+                  <p className="text-xs text-green-700 font-medium">
+                    Alta margem de lucro
+                  </p>
+                )}
+
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => navigate(`/sales?servico=${s.id}`)}
+                >
+                  <DollarSign className="h-4 w-4 mr-1" /> Vender Serviço
+                </Button>
               </CardContent>
             </Card>
           ))}
@@ -324,7 +419,8 @@ const TiposServicos = () => {
         </Card>
       )}
 
-            <Dialog open={showAddDialog} onOpenChange={resetForm}>
+      {/* === MODAL === */}
+      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>
@@ -343,7 +439,9 @@ const TiposServicos = () => {
               <Input
                 placeholder="Ex: Manutenção de Computadores"
                 value={formData.nome}
-                onChange={(e) => setFormData((p) => ({ ...p, nome: e.target.value }))}
+                onChange={(e) =>
+                  setFormData((p) => ({ ...p, nome: e.target.value }))
+                }
               />
             </div>
 
@@ -352,7 +450,9 @@ const TiposServicos = () => {
               <Textarea
                 placeholder="Descreva o serviço..."
                 value={formData.descricao}
-                onChange={(e) => setFormData((p) => ({ ...p, descricao: e.target.value }))}
+                onChange={(e) =>
+                  setFormData((p) => ({ ...p, descricao: e.target.value }))
+                }
               />
             </div>
 
@@ -363,7 +463,10 @@ const TiposServicos = () => {
                   type="number"
                   value={formData.precoCusto}
                   onChange={(e) =>
-                    setFormData((p) => ({ ...p, precoCusto: Number(e.target.value) }))
+                    setFormData((p) => ({
+                      ...p,
+                      precoCusto: Number(e.target.value),
+                    }))
                   }
                 />
               </div>
@@ -373,7 +476,10 @@ const TiposServicos = () => {
                   type="number"
                   value={formData.precoVenda}
                   onChange={(e) =>
-                    setFormData((p) => ({ ...p, precoVenda: Number(e.target.value) }))
+                    setFormData((p) => ({
+                      ...p,
+                      precoVenda: Number(e.target.value),
+                    }))
                   }
                 />
               </div>
@@ -385,7 +491,10 @@ const TiposServicos = () => {
                 type="number"
                 value={formData.duracaoMinutos}
                 onChange={(e) =>
-                  setFormData((p) => ({ ...p, duracaoMinutos: Number(e.target.value) }))
+                  setFormData((p) => ({
+                    ...p,
+                    duracaoMinutos: Number(e.target.value),
+                  }))
                 }
               />
             </div>
@@ -394,17 +503,21 @@ const TiposServicos = () => {
               <Label>Categoria</Label>
               <Select
                 value={formData.categoriaId}
-                onValueChange={(value) => setFormData((p) => ({ ...p, categoriaId: value }))}
+                onValueChange={(value) =>
+                  setFormData((p) => ({ ...p, categoriaId: value }))
+                }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione uma categoria" />
                 </SelectTrigger>
                 <SelectContent>
-                  {serviceCategories.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.id}>
-                      {cat.nome}
-                    </SelectItem>
-                  ))}
+                  {serviceCategories
+                    .filter((cat) => cat.id) // só mostra os que têm id válido
+                    .map((cat) => (
+                      <SelectItem key={cat.id} value={cat.id}>
+                        {cat.nome}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>

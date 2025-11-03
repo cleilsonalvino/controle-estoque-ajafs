@@ -8,6 +8,8 @@ import {
   deleteProductService,
   addCategoryToProductService,
   addSupplierToProductService,
+  createMarcaProdutoService,
+  getMarcaProdutosService
 } from "./products.service";
 import { createProductSchema, updateProductSchema } from "./products.dto";
 import type { AuthenticatedRequest } from "../../app/middlewares/auth.middleware";
@@ -28,11 +30,28 @@ export const createProductController = async (req: AuthenticatedRequest, res: Re
   return res.status(201).json(product);
 };
 
+export const createMarcaProdutoController = async (req: AuthenticatedRequest, res: Response) => {
+  console.log("Requisição para criar marca de produto:", req.body);
+  const { empresaId } = req.user!;
+  const { nome } = req.body;
+  if (typeof nome !== 'string' || nome.trim() === '') {
+    return res.status(400).json({ message: 'Nome da marca é obrigatório e deve ser uma string válida.' });
+  }
+  const marca = await createMarcaProdutoService(nome, empresaId);
+  return res.status(201).json(marca);
+}
+
 export const getProductsController = async (req: AuthenticatedRequest, res: Response) => {
   const { empresaId } = req.user!;
   const products = await getProductsService(empresaId);
   return res.status(200).json(products);
 };
+
+export const getMarcaProdutosController = async (req: AuthenticatedRequest, res: Response) => {
+  const { empresaId } = req.user!;
+  const marcas = await getMarcaProdutosService(empresaId);
+  return res.status(200).json(marcas);
+}
 
 export const getProductByIdController = async (req: AuthenticatedRequest, res: Response) => {
   const { id } = req.params;

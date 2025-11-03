@@ -504,6 +504,10 @@ const CreateProdutoDialog: React.FC<{
     precoVenda: "",
     urlImage: "",
     categoria: { id: "", nome: "" },
+    marca: {
+      id: "",
+      nome: "",
+    },
     estoqueMinimo: "0",
     quantidadeTotal: 0,
     codigoBarras: "",
@@ -513,7 +517,14 @@ const CreateProdutoDialog: React.FC<{
 
   const [form, setForm] = useState(initialState);
   const [saving, setSaving] = useState(false);
-  const { fetchProdutos } = useProdutos();
+  const { fetchMarcaProduto, createMarcaProduto } = useProdutos();
+  const [marcas, setMarcas] = useState([]);
+  const [marcaSelecionada, setMarcaSelecionada] = useState({
+    id: "",
+    nome: "",
+  });
+  const [novaMarca, setNovaMarca] = useState("");
+  const [openDialogMarca, setOpenDialogMarca] = useState(false);
 
   const handleChange = (key: keyof typeof form, value: any) =>
     setForm({ ...form, [key]: value });
@@ -561,6 +572,7 @@ const CreateProdutoDialog: React.FC<{
       onCreate({
         ...form,
         precoVenda: precoVendaNumber,
+        marca: { id: marcaSelecionada.id, nome: marcaSelecionada.nome },
       });
     } finally {
       setSaving(false);
@@ -596,7 +608,7 @@ const CreateProdutoDialog: React.FC<{
         <div className="space-y-6 py-2">
           {/* CORREÇÃO: Layout de grid corrigido e input de Preço de Custo adicionado. */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
+            <div className="space-y-2 col-span-2">
               <Label htmlFor="nome-create">
                 Nome<span className="text-red-500">*</span>
               </Label>
@@ -606,6 +618,103 @@ const CreateProdutoDialog: React.FC<{
                 value={form.nome}
                 onChange={(e) => handleChange("nome", e.target.value)}
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="marca-create">Marca</Label>
+              <Select
+                onOpenChange={async (open) => {
+                  if (open) {
+                    const data = await fetchMarcaProduto();
+                    setMarcas(data || []);
+                  }
+                }}
+                onValueChange={(id) => {
+                  const marca = marcas.find((m) => m.id === id);
+                  if (marca) {
+                    setMarcaSelecionada({ id: marca.id, nome: marca.nome });
+                    handleChange("marca", marca);
+                  }
+                }}
+                value={marcaSelecionada.id} // 👈 CORRIGIDO
+              >
+                <SelectTrigger className="border-slate-900">
+                  <SelectValue placeholder="Selecione ou crie uma marca" />
+                </SelectTrigger>
+
+                <SelectContent>
+                  {marcas.length > 0 ? (
+                    marcas.map((marca) => (
+                      <SelectItem key={marca.id} value={marca.id}>
+                        {marca.nome}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <div className="p-2 text-sm text-gray-500">
+                      Nenhuma marca encontrada
+                    </div>
+                  )}
+
+                  <div className="border-t my-2" />
+                  <div className="px-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full text-sm justify-center"
+                      onClick={() => setOpenDialogMarca(true)}
+                    >
+                      + Nova marca
+                    </Button>
+                  </div>
+                </SelectContent>
+              </Select>
+
+              {/* Dialog para criar nova marca */}
+              <Dialog open={openDialogMarca} onOpenChange={setOpenDialogMarca}>
+                <DialogContent className="sm:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Criar nova marca</DialogTitle>
+                  </DialogHeader>
+
+                  <div className="space-y-4 py-2">
+                    <Label htmlFor="nova-marca">Nome da marca</Label>
+                    <Input
+                      id="nova-marca"
+                      placeholder="Digite o nome da marca"
+                      value={novaMarca}
+                      onChange={(e) => setNovaMarca(e.target.value)}
+                      className="border-slate-900"
+                    />
+                  </div>
+
+                  <DialogFooter className="gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => setOpenDialogMarca(false)}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      onClick={async () => {
+                        if (!novaMarca.trim()) return;
+                        try {
+                          const nova = await createMarcaProduto(novaMarca);
+                          if (nova) {
+                            setMarcas((prev) => [...prev, nova]);
+                            setMarcaSelecionada(nova.id);
+                            handleChange("marca", nova);
+                          }
+                          setNovaMarca("");
+                          setOpenDialogMarca(false);
+                        } catch (error) {
+                          console.error("Erro ao criar marca:", error);
+                        }
+                      }}
+                    >
+                      Criar
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </div>
 
             <div className="space-y-2">
@@ -621,7 +730,7 @@ const CreateProdutoDialog: React.FC<{
                 inputMode="numeric"
               />
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2 col-span-2">
               <Label htmlFor="codigo-barras-create">Código de Barras</Label>
               <Input
                 className="border-slate-900"
@@ -1046,6 +1155,10 @@ export const Products: React.FC = () => {
             <SelectItem value="nome-desc">Nome (Z-A)</SelectItem>
             <SelectItem value="precoVenda-asc">Preço (Menor)</SelectItem>
             <SelectItem value="precoVenda-desc">Preço (Maior)</SelectItem>
+            <div className="border-t my-2" />
+            <SelectItem value="estoque-asc">Estoque (Menor)</SelectItem>
+            <SelectItem value="estoque-desc">Estoque (Maior)</SelectItem>
+            <SelectItem value="marca">Marca</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -1210,6 +1323,7 @@ export const Products: React.FC = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>Produto</TableHead>
+                <TableHead>Marca</TableHead>
                 <TableHead>Categoria</TableHead>
                 <TableHead>
                   Fornecedor
@@ -1319,6 +1433,8 @@ export const Products: React.FC = () => {
                         </TooltipProvider>
                       )}
                     </TableCell>
+                    {/* 🔹 Marca */}
+                    <TableCell>{produto.marca?.nome || "Sem Marca"}</TableCell>
 
                     {/* 🔹 Categoria */}
                     <TableCell>

@@ -24,15 +24,11 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import {
-  ShoppingCart,
-  Briefcase,
-  ArrowLeft,
-  CheckCircle,
-} from "lucide-react";
+import { ShoppingCart, Briefcase, ArrowLeft, CheckCircle, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Link, useLocation } from "react-router-dom";
 import { useTiposServicos } from "@/contexts/TiposServicosContext";
+import { useServiceSales } from "@/contexts/ServiceSalesContext";
 
 const Sales = () => {
   const { createSale, fetchSales } = useSales();
@@ -78,16 +74,17 @@ const Sales = () => {
   const [lastSale, setLastSale] = useState<any>(null);
   const [isServiceDialogOpen, setIsServiceDialogOpen] = useState(false);
   const [loadingService, setLoadingService] = useState(false);
-
-
+  const { createServiceSale } = useServiceSales();
 
   // Campos do formulário de serviço
   const [serviceData, setServiceData] = useState({
     clienteId: "",
     vendedorId: "",
-    descricao: "",
-    valor: "",
     formaPagamento: "",
+    valor: '0.00',
+    tipoServicoId: "",
+    descricao: "",
+    itens: [{ servicoId: "", quantidade: 1, precoUnitario: 0, descricao: "" }],
   });
 
   const handleFinalizeSale = async (saleData: {
@@ -130,44 +127,106 @@ const Sales = () => {
   };
 
   const handleRegisterService = async () => {
-    const { clienteId, vendedorId, descricao, valor, formaPagamento } =
-      serviceData;
+    const { clienteId, vendedorId, formaPagamento, itens } = serviceData;
 
-    if (!vendedorId || !descricao || !valor || !formaPagamento) {
+    if (!vendedorId || !formaPagamento || itens.length === 0) {
       toast.error("Preencha todos os campos obrigatórios.");
       return;
     }
 
+    // 🔹 Verifica se todos os serviços foram selecionados corretamente
+    for (const i of itens) {
+      if (!i.servicoId || i.precoUnitario <= 0 || i.quantidade <= 0) {
+        toast.error("Preencha corretamente os dados de todos os serviços.");
+        return;
+      }
+    }
+
+    const total = itens.reduce(
+      (acc, i) => acc + Number(i.precoUnitario) * Number(i.quantidade),
+      0
+    );
+
     setLoadingService(true);
     try {
-      await createSale({
+      await createServiceSale({
         clienteId: clienteId || undefined,
         vendedorId,
-        desconto: 0,
-        formaPagamento: formaPagamento,
-        itens: [
-          {
-            produtoId: null,
-            quantidade: 1,
-            precoUnitario: Number(valor),
-          },
-        ],
+        formaPagamento,
+        valor: total,
+        tipoServicoId: "",
+        descricao: "",
+        itens: itens.map((i) => ({
+          servicoId: i.servicoId,
+          quantidade: i.quantidade,
+          precoUnitario: i.precoUnitario,
+          descricao:
+            i.descricao ||
+            tiposServicos.find((t) => t.id === i.servicoId)?.nome ||
+            "Serviço",
+        })),
       });
-      toast.success("Serviço registrado com sucesso!");
-      setIsServiceDialogOpen(false);
+
+      // Atualiza Cupom Fiscal
+      setLastSale({
+        saleItems: itens.map((i) => ({
+          nome:
+            tiposServicos.find((t) => t.id === i.servicoId)?.nome ||
+            i.descricao ||
+            "Serviço",
+          precoVenda: Number(i.precoUnitario),
+          quantidade: Number(i.quantidade),
+        })),
+        total,
+        discount: 0,
+        paymentMethod: formaPagamento,
+      });
+      setShowCupom(true);
+
+      toast.success("Serviços registrados com sucesso!");
+
+      // ✅ Limpa e fecha o modal
       setServiceData({
         clienteId: "",
         vendedorId: "",
-        descricao: "",
-        valor: "",
         formaPagamento: "",
+        valor: '0.00',
+        tipoServicoId: "",
+        descricao: "",
+        itens: [
+          { servicoId: "", quantidade: 1, precoUnitario: 0, descricao: "" },
+        ],
       });
-    } catch (error) {
-      console.error(error);
-      toast.error("Erro ao registrar serviço.");
+      setIsServiceDialogOpen(false);
+    } catch (err) {
+      console.error(err);
+      toast.error("Erro ao registrar serviços.");
     } finally {
       setLoadingService(false);
     }
+  };
+
+  const addServiceItem = () => {
+    setServiceData((prev) => ({
+      ...prev,
+      itens: [
+        ...prev.itens,
+        { servicoId: "", quantidade: 1, precoUnitario: 0, descricao: "" },
+      ],
+    }));
+  };
+
+  const updateServiceItem = (index: number, field: string, value: any) => {
+    const newItems = [...serviceData.itens];
+    (newItems[index] as any)[field] = value;
+    setServiceData((prev) => ({ ...prev, itens: newItems }));
+  };
+
+  const removeServiceItem = (index: number) => {
+    setServiceData((prev) => ({
+      ...prev,
+      itens: prev.itens.filter((_, i) => i !== index),
+    }));
   };
 
   if (mode === "pdv") {
@@ -287,19 +346,96 @@ const Sales = () => {
                 </SelectContent>
               </Select>
             </div>
+            <div className="space-y-4">
+              {serviceData.itens.map((item, index) => (
+                <Card key={index} className="p-4 relative">
+                  <div className="absolute top-2 right-2">
+                    {serviceData.itens.length > 1 && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeServiceItem(index)}
+                      >
+                        <Trash2 className="h-4 w-4 text-red-500" />
+                      </Button>
+                    )}
+                  </div>
 
-            <div>
-              <Label>Descrição do Serviço *</Label>
-              <Select>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione a descrição" />
-                </SelectTrigger>
-                {tiposServicos.map((tipo) => (
-                  <SelectContent key={tipo.id}>
-                    <SelectItem value={tipo.id}>{tipo.nome}</SelectItem>
-                  </SelectContent>
-                ))}
-              </Select>
+                  <div className="grid gap-3">
+                    <div>
+                      <Label>Serviço</Label>
+                      <Select
+                        value={item.servicoId}
+                        onValueChange={(v) =>
+                          updateServiceItem(index, "servicoId", v)
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o tipo de serviço" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {tiposServicos.map((tipo) => (
+                            <SelectItem key={tipo.id} value={tipo.id}>
+                              {tipo.nome}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>Valor (R$)</Label>
+                        <Input
+                          type="number"
+                          value={item.precoUnitario}
+                          onChange={(e) =>
+                            updateServiceItem(
+                              index,
+                              "precoUnitario",
+                              Number(e.target.value)
+                            )
+                          }
+                        />
+                      </div>
+
+                      <div>
+                        <Label>Quantidade</Label>
+                        <Input
+                          type="number"
+                          value={item.quantidade}
+                          onChange={(e) =>
+                            updateServiceItem(
+                              index,
+                              "quantidade",
+                              Number(e.target.value)
+                            )
+                          }
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label>Descrição</Label>
+                      <Input
+                        placeholder="Ex: manutenção, instalação..."
+                        value={item.descricao}
+                        onChange={(e) =>
+                          updateServiceItem(index, "descricao", e.target.value)
+                        }
+                      />
+                    </div>
+                  </div>
+                </Card>
+              ))}
+
+              <Button
+                variant="outline"
+                className="mt-2 w-full"
+                onClick={addServiceItem}
+              >
+                + Adicionar outro serviço
+              </Button>
             </div>
 
             <div>
@@ -348,7 +484,9 @@ const Sales = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    <Link to={'/'} className="text-primary">Voltar para o inicio</Link>
+      <Link to={"/"} className="text-primary">
+        Voltar para o inicio
+      </Link>
     </div>
   );
 };
