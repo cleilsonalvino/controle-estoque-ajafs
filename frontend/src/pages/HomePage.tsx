@@ -1,3 +1,5 @@
+// src/pages/HomePage.tsx
+
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/useAuth";
 import { allMenuItems } from "@/config/menuItems";
@@ -16,6 +18,8 @@ import {
   User,
 } from "lucide-react";
 import api from "@/lib/api";
+import { useEmpresa } from "@/contexts/EmpresaContext"; // ✅ NOVO: Importar o hook da empresa
+import { toast } from "sonner";
 
 const iconMap: Record<string, React.ElementType> = {
   "/": Home,
@@ -31,15 +35,51 @@ const iconMap: Record<string, React.ElementType> = {
 
 export function HomePage() {
   const { user } = useAuth();
+  // ✅ CORREÇÃO: Pegar apenas a função do context
+  const { findUniqueEmpresa } = useEmpresa();
   const [dashboard, setDashboard] = useState<any>(null);
 
+  // ✅ CORREÇÃO: Vamos usar 'empresaDados' para guardar os dados
+  const [empresaDados, setEmpresaDados] = useState<any>(null);
+  // ✅ CORREÇÃO: Criar um estado de loading local
+  const [loadingEmpresaData, setLoadingEmpresaData] = useState(false);
+
   useEffect(() => {
+    // 1. Lógica do Dashboard (como estava antes)
     if (user?.user.papel === "ADMINISTRADOR") {
-      api.get("/dashboard")
+      api
+        .get("/dashboard")
         .then((res) => setDashboard(res.data))
-        .catch((err) => console.error(err));
+        .catch((err) => console.error("Erro ao buscar dashboard:", err));
     }
-  }, [user]);
+
+    console.log("user:", user)
+
+    // 2. Criar uma função async interna para buscar dados da empresa
+    const fetchEmpresaData = async () => {
+      // ✅ FIX 1: A "Guarda"
+      // Só executa se o user e o empresaId existirem
+      if (!user || !user.user.empresa.id) {
+        return; // Sai da função se o usuário ou o ID não estiverem prontos
+      }
+
+      setLoadingEmpresaData(true);
+
+      // ✅ FIX 2: O 'try/catch' e 'await' corretos
+      try {
+        const data = await findUniqueEmpresa(user.user.empresa.id);
+        setEmpresaDados(data);
+      } catch (error) {
+        console.error("Erro ao buscar dados da empresa:", error);
+        toast.error("Erro ao buscar dados da empresa");
+      } finally {
+        setLoadingEmpresaData(false);
+      }
+    };
+
+    // 3. Chamar a função async interna
+    fetchEmpresaData();
+  }, [user, findUniqueEmpresa]); // Dependências corretas
 
   if (!user) return <div>Carregando informações do usuário...</div>;
 
@@ -58,39 +98,96 @@ export function HomePage() {
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
+        className="flex flex-row items-center space-y-2 justify-between"
       >
         <h1 className="text-3xl font-bold">
           Bem-vindo(a), {user.user.nome}!
-        </h1>
-        <p className="text-muted-foreground capitalize">
-          {user.user.papel}
+          <p className="text-muted-foreground capitalize text-sm font-normal">
+          {user.user.papel?.toUpperCase()}
         </p>
+        </h1>
+        
+        <img src={user.user.empresa.logoEmpresa ?? "https://placehold.co/800?text=Logo+Empresa&font=roboto"} alt="logo da empresa" className="p-2 w-28 cursor-pointer" />
       </motion.div>
 
-      {/* Dados do usuário */}
-      <Card className="max-w-2xl shadow-md">
-        <CardHeader>
-          <CardTitle>Informações do Perfil</CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-2 gap-4 text-sm">
-          <div>
-            <strong>Nome:</strong>
-            <p>{user.user.nome}</p>
-          </div>
-          <div>
-            <strong>Email:</strong>
-            <p>{user.user.email}</p>
-          </div>
-          <div>
-            <strong>Status:</strong>
-            <p>{user.user.ativo ? "Inativo" : "Ativo"}</p>
-          </div>
-          <div>
-            <strong>Criado em:</strong>
-            <p>{user.user.criadoEm ?? "--"}</p>
-          </div>
-        </CardContent>
-      </Card>
+      {/* 🔄 ALTERADO: Cards de Informações */}
+      <div className="flex flex-wrap gap-4">
+        {/* Card 1: Informações da Empresa (do useEmpresa) */}
+        <Card className="flex-1 min-w-[350px] max-w-2xl shadow-md">
+          <CardHeader>
+            <CardTitle>Informações da Empresa</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-2 gap-4 text-sm">
+            {/* ✅ CORREÇÃO: Usar o estado de loading local */}
+            {loadingEmpresaData ? (
+              <p>Carregando dados da empresa...</p>
+            ) : // ✅ CORREÇÃO: Usar o estado 'empresaDados'
+            empresaDados ? (
+              <>
+                <div>
+                  <strong>Razão Social:</strong>
+                  {/* ✅ CORREÇÃO: Ler de 'empresaDados' */}
+                  <p>{empresaDados.razaoSocial}</p>
+                </div>
+                <div>
+                  <strong>Nome Fantasia:</strong>
+                  <p>{empresaDados.nomeFantasia}</p>
+                </div>
+                <div>
+                  <strong>CNPJ:</strong>
+                  <p>{empresaDados.cnpj}</p>
+                </div>
+                <div>
+                  <strong>Telefone:</strong>
+                  <p>{empresaDados.telefone}</p>
+                </div>
+                <div>
+                  <strong>Email:</strong>
+                  <p>{empresaDados.email ?? "--"}</p>
+                </div>
+                <div>
+                  <strong>Cidade/Estado:</strong>
+                  <p>
+                    {empresaDados.cidade} / {empresaDados.estado}
+                  </p>
+                </div>
+              </>
+            ) : (
+              <p>Nenhuma informação da empresa cadastrada.</p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Card 2: Informações do Perfil (do useAuth) */}
+        <Card className="flex-1 min-w-[350px] max-w-2xl shadow-md">
+          <CardHeader>
+            <CardTitle>Informações do Perfil</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <strong>Nome:</strong>
+              <p>{user.user.nome}</p>
+            </div>
+            <div>
+              <strong>Email:</strong>
+              <p>{user.user.email}</p>
+            </div>
+            <div>
+              <strong>Status:</strong>
+              {/* ✅ CORREÇÃO: Lógica de status estava invertida */}
+              <p>{user.user.ativo ? "Ativo" : "Inativo"}</p>
+            </div>
+            <div>
+              <strong>Membro desde:</strong>
+              <p>
+                {user.user.criadoEm
+                  ? new Date(user.user.criadoEm).toLocaleDateString("pt-BR")
+                  : "--"}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Se for ADMIN, visão geral do sistema */}
       {isAdmin && dashboard && (

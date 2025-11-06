@@ -16,7 +16,15 @@ interface User {
     telasPermitidas: string[];
     ativo: boolean;
     criadoEm: string;
-    empresaId?: string; // 🔹 Agora inclui o ID da empresa
+    empresa:{
+      id: string;
+      nome: string;
+      nomeFantasia: string;
+      razaoSocial: string;
+      cnpj: string;
+      telefone: string;
+      logoEmpresa: string;
+    }
   };
 }
 

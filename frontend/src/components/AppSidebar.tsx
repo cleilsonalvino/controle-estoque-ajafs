@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -17,6 +17,7 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { allMenuItems } from "@/config/menuItems";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export const AppNavbar = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -70,6 +71,20 @@ export const AppNavbar = () => {
     );
   }, [user, isLoading]);
 
+  const isMobile = useIsMobile();
+
+  useEffect(() => {
+    if (isMobile && mobileOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isMobile, mobileOpen]);
+
   const handleLogout = () => {
     logout();
     navigate("/login");
@@ -83,12 +98,8 @@ export const AppNavbar = () => {
       <div className="flex items-center justify-between px-6 py-3">
         {/* Logo */}
         <div className="flex items-center space-x-2">
-          <div className="p-2 bg-gradient-primary rounded-lg">
-            <Package className="h-6 w-6 text-primary-foreground" />
-          </div>
-          <div>
-            <h2 className="font-bold text-foreground">AJAFS</h2>
-            <p className="text-xs text-muted-foreground">Gestão empresarial</p>
+          <div className="p-2 w-28 cursor-pointer" onClick={()=>window.location.href = '/'}>
+            <img src="/logo-ajafs.png" alt="logo ajafs+ sistemas" />
           </div>
         </div>
 
@@ -162,7 +173,7 @@ export const AppNavbar = () => {
 
       {/* Menu Mobile Responsivo */}
       {mobileOpen && (
-        <div className="md:hidden border-t bg-card">
+        <div className="md:hidden border-t bg-card overflow-y-auto max-h-[calc(100vh-4rem)]">
           {Object.entries(groupedMenu).map(([categoria, itens]) =>
             itens.length > 0 ? (
               <div key={categoria} className="p-3 border-b">

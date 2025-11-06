@@ -1,5 +1,10 @@
-
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
 import api from "@/lib/api";
 import { toast } from "sonner";
 
@@ -25,13 +30,20 @@ export interface Empresa {
   atualizadoEm: Date;
 }
 
-
 interface EmpresaContextType {
   empresa: Empresa | null;
   loading: boolean;
   fetchEmpresa: () => Promise<void>;
-  createEmpresa: (newEmpresa: Omit<Empresa, "id">) => Promise<Empresa | undefined>;
-  updateEmpresa: (updatedEmpresa: Partial<Empresa>) => Promise<Empresa | undefined>;
+  createEmpresa: (
+    newEmpresa: Omit<Empresa, "id">
+  ) => Promise<Empresa | undefined>;
+  updateEmpresa: (
+    updatedEmpresa: Partial<Empresa>
+  ) => Promise<Empresa | undefined>;
+  // ✅ CORREÇÃO: A função deve retornar os dados da empresa ou undefined
+  findUniqueEmpresa: (
+    empresaId: string
+  ) => Promise<Empresa | undefined>;
 }
 
 const EmpresaContext = createContext<EmpresaContextType>({
@@ -40,6 +52,8 @@ const EmpresaContext = createContext<EmpresaContextType>({
   fetchEmpresa: async () => {},
   createEmpresa: async () => undefined,
   updateEmpresa: async () => undefined,
+  // ✅ CORREÇÃO: Atualiza o valor padrão do contexto
+  findUniqueEmpresa: async () => undefined,
 });
 
 interface EmpresaProviderProps {
@@ -50,6 +64,7 @@ export const EmpresaProvider = ({ children }: EmpresaProviderProps) => {
   const [empresa, setEmpresa] = useState<Empresa | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // Esta função busca a empresa "principal" ou "logada" e salva globalmente
   const fetchEmpresa = async () => {
     try {
       setLoading(true);
@@ -87,6 +102,24 @@ export const EmpresaProvider = ({ children }: EmpresaProviderProps) => {
     }
   };
 
+  // ✅ CORREÇÃO: Esta função agora busca uma empresa específica e RETORNA os dados
+  const findUniqueEmpresa = async (
+    empresaId: string
+  ): Promise<Empresa | undefined> => {
+    try {
+      const { data } = await api.get<Empresa>(`/empresa/${empresaId}`);
+      // ❌ NÃO ATUALIZE O ESTADO GLOBAL AQUI:
+      // setEmpresa(data);
+      
+      // ✅ RETORNE OS DADOS:
+      return data;
+    } catch (error) {
+      console.error("Erro ao buscar dados da empresa:", error);
+      toast.error("Erro ao buscar dados da empresa");
+      // Propaga o erro para o componente (HomePage) poder tratar
+      throw error; 
+    }
+  };
 
   return (
     <EmpresaContext.Provider
@@ -96,6 +129,7 @@ export const EmpresaProvider = ({ children }: EmpresaProviderProps) => {
         fetchEmpresa,
         createEmpresa,
         updateEmpresa,
+        findUniqueEmpresa,
       }}
     >
       {children}

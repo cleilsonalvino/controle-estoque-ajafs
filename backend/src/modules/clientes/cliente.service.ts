@@ -5,7 +5,18 @@ const prisma = new PrismaClient();
 
 export class ClienteService {
   async create(data: CreateClienteDto, empresaId: string) {
-    return await prisma.cliente.create({ data: { ...data, empresaId } as any });
+    const codigoCliente = function generateCodigoCliente() {
+      return 'CLT-' + Math.random().toString(36).substr(2, 9).toUpperCase();
+    };
+
+    return await prisma.cliente.create({
+      data: {
+        ...data,
+        empresaId,
+        codigo: codigoCliente(),
+      },
+    });
+
   }
 
   async findAll(empresaId: string) {

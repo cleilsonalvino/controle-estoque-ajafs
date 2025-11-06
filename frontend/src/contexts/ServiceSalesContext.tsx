@@ -65,8 +65,8 @@ export const ServiceSalesProvider = ({ children }: { children: ReactNode }) => {
     setLoading(true);
     try {
       // 🔹 Faz a requisição filtrando por tipoVenda = "Serviço"
-      const { data } = await axios.get("/vendas/filtro", {
-        params: { tipoVenda: "Serviço" },
+      const { data } = await axios.get("/vendas/filtrar", {
+        params: { tipoVenda: "Servico" },
       });
 
       // 🔹 Atualiza o estado apenas se vierem dados válidos

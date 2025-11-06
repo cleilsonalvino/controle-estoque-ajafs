@@ -46,6 +46,7 @@ export const loginService = async (data: any) => {
         id: user.empresa.id,
         nome: user.empresa.nome,
         nomeFantasia: user.empresa.nomeFantasia,
+        logoEmpresa: user.empresa.logoEmpresa,
       },
     },
     token,
@@ -73,6 +74,7 @@ export const getUserDataFromToken = async (token: string) => {
         id: user.empresa.id,
         nome: user.empresa.nome,
         nomeFantasia: user.empresa.nomeFantasia,
+        logoEmpresa: user.empresa.logoEmpresa,
       },
     };
   } catch {

@@ -187,6 +187,7 @@ model ItemVenda {
 // ================================
 model Cliente {
   id           String   @id @default(uuid())
+  codigo       String
   nome         String
   cpf          String?
   email        String?
@@ -208,6 +209,7 @@ model Cliente {
 // ================================
 model Vendedor {
   id           String   @id @default(uuid())
+  codigo       String   
   nome         String
   email        String?
   meta         Decimal? @db.Decimal(14, 2)
@@ -307,6 +309,7 @@ model Empresa {
   inscEstadual  String?
   inscMunicipal String?
   cnae          String?
+  logoEmpresa   String?
 
   cep           String
   estado        String

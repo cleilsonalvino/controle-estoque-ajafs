@@ -6,7 +6,16 @@ const prisma = new PrismaClient();
 
 export class VendedorService {
   async create(data: CreateVendedorDto, empresaId: string) {
-    return await prisma.vendedor.create({ data: { ...data, empresaId } as any });
+    const codigoVendedor = function generateCodigoVendedor() {
+      return "VEN-" + Math.random().toString(36).substr(2, 9).toUpperCase();
+    };
+    return await prisma.vendedor.create({
+      data: {
+        ...data,
+        empresaId,
+        codigo: codigoVendedor(),
+      },
+    });
   }
 
   async findAll(empresaId: string) {

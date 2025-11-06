@@ -5,9 +5,12 @@ import { useAuth } from "./useAuth";
 
 export interface Vendedor {
   id: string;
+  codigo?: string;
   nome: string;
   email: string;
   meta: number;
+  criadoEm?: Date;
+  atualizadoEm?: Date;
 }
 
 interface VendedorContextProps {

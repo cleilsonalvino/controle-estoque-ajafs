@@ -36,7 +36,7 @@ export const allMenuItems = [
     icon: ArrowUpDown,
   },
   { key: "suppliers", title: "Fornecedores", url: "/suppliers", icon: Users },
-  { key: "categories", title: "Categorias", url: "/categories", icon: Tag },
+  { key: "categories", title: "Categorias de produtos", url: "/categories", icon: Tag },
   {
     key: "tipos-servicos",
     title: "Tipos de Serviços",
