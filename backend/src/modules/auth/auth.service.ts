@@ -42,12 +42,7 @@ export const loginService = async (data: any) => {
       nome: user.nome,
       email: user.email,
       papel: user.papel,
-      empresa: {
-        id: user.empresa.id,
-        nome: user.empresa.nome,
-        nomeFantasia: user.empresa.nomeFantasia,
-        logoEmpresa: user.empresa.logoEmpresa,
-      },
+      empresa: user.empresa,
     },
     token,
   };
@@ -70,12 +65,7 @@ export const getUserDataFromToken = async (token: string) => {
       nome: user.nome,
       email: user.email,
       papel: user.papel,
-      empresa: {
-        id: user.empresa.id,
-        nome: user.empresa.nome,
-        nomeFantasia: user.empresa.nomeFantasia,
-        logoEmpresa: user.empresa.logoEmpresa,
-      },
+      empresa: user.empresa,
     };
   } catch {
     throw new CustomError("Token inválido ou expirado", 401);

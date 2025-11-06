@@ -24,7 +24,13 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { ShoppingCart, Briefcase, ArrowLeft, CheckCircle, Trash2 } from "lucide-react";
+import {
+  ShoppingCart,
+  Briefcase,
+  ArrowLeft,
+  CheckCircle,
+  Trash2,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Link, useLocation } from "react-router-dom";
 import { useTiposServicos } from "@/contexts/TiposServicosContext";
@@ -39,6 +45,7 @@ const Sales = () => {
   const location = useLocation();
 
   // === REFRESH AUTOMÁTICO ===
+  // 🔄 ALTERADO: Adicionadas todas as dependências de fetch no array
   useEffect(() => {
     const fetchAll = async () => {
       await Promise.all([
@@ -67,7 +74,14 @@ const Sales = () => {
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [location.pathname]);
+  }, [
+    location.pathname,
+    fetchSales,
+    fetchClientes,
+    fetchVendedores,
+    fetchProdutos,
+    fetchTiposServicos,
+  ]);
 
   const [mode, setMode] = useState<"menu" | "pdv">("menu");
   const [showCupom, setShowCupom] = useState(false);
@@ -81,7 +95,7 @@ const Sales = () => {
     clienteId: "",
     vendedorId: "",
     formaPagamento: "",
-    valor: '0.00',
+    valor: "0.00",
     tipoServicoId: "",
     descricao: "",
     itens: [{ servicoId: "", quantidade: 1, precoUnitario: 0, descricao: "" }],
@@ -108,7 +122,9 @@ const Sales = () => {
 
     try {
       await createSale(salePayload);
-      setShowCupom(true);
+
+      const vendedor = vendedores.find((v) => v.id === saleData.vendedorId);
+
       setLastSale({
         saleItems: saleData.saleItems,
         total: saleData.saleItems.reduce(
@@ -117,11 +133,20 @@ const Sales = () => {
         ),
         discount: saleData.desconto,
         paymentMethod: saleData.formaPagamento,
+        vendedor: vendedor ? vendedor.nome : "—",
+        dataHora: new Date().toLocaleString("pt-BR", {
+          dateStyle: "short",
+          timeStyle: "short",
+        }),
       });
+
+      // ✅ Só abre o cupom depois que o estado estiver definido
+      setShowCupom(true);
+
       return true;
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      toast.error(err.response?.data?.message);
+      toast.error(err.response?.data?.message || "Erro ao finalizar venda.");
       return false;
     }
   };
@@ -167,7 +192,7 @@ const Sales = () => {
         })),
       });
 
-      // Atualiza Cupom Fiscal
+      const vendedor = vendedores.find((v) => v.id === vendedorId);
       setLastSale({
         saleItems: itens.map((i) => ({
           nome:
@@ -179,8 +204,14 @@ const Sales = () => {
         })),
         total,
         discount: 0,
+        vendedor: vendedor ? vendedor.nome : "—",
         paymentMethod: formaPagamento,
+        dataHora: new Date().toLocaleString("pt-BR", {
+          dateStyle: "short",
+          timeStyle: "short",
+        }),
       });
+
       setShowCupom(true);
 
       toast.success("Serviços registrados com sucesso!");
@@ -190,7 +221,7 @@ const Sales = () => {
         clienteId: "",
         vendedorId: "",
         formaPagamento: "",
-        valor: '0.00',
+        valor: "0.00",
         tipoServicoId: "",
         descricao: "",
         itens: [

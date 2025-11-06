@@ -24,6 +24,16 @@ interface User {
       cnpj: string;
       telefone: string;
       logoEmpresa: string;
+      endereco: string;
+      numero: string;
+      complemento: string;
+      bairro: string;
+      cidade: string;
+      estado: string;
+      cep: string;
+      inscEstadual: string;
+      inscMunicipal: string;
+      cnae: string;
     }
   };
 }

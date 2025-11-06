@@ -72,7 +72,8 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLocation } from "react-router-dom";
 import { toast as sonnerToast, toast } from "sonner";
-import { id } from "date-fns/locale";
+import { DataTable } from "@/components/ui/data-table"; 
+import { getProductColumns } from "@/components/tables/product-columns";
 
 /**
  * Modal de Detalhes do Produto
@@ -942,6 +943,8 @@ export const Products: React.FC = () => {
       Number(p.estoqueMinimo || 0)
   ).length;
 
+
+
   // === DADOS GRÁFICOS ===
   const topProdutosEstoque = produtosComEstoque
     .map((p) => ({
@@ -1017,45 +1020,21 @@ export const Products: React.FC = () => {
     }
   };
 
-  const produtosFiltrados = useMemo(() => {
-    if (!produtos) return [];
-    const termoBusca = filtro.toLowerCase().trim();
-    if (!termoBusca) return produtos;
-    return produtos.filter(
-      (p) =>
-        p.nome.toLowerCase().includes(termoBusca) ||
-        p.descricao?.toLowerCase().includes(termoBusca) ||
-        p.categoria?.nome?.toLowerCase().includes(termoBusca)
-    );
-  }, [produtos, filtro]);
-
-  const produtosOrdenados = useMemo(() => {
-    const copia = [...produtosFiltrados];
-    const [criterio, direcao] = ordenacao.split("-");
-    copia.sort((a, b) => {
-      let valA: any, valB: any;
-      if (criterio === "nome") {
-        valA = a.nome.toLowerCase();
-        valB = b.nome.toLowerCase();
-      } else if (criterio === "precoVenda") {
-        valA = Number(a.precoVenda);
-        valB = Number(b.precoVenda);
-      }
-      if (valA < valB) return direcao === "asc" ? -1 : 1;
-      if (valA > valB) return direcao === "asc" ? 1 : -1;
-      return 0;
-    });
-    return copia;
-  }, [produtosFiltrados, ordenacao]);
-
-  const cardVariants: Variants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: (i: number) => ({
-      opacity: 1,
-      y: 0,
-      transition: { delay: i * 0.05, duration: 0.3, ease: "easeOut" },
-    }),
+  const handleOpenDetalhes = (produto: Produto) => {
+    setSelectedProduct(produto);
+    setOpenDetalhes(true);
   };
+
+
+
+    const columns = useMemo(() => getProductColumns({
+      onEdit: handleOpenEdit,
+      onDelete: handleDelete,
+      onView: handleOpenDetalhes,
+  }), [produtos]); // Recria se as funções mudarem (raro)
+
+
+
 
   if (loading && produtos.length === 0) {
     return (
@@ -1067,101 +1046,11 @@ export const Products: React.FC = () => {
     );
   }
 
-  const handlePrintBarcode = (codigo: string) => {
-    if (!codigo) {
-      alert("O produto ainda não tem código de barras!");
-      return;
-    }
 
-    const printWindow = window.open("", "_blank", "width=600,height=300");
-    if (!printWindow) return;
-
-    const doc = printWindow.document;
-    doc.head.innerHTML = `
-    <title>Código de Barras</title>
-    <style>
-      body {
-        margin: 0;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 100vh;
-      }
-      svg {
-        max-width: 90%;
-        max-height: 90%;
-      }
-      @media print {
-        body { margin: 0; }
-        svg { page-break-inside: avoid; }
-      }
-    </style>
-  `;
-
-    const container = doc.createElement("div");
-    const svg = doc.createElementNS("http://www.w3.org/2000/svg", "svg");
-    svg.id = "barcode";
-    container.appendChild(svg);
-    doc.body.appendChild(container);
-
-    const script = doc.createElement("script");
-    script.src =
-      "https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js";
-    script.onload = () => {
-      // @ts-ignore
-      printWindow.JsBarcode("#barcode", codigo, {
-        format: "EAN13",
-        displayValue: true,
-      });
-      printWindow.focus();
-      printWindow.print();
-      printWindow.close();
-    };
-    doc.body.appendChild(script);
-  };
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6">
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Produtos</h1>
-          <p className="text-sm text-muted-foreground">
-            Gerencie produtos, fornecedores e lotes de forma inteligente.
-          </p>
-        </div>
-        <Button onClick={() => setOpenCreate(true)} className="h-10 gap-2">
-          <PlusCircle className="w-5 h-5" />
-          Adicionar Produto
-        </Button>
-      </div>
 
-      <div className="flex flex-col md:flex-row items-center justify-between gap-4 p-4 bg-muted/40 rounded-lg border">
-        <div className="relative w-full md:flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Buscar por nome, categoria..."
-            className="pl-10 h-10 w-full"
-            value={filtro}
-            onChange={(e) => setFiltro(e.target.value)}
-          />
-        </div>
-        <Select value={ordenacao} onValueChange={setOrdenacao}>
-          <SelectTrigger className="w-full md:w-[180px] h-10">
-            <SelectValue placeholder="Ordenar por" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="nome-asc">Nome (A-Z)</SelectItem>
-            <SelectItem value="nome-desc">Nome (Z-A)</SelectItem>
-            <SelectItem value="precoVenda-asc">Preço (Menor)</SelectItem>
-            <SelectItem value="precoVenda-desc">Preço (Maior)</SelectItem>
-            <div className="border-t my-2" />
-            <SelectItem value="estoque-asc">Estoque (Menor)</SelectItem>
-            <SelectItem value="estoque-desc">Estoque (Maior)</SelectItem>
-            <SelectItem value="marca">Marca</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
 
       {/* === DASHBOARD ANALÍTICO === */}
       <div className="grid md:grid-cols-4 gap-4">
@@ -1303,288 +1192,20 @@ export const Products: React.FC = () => {
         </Card>
       </div>
 
-      <AnimatePresence>
-        {!loading && produtosOrdenados.length === 0 ? (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-center py-20"
-          >
-            <LayoutGrid className="mx-auto h-16 w-16 text-muted-foreground/50" />
-            <h3 className="mt-4 text-xl font-semibold">
-              Nenhum produto cadastrado
-            </h3>
-            <p className="text-muted-foreground">
-              Clique em "Adicionar Produto" para começar.
-            </p>
-          </motion.div>
-        ) : (
-          <ShadcnTable>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Produto</TableHead>
-                <TableHead>Marca</TableHead>
-                <TableHead>Categoria</TableHead>
-                <TableHead>
-                  Fornecedor
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Info className="w-3.5 h-3.5 text-muted-foreground cursor-pointer" />
-                    </TooltipTrigger>
-                    <TooltipContent
-                      side="top"
-                      className="max-w-xs text-sm leading-relaxed"
-                    >
-                      Um produto pode ter vários fornecedores.
-                    </TooltipContent>
-                  </Tooltip>
-                </TableHead>
-                <TableHead>
-                  Quantidade em Estoque
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Info className="w-3.5 h-3.5 text-muted-foreground cursor-pointer" />
-                    </TooltipTrigger>
-                    <TooltipContent
-                      side="top"
-                      className="max-w-xs text-sm leading-relaxed"
-                    >
-                      Quantidade total de produtos em estoque.
-                    </TooltipContent>
-                  </Tooltip>
-                </TableHead>
-                <TableHead>
-                  Preço Custo(médio)
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Info className="w-3.5 h-3.5 text-muted-foreground cursor-pointer" />
-                    </TooltipTrigger>
-                    <TooltipContent
-                      side="top"
-                      className="max-w-xs text-sm leading-relaxed"
-                    >
-                      Custo médio é a soma da quantidade de produtos de cada
-                      lote, dividido pela quantidade de lotes.
-                    </TooltipContent>
-                  </Tooltip>
-                </TableHead>
-                <TableHead>Preço Venda</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {produtosOrdenados.map((produto, i) => {
-                // Calcula o estoque total somando os lotes
-                const estoqueAtual =
-                  produto.lote?.reduce(
-                    (acc, lote) => acc + Number(lote.quantidadeAtual),
-                    0
-                  ) || 0;
-
-                // Verifica se o estoque está abaixo do mínimo
-                const isBaixoEstoque =
-                  estoqueAtual <= (Number(produto.estoqueMinimo) || 0);
-
-                return (
-                  <motion.tr
-                    key={`${produto.id}-${produto.criadoEm}`}
-                    variants={cardVariants}
-                    initial="hidden"
-                    animate="visible"
-                    custom={i}
-                    className={`hover:bg-muted/30 transition-colors ${
-                      isBaixoEstoque ? "bg-yellow-50" : ""
-                    }`}
-                  >
-                    {/* 🔹 Nome do produto + ícone de alerta */}
-                    <TableCell
-                      className="font-medium cursor-pointer hover:text-primary flex items-center gap-2"
-                      onClick={() => {
-                        setSelectedProduct(produto);
-                        setOpenDetalhes(true);
-                      }}
-                    >
-                      {produto.nome}
-
-                      {isBaixoEstoque && (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <AlertTriangle
-                                className={`w-4 h-4 ${
-                                  estoqueAtual === 0
-                                    ? "text-red-600"
-                                    : "text-yellow-600"
-                                }`}
-                              />
-                            </TooltipTrigger>
-                            <TooltipContent side="top">
-                              {estoqueAtual === 0 ? (
-                                <p className="text-sm text-red-600">
-                                  Sem estoque
-                                </p>
-                              ) : (
-                                <p className="text-sm">
-                                  Estoque baixo ({estoqueAtual} unidades)
-                                </p>
-                              )}
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      )}
-                    </TableCell>
-                    {/* 🔹 Marca */}
-                    <TableCell>{produto.marca?.nome || "Sem Marca"}</TableCell>
-
-                    {/* 🔹 Categoria */}
-                    <TableCell>
-                      {produto.categoria?.nome || "Sem categoria"}
-                    </TableCell>
-
-                    {/* 🔹 Fornecedores */}
-                    <TableCell>
-                      {produto.lote?.length ? (
-                        <div className="flex items-center gap-1">
-                          <span>
-                            {produto.lote[0]?.fornecedor?.nome ||
-                              "Sem fornecedor"}
-                          </span>
-                          {produto.lote.length > 1 && (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <ArrowDownNarrowWide className="w-3.5 h-3.5 text-muted-foreground cursor-pointer" />
-                                </TooltipTrigger>
-                                <TooltipContent
-                                  side="top"
-                                  className="max-w-xs text-sm leading-relaxed"
-                                >
-                                  <p className="font-medium mb-1">
-                                    Outros fornecedores:
-                                  </p>
-                                  <ul className="list-disc list-inside">
-                                    {produto.lote
-                                      .slice(1)
-                                      .map((lote, index) => (
-                                        <li key={index}>
-                                          {lote.fornecedor?.nome || "Sem nome"}
-                                        </li>
-                                      ))}
-                                  </ul>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          )}
-                        </div>
-                      ) : (
-                        "Sem fornecedor"
-                      )}
-                    </TableCell>
-
-                    {/* 🔹 Quantidade */}
-                    <TableCell>{produto.quantidadeTotal}</TableCell>
-
-                    {/* 🔹 Custo médio */}
-                    <TableCell>
-                      {produto.custoMedio
-                        ? Number(produto.custoMedio).toLocaleString("pt-BR", {
-                            style: "currency",
-                            currency: "BRL",
-                          })
-                        : "Sem dados"}
-                    </TableCell>
-
-                    <TableCell>
-                      {produto.precoVenda ? `R$ ${produto.precoVenda}` : "—"}
-                    </TableCell>
-                    {/* CORREÇÃO: Bloco de ações com Tooltip corrigido. */}
-                    <TableCell className="flex justify-end gap-2">
-                      <TooltipProvider>
-                        <Tooltip delayDuration={300}>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className="border-slate-500 hover:bg-slate-100"
-                              onClick={() =>
-                                handlePrintBarcode(produto.codigoBarras)
-                              }
-                            >
-                              <Printer className="w-4 h-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            Imprimir código de barras
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-
-                      <TooltipProvider>
-                        <Tooltip delayDuration={300}>
-                          <TooltipTrigger asChild>
-                            <Button
-                              size="icon"
-                              variant="outline"
-                              className="h-8 w-8"
-                              onClick={() => {
-                                setSelectedProduct(produto);
-                                setOpenDetalhes(true);
-                              }}
-                            >
-                              <Eye className="w-4 h-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Ver detalhes</TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-
-                      <TooltipProvider>
-                        <Tooltip delayDuration={300}>
-                          <TooltipTrigger asChild>
-                            <Button
-                              size="icon"
-                              variant="outline"
-                              className="h-8 w-8"
-                              onClick={() => handleOpenEdit(produto)}
-                            >
-                              <Edit3 className="w-4 h-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Editar</TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-
-                      <TooltipProvider>
-                        <Tooltip delayDuration={300}>
-                          <TooltipTrigger asChild>
-                            <Button
-                              size="icon"
-                              variant="destructive"
-                              className="h-8 w-8"
-                              onClick={() => {
-                                if (
-                                  confirm(
-                                    "Tem certeza que deseja excluir este produto?"
-                                  )
-                                ) {
-                                  handleDelete(produto.id);
-                                }
-                              }}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Excluir</TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </TableCell>
-                  </motion.tr>
-                );
-              })}
-            </TableBody>
-          </ShadcnTable>
-        )}
-      </AnimatePresence>
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Produtos</h1>
+          <p className="text-sm text-muted-foreground">
+            Gerencie produtos, fornecedores e lotes de forma inteligente.
+          </p>
+        </div>
+        <Button onClick={() => setOpenCreate(true)} className="h-10 gap-2">
+          <PlusCircle className="w-5 h-5" />
+          Adicionar Produto
+        </Button>
+      </div>
+      
+      <DataTable columns={columns} data={produtos} />
 
       {selectedProduct && (
         <EditProdutoDialog

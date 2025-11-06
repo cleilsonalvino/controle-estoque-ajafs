@@ -1,7 +1,6 @@
 // src/pages/PDV.tsx
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
-// ✅ NOVO: Importar useNavigate para a navegação
 import { useNavigate } from "react-router-dom";
 import {
   X,
@@ -15,7 +14,7 @@ import {
   Coins,
   PlusCircle,
   Loader2,
-  FileWarning, // ✅ NOVO: Ícone para o modal
+  FileWarning,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -44,7 +43,6 @@ import { Produto, useProdutos } from "@/contexts/ProdutoContext";
 import { Cliente, useClientes } from "@/contexts/ClienteContext";
 import { Vendedor } from "@/contexts/VendedorContext";
 
-// ... (Tipos FinalizeSaleData e PDVProps permanecem os mesmos)
 type FinalizeSaleData = {
   saleItems: SaleItem[];
   clienteId?: string;
@@ -68,10 +66,11 @@ const PAYMENT_METHODS = [
   { value: "Credito", label: "Cartão de Crédito" },
 ];
 
+const DEFAULT_VENDEDOR_KEY = "pdv_default_vendedor";
+
 // ============================================================================
-// 🦁 Custom Hook: usePdv (CORRIGIDO)
+// 🦁 Custom Hook: usePdv (CORRIGIDO E MELHORADO)
 // ============================================================================
-// 🔄 ALTERADO: Hook não recebe mais 'estoques'. Ele usará 'produto.quantidadeTotal'
 const usePdv = (
   onFinalizeSale: PDVProps["onFinalizeSale"],
   onZeroStock: (produto: Produto) => void
@@ -81,13 +80,21 @@ const usePdv = (
 
   const [saleItems, setSaleItems] = useState<SaleItem[]>([]);
   const [selectedCliente, setSelectedCliente] = useState<string | null>();
-  const [selectedVendedor, setSelectedVendedor] = useState<
-    string | undefined
-  >();
+  // ✅ NOVO: Carrega o vendedor padrão do localStorage
+  const [selectedVendedor, setSelectedVendedor] = useState<string | undefined>(
+    () => {
+      return localStorage.getItem(DEFAULT_VENDEDOR_KEY) || undefined;
+    }
+  );
   const [discount, setDiscount] = useState<number>(0);
   const [paymentMethod, setPaymentMethod] = useState<string | undefined>();
   const [amountPaid, setAmountPaid] = useState<number>(0);
-  const [searchQuery, setSearchQuery] = useState("");
+
+  // ✅ NOVO: Estados de busca separados
+  const [productSearchQuery, setProductSearchQuery] = useState("");
+  const [clientSearchQuery, setClientSearchQuery] = useState("");
+  const [sellerSearchQuery, setSellerSearchQuery] = useState("");
+
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [highlightedItemId, setHighlightedItemId] = useState<string | null>(
     null
@@ -119,7 +126,6 @@ const usePdv = (
     [amountPaid, total, paymentMethod]
   );
 
-  // ... (useEffect de carregar e salvar no localStorage permanece o mesmo)
   useEffect(() => {
     const saved = localStorage.getItem("pdv_cart");
     if (saved) {
@@ -136,23 +142,21 @@ const usePdv = (
     localStorage.setItem("pdv_cart", JSON.stringify(saleItems));
   }, [saleItems]);
 
+  // 🔄 ALTERADO: Usa 'productSearchQuery'
   const filteredProducts = useMemo(() => {
-    if (!searchQuery) return [];
-    const query = searchQuery.toLowerCase();
+    if (!productSearchQuery) return [];
+    const query = productSearchQuery.toLowerCase();
     return produtos.filter(
       (p) =>
         p.nome.toLowerCase().includes(query) ||
         p.codigoBarras?.toLowerCase().includes(query)
     );
-  }, [searchQuery, produtos]);
+  }, [productSearchQuery, produtos]);
 
-  // 🔄 ALTERADO: Verifica 'produto.quantidadeTotal' diretamente
   const addItemToSale = useCallback(
     (produto: Produto) => {
-      // ✅ CORREÇÃO: Usa o estoque direto do objeto produto
       const estoqueDisponivel = produto.quantidadeTotal;
 
-      // Se o estoque é zero ou negativo, chama o modal e para
       if (estoqueDisponivel <= 0) {
         onZeroStock(produto);
         return;
@@ -162,11 +166,9 @@ const usePdv = (
         const existingItem = prevItems.find((item) => item.id === produto.id);
 
         if (existingItem) {
-          // Impede de adicionar mais que o estoque
-          // ✅ CORREÇÃO: Leitura direta do estoque
           if (existingItem.quantidade >= estoqueDisponivel) {
             toast.error(`Estoque máximo atingido para ${produto.nome}.`);
-            return prevItems; // Retorna o estado anterior sem alteração
+            return prevItems;
           }
           return prevItems.map((item) =>
             item.id === produto.id
@@ -175,7 +177,6 @@ const usePdv = (
           );
         }
 
-        // Se é um item novo
         return [
           ...prevItems,
           {
@@ -190,20 +191,18 @@ const usePdv = (
       });
 
       setLastAddedProduct(produto);
-      setSearchQuery("");
+      setProductSearchQuery(""); // 🔄 ALTERADO
       setHighlightedItemId(produto.id);
       setTimeout(() => setHighlightedItemId(null), 600);
     },
-    [onZeroStock] // ✅ CORREÇÃO: Removido 'estoques' das dependências
+    [onZeroStock]
   );
 
-  // 🔄 ALTERADO: Verifica 'itemToUpdate.produto.quantidadeTotal'
   const updateItemQuantity = useCallback(
     (id: string, newQuantity: number) => {
       const itemToUpdate = saleItems.find((item) => item.id === id);
       if (!itemToUpdate) return;
 
-      // ✅ CORREÇÃO: Usa o estoque do produto dentro do item do carrinho
       const estoqueDisponivel = itemToUpdate.produto.quantidadeTotal;
 
       if (newQuantity > estoqueDisponivel) {
@@ -221,19 +220,25 @@ const usePdv = (
             )
       );
     },
-    [saleItems] // ✅ CORREÇÃO: Removido 'estoques' das dependências
+    [saleItems]
   );
 
   const resetSale = useCallback(() => {
     setSaleItems([]);
     setSelectedCliente(undefined);
-    setSelectedVendedor(undefined);
+    // ✅ NOVO: Ao resetar a venda, mantém o vendedor padrão
+    setSelectedVendedor(
+      localStorage.getItem(DEFAULT_VENDEDOR_KEY) || undefined
+    );
     setDiscount(0);
     setPaymentMethod(undefined);
     setIsPaymentDialogOpen(false);
     setLastAddedProduct(null);
     setAmountPaid(0);
-    setSearchQuery("");
+    // ✅ NOVO: Limpa todas as buscas
+    setProductSearchQuery("");
+    setClientSearchQuery("");
+    setSellerSearchQuery("");
   }, []);
 
   const clearCart = useCallback(() => {
@@ -251,7 +256,7 @@ const usePdv = (
     try {
       const success = await onFinalizeSale({
         saleItems,
-        clienteId: selectedCliente || null, // Permite nulo para "Consumidor Final"
+        clienteId: selectedCliente || null,
         vendedorId: selectedVendedor,
         desconto: discount,
         formaPagamento: paymentMethod,
@@ -261,7 +266,6 @@ const usePdv = (
       if (success) {
         toast.success("Venda finalizada com sucesso!");
         toast.info("Estoque dos produtos foi atualizado.");
-
         resetSale();
       }
     } catch (err: any) {
@@ -286,7 +290,7 @@ const usePdv = (
           setSelectedCliente(newCustomer.id);
           setIsNewCustomerDialogOpen(false);
           setNewCustomerName("");
-          setNewCPFCustomer(""); // Limpa CPF também
+          setNewCPFCustomer("");
           return "Cliente cadastrado e selecionado!";
         }
         throw new Error("API não retornou um cliente válido.");
@@ -307,8 +311,13 @@ const usePdv = (
     setPaymentMethod,
     amountPaid,
     setAmountPaid,
-    searchQuery,
-    setSearchQuery,
+    // ✅ NOVO: Retorna os 3 estados de busca
+    productSearchQuery,
+    setProductSearchQuery,
+    clientSearchQuery,
+    setClientSearchQuery,
+    sellerSearchQuery,
+    setSellerSearchQuery,
     isPaymentDialogOpen,
     setIsPaymentDialogOpen,
     highlightedItemId,
@@ -336,32 +345,14 @@ const usePdv = (
 // 🎨 Componente de UI: PDV
 // ============================================================================
 const PDV = ({ clientes, vendedores, onFinalizeSale, onExit }: PDVProps) => {
-  const navigate = useNavigate(); // ✅ NOVO: Hook para navegação
+  const navigate = useNavigate();
   const [isFullscreen, setIsFullscreen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // ❌ REMOVIDO: O estado 'estoques' não é mais necessário
-  // const [estoques, setEstoques] = useState<Record<string, number>>({});
-
-  // ✅ NOVO: Estado para o modal de estoque zerado
   const [isZeroStockDialogOpen, setIsZeroStockDialogOpen] = useState(false);
   const [productWithZeroStock, setProductWithZeroStock] =
     useState<Produto | null>(null);
 
-  // ❌ REMOVIDO: Não precisamos mais do getEstoqueProdutoId aqui
-  // const { getEstoqueProdutoId } = useProdutos();
-
-  // ❌ REMOVIDO: A função fetchEstoque não é mais necessária
-  /*
-  const fetchEstoque = useCallback(
-    async (produtoId: string) => {
-      // ... (todo o bloco removido)
-    },
-    [estoques, getEstoqueProdutoId]
-  );
-  */
-
-  // ✅ NOVO: Callback que será passado para o hook
   const handleZeroStock = (produto: Produto) => {
     setProductWithZeroStock(produto);
     setIsZeroStockDialogOpen(true);
@@ -369,8 +360,6 @@ const PDV = ({ clientes, vendedores, onFinalizeSale, onExit }: PDVProps) => {
 
   const {
     saleItems,
-    // ...
-    // (outros estados e funções retornados do hook)
     clearCart,
     addItemToSale,
     filteredProducts,
@@ -380,7 +369,6 @@ const PDV = ({ clientes, vendedores, onFinalizeSale, onExit }: PDVProps) => {
     newCustomerName,
     setNewCustomerName,
     setIsNewCustomerDialogOpen,
-    // ...
     subtotal,
     total,
     change,
@@ -388,8 +376,13 @@ const PDV = ({ clientes, vendedores, onFinalizeSale, onExit }: PDVProps) => {
     highlightedItemId,
     isPaymentDialogOpen,
     setIsPaymentDialogOpen,
-    searchQuery,
-    setSearchQuery,
+    // ✅ NOVO: Obtém os 3 estados de busca
+    productSearchQuery,
+    setProductSearchQuery,
+    clientSearchQuery,
+    setClientSearchQuery,
+    sellerSearchQuery,
+    setSellerSearchQuery,
     amountPaid,
     setAmountPaid,
     paymentMethod,
@@ -404,29 +397,86 @@ const PDV = ({ clientes, vendedores, onFinalizeSale, onExit }: PDVProps) => {
     setSelectedCliente,
     updateItemQuantity,
     handleFinalize,
-  } = usePdv(onFinalizeSale, handleZeroStock); // 🔄 ALTERADO: Não passa mais 'estoques'
+  } = usePdv(onFinalizeSale, handleZeroStock);
 
-  // ❌ REMOVIDO: Este useEffect não é mais necessário
-  /*
-  useEffect(() => {
-    saleItems.forEach((item) => {
-      fetchEstoque(item.produto.id);
-    });
-  }, [saleItems, fetchEstoque]);
-  */
+  const handleGoToMovements = () => {
+    navigate("/movements");
+  };
 
-  // ❌ REMOVIDO: Este useEffect não é mais necessário
-  /*
-  useEffect(() => {
-    if (filteredProducts.length > 0) {
-      filteredProducts.forEach((produto) => {
-        fetchEstoque(produto.id);
-      });
+  // ✅ NOVO: Função para gerar orçamento (para o botão e atalho F4)
+  const handleGerarOrcamento = useCallback(() => {
+    if (saleItems.length === 0) {
+      toast.error("Adicione itens ao carrinho para gerar um orçamento.");
+      return;
     }
-  }, [filteredProducts, fetchEstoque]);
-  */
+    if (!selectedVendedor) {
+      toast.error("Selecione um vendedor antes de gerar o orçamento.");
+      return;
+    }
 
-  // ... (O resto do componente, incluindo useEffects e o JSX, segue abaixo)
+    const budget = {
+      saleItems,
+      clienteId: selectedCliente || null,
+      vendedorId: selectedVendedor,
+      desconto: discount,
+      total,
+      data: new Date().toLocaleString("pt-BR"),
+    };
+
+    console.log("Orçamento gerado:", budget);
+    toast.success("Orçamento gerado com sucesso!");
+
+    const win = window.open("", "_blank");
+    if (win) {
+      win.document.write(`
+        <html>
+          <head><title>Orçamento</title></head>
+          <body style="font-family:sans-serif;padding:40px;">
+            <h2>Orçamento</h2>
+            <p><strong>Data:</strong> ${budget.data}</p>
+            <p><strong>Vendedor:</strong> ${
+              vendedores.find((v) => v.id === selectedVendedor)?.nome
+            }</p>
+            <p><strong>Cliente:</strong> ${
+              clientes.find((c) => c.id === selectedCliente)?.nome ||
+              "Consumidor Final"
+            }</p>
+            <hr>
+            <h3>Itens</h3>
+            <ul>
+              ${saleItems
+                .map(
+                  (item) =>
+                    `<li>${item.produto.nome} — ${
+                      item.quantidade
+                    } x R$ ${item.precoVenda.toFixed(2)} = R$ ${(
+                      item.quantidade * item.precoVenda
+                    ).toFixed(2)}</li>`
+                )
+                .join("")}
+            </ul>
+            <hr>
+            <p><strong>Subtotal:</strong> R$ ${subtotal.toFixed(2)}</p>
+            <p><strong>Desconto:</strong> ${discount}%</p>
+            <h3><strong>Total:</strong> R$ ${total.toFixed(2)}</h3>
+            <script>window.print();</script>
+          </body>
+        </html>
+      `);
+      win.document.close();
+    }
+  }, [
+    saleItems,
+    selectedCliente,
+    selectedVendedor,
+    discount,
+    total,
+    vendedores,
+    clientes,
+    subtotal,
+  ]);
+
+  // ✅ NOVO: useEffect de atalhos de teclado remapeado
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (
@@ -436,21 +486,64 @@ const PDV = ({ clientes, vendedores, onFinalizeSale, onExit }: PDVProps) => {
       )
         return;
 
-      if (e.key === "Delete" && saleItems.length > 0) {
-        e.preventDefault();
-        clearCart();
-      }
-
+      // F1: Focar busca de produto
       if (e.key === "F1") {
         e.preventDefault();
         searchInputRef.current?.focus();
       }
-      if (e.key === "F4" && saleItems.length > 0) {
+
+      // F2: Finalizar Venda
+      if (e.key === "F2" && saleItems.length > 0) {
         e.preventDefault();
         setIsPaymentDialogOpen(true);
       }
+
+      // F3: Definir Vendedor Padrão
+      if (e.key === "F3") {
+        e.preventDefault();
+        if (selectedVendedor) {
+          localStorage.setItem(DEFAULT_VENDEDOR_KEY, selectedVendedor);
+          const vendedorName =
+            vendedores.find((v) => v.id === selectedVendedor)?.nome ||
+            "Selecionado";
+          toast.success(`Vendedor "${vendedorName}" definido como padrão!`);
+        } else {
+          toast.error(
+            "Selecione um vendedor primeiro para definir como padrão."
+          );
+        }
+      }
+
+      // F4: Gerar Orçamento
+      if (e.key === "F4") {
+        e.preventDefault();
+        handleGerarOrcamento();
+      }
+
+      // F5: Limpar Carrinho
+      if (e.key === "F5" && saleItems.length > 0) {
+        e.preventDefault();
+        clearCart();
+      }
+
+      // F6: Ir para Movimentações
+      if (e.key === "F6") {
+        e.preventDefault();
+        handleGoToMovements();
+      }
+
+      // ESC: Limpar buscas ou Sair do PDV
       if (e.key === "Escape") {
-        setSearchQuery("");
+        e.preventDefault();
+        if (productSearchQuery) {
+          setProductSearchQuery("");
+        } else if (clientSearchQuery) {
+          setClientSearchQuery("");
+        } else if (sellerSearchQuery) {
+          setSellerSearchQuery("");
+        } else {
+          onExit(); // Sai do PDV se nenhuma busca estiver ativa
+        }
       }
     };
 
@@ -460,10 +553,19 @@ const PDV = ({ clientes, vendedores, onFinalizeSale, onExit }: PDVProps) => {
     saleItems.length,
     isPaymentDialogOpen,
     isNewCustomerDialogOpen,
-    isZeroStockDialogOpen, // Adicionado
-    setIsPaymentDialogOpen,
-    setSearchQuery,
+    isZeroStockDialogOpen,
+    selectedVendedor,
+    vendedores,
+    handleGerarOrcamento,
     clearCart,
+    onExit,
+    productSearchQuery,
+    setProductSearchQuery,
+    clientSearchQuery,
+    setClientSearchQuery,
+    sellerSearchQuery,
+    setSellerSearchQuery,
+    setIsPaymentDialogOpen,
   ]);
 
   const toggleFullscreen = useCallback(() => {
@@ -475,10 +577,6 @@ const PDV = ({ clientes, vendedores, onFinalizeSale, onExit }: PDVProps) => {
       document.exitFullscreen().then(() => setIsFullscreen(false));
     }
   }, []);
-
-  const handleGoToMovements = () => {
-    navigate("/movements");
-  };
 
   if (loadingProdutos) {
     return (
@@ -501,7 +599,8 @@ const PDV = ({ clientes, vendedores, onFinalizeSale, onExit }: PDVProps) => {
                   <Button
                     variant="ghost"
                     size="icon"
-                    title="Esvaziar Carrinho (Del)"
+                    // ✅ NOVO: Atalho F5
+                    title="Esvaziar Carrinho (F5)"
                     onClick={clearCart}
                   >
                     <Trash2 className="h-4 w-4 text-red-500" />
@@ -537,7 +636,6 @@ const PDV = ({ clientes, vendedores, onFinalizeSale, onExit }: PDVProps) => {
                       <div className="flex-1">
                         <p className="font-semibold">
                           {item.produto.nome}
-                          {/* ✅ CORREÇÃO: Exibir o estoque do objeto produto */}
                           <span className="ml-2 text-xs font-normal text-muted-foreground">
                             (Estoque: {item.produto.quantidadeTotal ?? "--"})
                           </span>
@@ -580,6 +678,17 @@ const PDV = ({ clientes, vendedores, onFinalizeSale, onExit }: PDVProps) => {
             ) : (
               <p></p>
             )}
+            <p className="text-sm text-zinc-400 m-2">
+              <strong>Atalhos do PDV:</strong>
+              As teclas de atalho são as seguintes — <strong>F1</strong> foca a
+              busca de produto,
+              <strong>F2</strong> finaliza a venda,
+              <strong>F3</strong> define o vendedor padrão,
+              <strong>F4</strong> gera o orçamento,
+              <strong>F5</strong> limpa o carrinho,
+              <strong>F6</strong> leva para a tela de movimentações e{" "}
+              <strong>ESC</strong> sai do PDV.
+            </p>
           </Card>
 
           <div className="grid grid-cols-2 gap-4">
@@ -641,7 +750,8 @@ const PDV = ({ clientes, vendedores, onFinalizeSale, onExit }: PDVProps) => {
               onClick={onExit}
               variant="destructive"
               size="icon"
-              aria-label="Fechar PDV"
+              // ✅ NOVO: Atalho ESC
+              aria-label="Fechar PDV (ESC)"
             >
               <X className="h-4 w-4" />
             </Button>
@@ -655,8 +765,9 @@ const PDV = ({ clientes, vendedores, onFinalizeSale, onExit }: PDVProps) => {
             id="search"
             placeholder="Digite o nome ou código de barras..."
             className="pl-8"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            // ✅ NOVO: Usa state 'productSearchQuery'
+            value={productSearchQuery}
+            onChange={(e) => setProductSearchQuery(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter" && filteredProducts.length > 0) {
                 addItemToSale(filteredProducts[0]);
@@ -664,7 +775,8 @@ const PDV = ({ clientes, vendedores, onFinalizeSale, onExit }: PDVProps) => {
               }
             }}
           />
-          {filteredProducts.length > 0 && searchQuery && (
+          {/* ✅ NOVO: Usa state 'productSearchQuery' */}
+          {filteredProducts.length > 0 && productSearchQuery && (
             <Card className="absolute top-full w-full mt-1 z-10 shadow-lg">
               <ScrollArea className="h-auto max-h-60">
                 {filteredProducts.map((p) => (
@@ -686,23 +798,28 @@ const PDV = ({ clientes, vendedores, onFinalizeSale, onExit }: PDVProps) => {
 
         <Separator />
         <div className="space-y-4">
-          {/* CLIENTE */}
+          {/* CLIENTE - ✅ CORRIGIDO */}
           <div className="relative">
             <Label>Cliente</Label>
             <Input
-              placeholder="Digite o nome ou CPF do cliente..."
-              value={
+              // ✅ NOVO: Usa 'clientSearchQuery' para o valor
+              value={clientSearchQuery}
+              // ✅ NOVO: Usa placeholder para mostrar seleção
+              placeholder={
                 selectedCliente
-                  ? clientes.find((c) => c.id === selectedCliente)?.nome || ""
-                  : ""
+                  ? clientes.find((c) => c.id === selectedCliente)?.nome
+                  : "Digite o nome ou CPF do cliente..."
               }
+              // ✅ NOVO: Atualiza 'clientSearchQuery' e limpa seleção
               onChange={(e) => {
-                setSearchQuery(e.target.value);
+                setClientSearchQuery(e.target.value);
                 setSelectedCliente(null);
               }}
-              onFocus={() => setSearchQuery("")}
+              // ✅ NOVO: Limpa busca ao focar
+              onFocus={() => setClientSearchQuery("")}
             />
-            {searchQuery && (
+            {/* ✅ NOVO: Mostra resultados com base em 'clientSearchQuery' */}
+            {clientSearchQuery && (
               <Card className="absolute top-full w-full mt-1 z-10 shadow-lg">
                 <ScrollArea className="h-auto max-h-60">
                   {clientes
@@ -710,8 +827,8 @@ const PDV = ({ clientes, vendedores, onFinalizeSale, onExit }: PDVProps) => {
                       (c) =>
                         c.nome
                           .toLowerCase()
-                          .includes(searchQuery.toLowerCase()) ||
-                        c.cpf?.includes(searchQuery)
+                          .includes(clientSearchQuery.toLowerCase()) ||
+                        c.cpf?.includes(clientSearchQuery)
                     )
                     .map((c) => (
                       <div
@@ -719,7 +836,8 @@ const PDV = ({ clientes, vendedores, onFinalizeSale, onExit }: PDVProps) => {
                         className="p-3 hover:bg-muted cursor-pointer flex justify-between"
                         onClick={() => {
                           setSelectedCliente(c.id);
-                          setSearchQuery("");
+                          // ✅ NOVO: Limpa busca ao selecionar
+                          setClientSearchQuery("");
                         }}
                       >
                         <div>
@@ -743,24 +861,29 @@ const PDV = ({ clientes, vendedores, onFinalizeSale, onExit }: PDVProps) => {
             )}
           </div>
 
-          {/* VENDEDOR */}
+          {/* VENDEDOR - ✅ CORRIGIDO */}
           <div className="relative">
-            <Label>Vendedor</Label>
+            {/* ✅ NOVO: Label com atalho F3 */}
+            <Label>Vendedor (F3 p/ Padrão)</Label>
             <Input
-              placeholder="Digite o nome ou código do vendedor..."
-              value={
+              // ✅ NOVO: Usa 'sellerSearchQuery' para o valor
+              value={sellerSearchQuery}
+              // ✅ NOVO: Usa placeholder para mostrar seleção
+              placeholder={
                 selectedVendedor
-                  ? vendedores.find((v) => v.codigo === selectedVendedor)
-                      ?.nome || ""
-                  : ""
+                  ? vendedores.find((v) => v.id === selectedVendedor)?.nome
+                  : "Digite o nome ou código do vendedor..."
               }
+              // ✅ NOVO: Atualiza 'sellerSearchQuery' e limpa seleção
               onChange={(e) => {
-                setSearchQuery(e.target.value);
+                setSellerSearchQuery(e.target.value);
                 setSelectedVendedor(undefined);
               }}
-              onFocus={() => setSearchQuery("")}
+              // ✅ NOVO: Limpa busca ao focar
+              onFocus={() => setSellerSearchQuery("")}
             />
-            {searchQuery && (
+            {/* ✅ NOVO: Mostra resultados com base em 'sellerSearchQuery' */}
+            {sellerSearchQuery && (
               <Card className="absolute top-full w-full mt-1 z-10 shadow-lg">
                 <ScrollArea className="h-auto max-h-60">
                   {vendedores
@@ -768,8 +891,10 @@ const PDV = ({ clientes, vendedores, onFinalizeSale, onExit }: PDVProps) => {
                       (v) =>
                         v.nome
                           .toLowerCase()
-                          .includes(searchQuery.toLowerCase()) ||
-                        v.id?.toLowerCase().includes(searchQuery.toLowerCase())
+                          .includes(sellerSearchQuery.toLowerCase()) ||
+                        v.id
+                          ?.toLowerCase()
+                          .includes(sellerSearchQuery.toLowerCase())
                     )
                     .map((v) => (
                       <div
@@ -777,7 +902,8 @@ const PDV = ({ clientes, vendedores, onFinalizeSale, onExit }: PDVProps) => {
                         className="p-3 hover:bg-muted cursor-pointer flex justify-between"
                         onClick={() => {
                           setSelectedVendedor(v.id);
-                          setSearchQuery("");
+                          // ✅ NOVO: Limpa busca ao selecionar
+                          setSellerSearchQuery("");
                         }}
                       >
                         <div>
@@ -798,7 +924,11 @@ const PDV = ({ clientes, vendedores, onFinalizeSale, onExit }: PDVProps) => {
             onClick={() => {
               setSelectedVendedor(undefined);
               setSelectedCliente(null);
-              setSearchQuery("");
+              setClientSearchQuery("");
+              setSellerSearchQuery("");
+              // ✅ NOVO: Limpa também o vendedor padrão
+              localStorage.removeItem(DEFAULT_VENDEDOR_KEY);
+              toast.info("Seleção de cliente e vendedor (padrão) limpa.");
             }}
             className="text-sm text-red-500 cursor-pointer hover:underline"
           >
@@ -809,62 +939,15 @@ const PDV = ({ clientes, vendedores, onFinalizeSale, onExit }: PDVProps) => {
 
         <div className="flex-1" />
         <Button
-          onClick={() => {
-            if (!selectedVendedor) {
-              toast.error("Selecione um vendedor antes de gerar o orçamento.");
-              return;
-            }
-
-            const budget = {
-              saleItems,
-              clienteId: selectedCliente || null,
-              vendedorId: selectedVendedor,
-              desconto: discount,
-              total,
-              data: new Date().toLocaleString("pt-BR"),
-            };
-
-            // Pode salvar no localStorage, enviar para API, etc.
-            console.log("Orçamento gerado:", budget);
-            toast.success("Orçamento gerado com sucesso!");
-
-            // Exemplo: abrir uma prévia de impressão simples
-            const win = window.open("", "_blank");
-            if (win) {
-              win.document.write(`
-        <html>
-          <head><title>Orçamento</title></head>
-          <body style="font-family:sans-serif;padding:40px;">
-            <h2>Orçamento</h2>
-            <p><strong>Data:</strong> ${budget.data}</p>
-            <p><strong>Vendedor:</strong> ${
-              vendedores.find((v) => v.id === selectedVendedor)?.nome
-            }</p>
-            <p><strong>Total:</strong> R$ ${total.toFixed(2)}</p>
-            <hr>
-            <ul>
-              ${saleItems
-                .map(
-                  (item) =>
-                    `<li>${item.produto.nome} — ${
-                      item.quantidade
-                    } x R$ ${item.precoVenda.toFixed(2)}</li>`
-                )
-                .join("")}
-            </ul>
-            <script>window.print();</script>
-          </body>
-        </html>
-      `);
-              win.document.close();
-            }
-          }}
+          // ✅ NOVO: Usa a função 'handleGerarOrcamento'
+          onClick={handleGerarOrcamento}
           disabled={saleItems.length === 0}
           variant="outline"
           size="lg"
           className="w-full py-6 text-lg font-semibold text-blue-600 border-blue-400"
         >
-          <FileWarning className="h-5 w-5 mr-2" /> Gerar Orçamento
+          {/* ✅ NOVO: Atalho F4 */}
+          <FileWarning className="h-5 w-5 mr-2" /> Gerar Orçamento (F4)
         </Button>
 
         <Button
@@ -873,11 +956,13 @@ const PDV = ({ clientes, vendedores, onFinalizeSale, onExit }: PDVProps) => {
           size="lg"
           className="w-full py-8 text-xl font-bold"
         >
-          <DollarSign className="h-6 w-6 mr-2" /> Finalizar Venda (F4)
+          {/* ✅ NOVO: Atalho F2 */}
+          <DollarSign className="h-6 w-6 mr-2" /> Finalizar Venda (F2)
         </Button>
       </div>
 
       <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
+        {/* ... (Conteúdo do Dialog de Pagamento não modificado) ... */}
         <DialogContent className="sm:max-w-md">
           {!selectedVendedor ? (
             <div className="text-sm text-red-500 text-center p-4">
@@ -976,6 +1061,7 @@ const PDV = ({ clientes, vendedores, onFinalizeSale, onExit }: PDVProps) => {
         open={isNewCustomerDialogOpen}
         onOpenChange={setIsNewCustomerDialogOpen}
       >
+        {/* ... (Conteúdo do Dialog de Novo Cliente não modificado) ... */}
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="text-2xl">
@@ -1040,7 +1126,8 @@ const PDV = ({ clientes, vendedores, onFinalizeSale, onExit }: PDVProps) => {
               </span>
               " está com o estoque zerado e não pode ser adicionado à venda.
               <br />
-              Deseja ir para a tela de movimentações para adicionar mais
+              {/* ✅ NOVO: Atalho F6 */}
+              Deseja ir para a tela de movimentações (F6) para adicionar mais
               unidades?
             </DialogDescription>
           </DialogHeader>
