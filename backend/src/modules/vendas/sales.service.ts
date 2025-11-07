@@ -151,6 +151,40 @@ export const createSaleServicesService = async (data: any, empresaId: string) =>
     return venda;
   });
 };
+
+export const getVendasTopProdutosService = async (empresaId: string) => {
+  const topProducts = await prisma.itemVenda.groupBy({
+    by: ['produtoId'],
+    _sum: {
+      quantidade: true,
+    },
+    where: {
+      empresaId,
+    },
+    orderBy: {
+      _sum: {
+        quantidade: 'desc',
+      },
+    },
+    take: 10,
+  });
+
+  const resultados = await Promise.all(topProducts.map(async (item) => {
+    const produto = await prisma.produto.findUnique({
+      where: { id: item.produtoId },
+      include: { categoria: true },
+    });
+
+    return {
+      produto,
+      totalVendido: item._sum.quantidade || 0,
+    };
+  }));
+
+  console.log(resultados);
+
+  return resultados;
+};
   
 
 /**

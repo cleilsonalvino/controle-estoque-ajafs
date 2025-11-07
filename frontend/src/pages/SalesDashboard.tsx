@@ -60,6 +60,7 @@ import { Sale } from "@/contexts/SalesContext"; // Removido SaleData se não for
 import api from "@/lib/api";
 import { useLocation } from "react-router-dom";
 import { toast } from "sonner";
+import TopSellingProducts from "@/components/TopSellingProducts";
 
 // ========================
 // Utils
@@ -177,91 +178,7 @@ const SalesLast6Months = () => {
   );
 };
 
-const TopSellingProducts = () => {
-  const { sales: allSalesRaw } = useSales();
-  const { produtos: produtosRaw } = useProdutos() as { produtos: Produto[] };
-  const allSales = Array.isArray(allSalesRaw) ? allSalesRaw : [];
-  const produtos = Array.isArray(produtosRaw) ? produtosRaw : [];
 
-  const topProducts = useMemo(() => {
-    const quantities = new Map<string, number>(); // productId -> qty
-
-    for (const sale of allSales) {
-      const itens = Array.isArray(sale.itens) ? sale.itens : [];
-      for (const item of itens) {
-        const productId = item.produtoId;
-        if (!productId) continue;
-        const qty = toNumber(item.quantidade ?? item.quantidade);
-        quantities.set(productId, (quantities.get(productId) ?? 0) + qty);
-      }
-    }
-
-    const sorted = [...quantities.entries()]
-      .sort(([, a], [, b]) => b - a)
-      .slice(0, 5);
-
-    return sorted.map(([productId, sales]) => {
-      const product = produtos.find((p) => p.id === productId);
-      // receita do produto
-      const revenue = allSales.reduce((acc, sale) => {
-        const itens = Array.isArray(sale.itens) ? sale.itens : [];
-        for (const i of itens) {
-          if (i.produtoId === productId) {
-            acc +=
-              toNumber(i.quantidade ?? i.quantidade) * toNumber(i.precoCusto);
-          }
-        }
-        return acc;
-      }, 0);
-
-      return {
-        name: product?.nome ?? "Produto Desconhecido",
-        sales,
-        revenue,
-      };
-    });
-  }, [allSales, produtos]);
-
-  return (
-    <Card className="bg-gradient-card border-0 shadow-md">
-      <CardHeader>
-        <CardTitle>Produtos Mais Vendidos</CardTitle>
-        <CardDescription>
-          Ranking de produtos por volume de vendas
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {topProducts.map((product, index) => (
-            <div
-              key={`${product.name}-${index}`}
-              className="flex items-center justify-between"
-            >
-              <div className="flex items-center space-x-3">
-                <Badge className="w-6 h-6 p-0 flex items-center justify-center text-xs">
-                  {index + 1}
-                </Badge>
-                <div>
-                  <div className="text-sm font-medium line-clamp-1">
-                    {product.name}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {product.sales} produtos vendidos
-                  </div>
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-sm font-semibold">
-                  {fmtBRL(product.revenue)}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
-  );
-};
 
 const SalesByCategory = () => {
   const { sales: allSalesRaw } = useSales();
@@ -957,14 +874,6 @@ const SalesDashboard = () => {
 
             {/* Botões de Exportação */}
             <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                onClick={exportToPDF}
-                disabled={isLoadingTable || tableData.length === 0}
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Exportar PDF
-              </Button>
               <Button
                 variant="secondary"
                 onClick={handleClearFilters}

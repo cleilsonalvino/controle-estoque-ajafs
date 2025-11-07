@@ -23,6 +23,7 @@ export function LoginPage() {
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (token) navigate("/");
+    
   }, [navigate]);
 
   const handleSubmit = async (event: React.FormEvent) => {

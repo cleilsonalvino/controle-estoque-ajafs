@@ -7,7 +7,8 @@ import {
   deleteVendaController,
   cancelarVendaController,
   getVendasFiltrarController,
-  createServiceSaleController
+  createServiceSaleController,
+  getVendasTopProdutosController
   //deleteAllSalesController
 } from "./sales.controller";
 import { authMiddleware } from "../../app/middlewares/auth.middleware";
@@ -24,6 +25,7 @@ salesRouter.get("/filtrar", getVendasFiltrarController);
 //salesRouter.delete("/delete-all", deleteAllSalesController);
 salesRouter.get("/", getVendasController);
 salesRouter.get("/:id", getVendaByIdController);
+salesRouter.get("/reports/top-products", getVendasTopProdutosController);
 salesRouter.put("/:id", updateVendaController);
 salesRouter.delete("/:id", deleteVendaController);
 salesRouter.patch("/cancelar/:id", cancelarVendaController);

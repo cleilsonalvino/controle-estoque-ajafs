@@ -7,7 +7,8 @@ import {
   deleteVendaService,
   cancelVendaService,
   getVendasFiltrarService,
-  createSaleServicesService
+  createSaleServicesService,
+  getVendasTopProdutosService
 } from "./sales.service";
 import { createVendaSchema } from "./sales.dto";
 import { CustomError } from "../../shared/errors";
@@ -73,6 +74,24 @@ export const getVendasController = async (req: AuthenticatedRequest, res: Respon
     res.status(error.status || 500).json({ message: error.message });
   }
 };
+
+export const getVendasTopProdutosController = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const {empresaId} = req.user!;
+
+    if (!empresaId) {
+      return res.status(400).json({ message: "Empresa não informada." });
+    }
+
+    const data = await getVendasTopProdutosService(empresaId);
+    res.json(data);
+    
+  } catch (error) {
+    console.error("Erro ao buscar top produtos:", error);
+    res.status(500).json({ message: "Erro interno ao gerar relatório." });
+  }
+};
+
 
 /**
  * ======================================================
