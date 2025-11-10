@@ -107,7 +107,7 @@ export function HomePage() {
         </p>
         </h1>
         
-        <img src={user.user.empresa.logoEmpresa ?? "https://placehold.co/800?text=Logo+Empresa&font=roboto"} alt="logo da empresa" className="p-2 w-28 cursor-pointer" />
+        <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR4PmLASrRCL1jyqcfM1e96WSV2H7cO63HMTQ&s" alt="logo da empresa" className="p-2 w-28 cursor-pointer" />
       </motion.div>
 
       {/* 🔄 ALTERADO: Cards de Informações */}
