@@ -175,7 +175,7 @@ export function HomePage() {
             <div>
               <strong>Status:</strong>
               {/* ✅ CORREÇÃO: Lógica de status estava invertida */}
-              <p>{user.user.ativo ? "Ativo" : "Inativo"}</p>
+              <p>Ativo</p>
             </div>
             <div>
               <strong>Membro desde:</strong>
