@@ -103,7 +103,7 @@ export function HomePage() {
         <h1 className="text-3xl font-bold">
           Bem-vindo(a), {user.user.nome}!
           <p className="text-muted-foreground capitalize text-sm font-normal">
-          {user.user.papel?.toUpperCase()}(a)
+          {user.user.papel?.toUpperCase()}(A)
         </p>
         </h1>
         
