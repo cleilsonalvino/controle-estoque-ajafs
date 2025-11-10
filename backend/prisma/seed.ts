@@ -9,7 +9,7 @@ async function main() {
   const empresa = await prisma.empresa.create({
     data: {
       nome: 'CENTRO DE REPARACAO AUTOMOTIVA LTDA',
-      cnpj: '30390419000168',
+      cnpj: '30390419000123',
       telefone: '79998414037',
       razaoSocial: '',
       nomeFantasia: 'C.R.A CENTRO DE REPARACAO AUTOMOTIVA',
@@ -26,7 +26,7 @@ async function main() {
   const usuario = await prisma.usuario.create({
     data: {
       nome: 'CRA Admin',
-      email: 'admin@cra.com',
+      email: 'admin@ajafs.com',
       senha: '$2a$12$V/CA2x6172q.uBmf8PFXHe79yZ9YFd6414a1N8ZIkiIWEGLQTKCFe',
       papel: 'ADMINISTRADOR',
       empresaId: empresa.id,
