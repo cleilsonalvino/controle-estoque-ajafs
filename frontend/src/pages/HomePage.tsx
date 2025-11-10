@@ -177,14 +177,6 @@ export function HomePage() {
               {/* ✅ CORREÇÃO: Lógica de status estava invertida */}
               <p>Ativo</p>
             </div>
-            <div>
-              <strong>Membro desde:</strong>
-              <p>
-                {user.user.criadoEm
-                  ? new Date(user.user.criadoEm).toLocaleDateString("pt-BR")
-                  : "--"}
-              </p>
-            </div>
           </CardContent>
         </Card>
       </div>

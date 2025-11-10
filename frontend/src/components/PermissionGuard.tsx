@@ -9,7 +9,7 @@ interface PermissionGuardProps {
 export const PermissionGuard = ({ permissionKey, children }: PermissionGuardProps) => {
   const { user, isLoading } = useAuth();
 
-  // Enquanto carrega, mostra o spinner
+  // Enquanto carrega
   if (isLoading) {
     return (
       <div className="w-full h-screen flex items-center justify-center">
@@ -18,13 +18,24 @@ export const PermissionGuard = ({ permissionKey, children }: PermissionGuardProp
     );
   }
 
-  // Se não estiver logado
+  // 🔒 Se não estiver logado
   if (!user) {
     return <Navigate to="/login" replace />;
   }
 
-  // 🔑 Compatibilidade com os dois formatos de permissão
-  // (ex: "products" ou "/products")
+  const email = user.user.email?.toLowerCase();
+
+  // 🌟 Acesso exclusivo para o super-admin master
+  if (permissionKey === "super-admin") {
+    if (email === "ajafs@admin.com") {
+      return children ? <>{children}</> : <Outlet />;
+    } else {
+      console.warn(`🚫 Acesso restrito à conta master (${email})`);
+      return <Navigate to="/" replace />;
+    }
+  }
+
+  // 🔑 Verificação de permissão normal
   const hasPermission =
     user.user.telasPermitidas?.includes(permissionKey) ||
     user.user.telasPermitidas?.includes(`/${permissionKey}`) ||

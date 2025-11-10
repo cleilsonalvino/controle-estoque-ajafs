@@ -32,7 +32,7 @@ import Vendedores from "./pages/Vendedores";
 import TiposServicos from "./pages/TiposServicos";
 import EstoqueDashboard from "./pages/EstoqueDashboard";
 import { PermissionGuard } from "./components/PermissionGuard";
-import SuperAdminEmpresas from "./pages/admin/SuperAdmin";
+import SuperAdminEmpresas from "./pages/admin/SuperAdminEmpresas";
 import { ServiceSalesProvider } from "./contexts/ServiceSalesContext";
 //import { TitleBar } from "./components/TitleBar";
 
@@ -161,7 +161,17 @@ const App = () => (
                                         </PermissionGuard>
                                       }
                                     />
+                                    <Route
+                                      path="/super-admin"
+                                      element={
+                                        <PermissionGuard permissionKey="super-admin">
+                                          <SuperAdminEmpresas />
+                                        </PermissionGuard>
+                                      }
+                                    />
+                                  
                                   </Route>
+                                  
 
                                   {/* === GROUP 2: Route WITHOUT Sidebar (PDV) === */}
                                   <Route
@@ -172,6 +182,7 @@ const App = () => (
                                       </PermissionGuard>
                                     }
                                   />
+                                  
                                 </Route>
 
                                 <Route path="*" element={<NotFound />} />
