@@ -36,7 +36,7 @@ async function createWindow() {
 
   // impede que links externos abram dentro do app
   win.webContents.on("will-navigate", (event, url) => {
-    if (url.startsWith("http") && !url.startsWith("http://168.231.95.166:8088/")) {
+    if (url.startsWith("http") && !url.startsWith("http://localhost:8080/")) {
       event.preventDefault();
       shell.openExternal(url);
     }
