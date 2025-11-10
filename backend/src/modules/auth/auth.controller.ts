@@ -22,6 +22,8 @@ export const loginMeController = async (req: Request, res: Response) => {
       user: userData,
     });
   } catch (error: any) {
-    res.status(error.status || 500).json({ message: error.message });
+    console.error("Erro interno em /auth/me:", error);
+    res.status(error.statusCode || error.status || 500).json({ message: error.message });
+
   }
 };

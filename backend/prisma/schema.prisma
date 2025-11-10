@@ -209,7 +209,7 @@ model Cliente {
 // ================================
 model Vendedor {
   id           String   @id @default(uuid())
-  codigo       String   
+  codigo       String?   
   nome         String
   email        String?
   meta         Decimal? @db.Decimal(14, 2)

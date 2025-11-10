@@ -12,13 +12,20 @@ export function authMiddleware(req: AuthRequest, res: Response, next: NextFuncti
   const [, token] = authHeader.split(' ')
 
   if (token) {
-    try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret') as any
-    req.user = decoded
-    next()
-    } catch {
-    return res.status(401).json({ message: 'Token inválido ou expirado' })
+try {
+  const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { id: string; empresaId: string; papel: string };
+  req.user = decoded;
+  next();
+} catch (error: any) {
+  if (error.name === "TokenExpiredError") {
+    console.warn("Token expirado:", error.expiredAt);
+    return res.status(401).json({ message: "Sessão expirada. Faça login novamente." });
   }
+
+  console.error("Falha na autenticação:", error.message);
+  return res.status(401).json({ message: "Token inválido." });
+}
+
   } else {
     return res.status(401).json({ message: 'Token malformado' })
   }

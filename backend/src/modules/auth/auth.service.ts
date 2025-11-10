@@ -31,8 +31,8 @@ export const loginService = async (data: any) => {
       empresaId: user.empresaId,
       papel: user.papel,
     },
-    process.env.JWT_SECRET || "secret",
-    { expiresIn: "1d" }
+    process.env.JWT_SECRET!,
+    { expiresIn: "30d" }
   );
 
   // ✅ retornar o usuário com empresa + token
@@ -48,10 +48,12 @@ export const loginService = async (data: any) => {
   };
 };
 
-
 export const getUserDataFromToken = async (token: string) => {
   try {
-    const decoded: any = jwt.verify(token, process.env.JWT_SECRET || "secret");
+    if (!process.env.JWT_SECRET) {
+      throw new CustomError("Chave JWT não configurada no servidor", 500);
+    }
+    const decoded: any = jwt.verify(token, process.env.JWT_SECRET);
 
     const user = await prisma.usuario.findUnique({
       where: { id: decoded.id },
