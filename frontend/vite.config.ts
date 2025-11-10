@@ -7,6 +7,7 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: true,
     port: 8080,
+    allowedHosts: ["all"],
   },
   plugins: [react()].filter(Boolean) as PluginOption[],
   resolve: {
