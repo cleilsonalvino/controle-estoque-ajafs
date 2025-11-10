@@ -6,7 +6,7 @@
   "main": "dist/index.js",
   "scripts": {
     "dev:server": "nodemon",
-    "dev:console": "node -r tsconfig-paths/register -r sucrase/register src/index.ts",
+    "dev": "node -r tsconfig-paths/register -r sucrase/register src/index.ts",
     "migrate": "npx prisma migrate dev",
     "generate": "npx prisma generate",
     "studio": "npx prisma studio",
