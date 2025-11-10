@@ -25,7 +25,33 @@ export const AppNavbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // 🔹 Agrupamento dinâmico
+  const isMobile = useIsMobile();
+  const email = user?.user?.email?.toLowerCase();
+
+  // 🔹 Itens visíveis considerando permissões e papel
+  const visibleMenuItems = useMemo(() => {
+    if (isLoading || !user) return [];
+
+    const isAdmin = user.user.papel?.toLowerCase() === "administrador";
+    const isMaster = email === "ajafs@admin.com";
+
+    // 🔸 Se for o master, mostra tudo (incluindo super_admin)
+    if (isMaster) return allMenuItems;
+
+    // 🔸 Se for admin, mostra tudo exceto o super_admin
+    if (isAdmin)
+      return allMenuItems.filter((item) => item.key !== "super_admin");
+
+    // 🔸 Para usuários comuns, mostra apenas as telas permitidas e oculta o super_admin
+    if (!user.user.telasPermitidas) return [];
+    return allMenuItems.filter(
+      (item) =>
+        user.user.telasPermitidas.includes(item.url) &&
+        item.key !== "super_admin"
+    );
+  }, [user, isLoading, email]);
+
+  // 🔹 Agrupamento dinâmico (usando os itens visíveis)
   const groupedMenu = useMemo(() => {
     const grupos: Record<string, typeof allMenuItems> = {
       Gestão: [],
@@ -35,7 +61,7 @@ export const AppNavbar = () => {
       Outros: [],
     };
 
-    allMenuItems.forEach((item) => {
+    visibleMenuItems.forEach((item) => {
       if (["home", "estoque", "dashboard-sales", "sales"].includes(item.key)) {
         grupos["Gestão"].push(item);
       } else if (
@@ -59,29 +85,14 @@ export const AppNavbar = () => {
     });
 
     return grupos;
-  }, []);
+  }, [visibleMenuItems]);
 
-  const visibleMenuItems = useMemo(() => {
-    if (isLoading || !user) return [];
-    const isAdmin = user.user.papel?.toLowerCase() === "administrador";
-    if (isAdmin) return allMenuItems;
-    if (!user.user.telasPermitidas) return [];
-    return allMenuItems.filter((item) =>
-      user.user.telasPermitidas.includes(item.url)
-    );
-  }, [user, isLoading]);
-
-  const isMobile = useIsMobile();
-
+  // 🔹 Bloqueio de scroll quando menu mobile está aberto
   useEffect(() => {
-    if (isMobile && mobileOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
-
+    document.body.style.overflow =
+      isMobile && mobileOpen ? "hidden" : "unset";
     return () => {
-      document.body.style.overflow = 'unset';
+      document.body.style.overflow = "unset";
     };
   }, [isMobile, mobileOpen]);
 
@@ -93,12 +104,16 @@ export const AppNavbar = () => {
   const isActive = (path: string) =>
     location.pathname === path || location.pathname.startsWith(`${path}/`);
 
+  // 🔹 Renderização
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-card border-b shadow-sm">
       <div className="flex items-center justify-between px-6 py-3">
         {/* Logo */}
         <div className="flex items-center space-x-2">
-          <div className="p-2 w-28 cursor-pointer" onClick={()=>window.location.href = '/'}>
+          <div
+            className="p-2 w-28 cursor-pointer"
+            onClick={() => (window.location.href = "/")}
+          >
             <img src="/logo-ajafs.png" alt="logo ajafs+ sistemas" />
           </div>
         </div>
@@ -137,9 +152,8 @@ export const AppNavbar = () => {
 
         {/* Ações Direitas */}
         <div className="flex items-center space-x-3">
-          {/* 🔹 Botão PDV */}
           <Button
-            onClick={() => navigate("/sales")} // <-- ajusta rota do PDV aqui
+            onClick={() => navigate("/sales")}
             variant="default"
             size="sm"
             className="flex items-center space-x-2"
@@ -148,7 +162,6 @@ export const AppNavbar = () => {
             <span className="hidden md:inline">Abrir PDV</span>
           </Button>
 
-          {/* Logout */}
           <Button
             onClick={handleLogout}
             variant="ghost"
@@ -159,7 +172,6 @@ export const AppNavbar = () => {
             <span className="hidden md:inline">Sair</span>
           </Button>
 
-          {/* Menu Mobile */}
           <Button
             variant="ghost"
             size="sm"
@@ -171,7 +183,7 @@ export const AppNavbar = () => {
         </div>
       </div>
 
-      {/* Menu Mobile Responsivo */}
+      {/* Menu Mobile */}
       {mobileOpen && (
         <div className="md:hidden border-t bg-card overflow-y-auto max-h-[calc(100vh-4rem)]">
           {Object.entries(groupedMenu).map(([categoria, itens]) =>
@@ -202,7 +214,6 @@ export const AppNavbar = () => {
             ) : null
           )}
 
-          {/* 🔹 Botão PDV no menu mobile */}
           <div className="p-3 border-t">
             <Button
               onClick={() => {
@@ -220,3 +231,4 @@ export const AppNavbar = () => {
     </header>
   );
 };
+
