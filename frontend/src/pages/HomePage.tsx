@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/useAuth";
 import { allMenuItems } from "@/config/menuItems";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { motion } from "framer-motion";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -53,7 +53,7 @@ export function HomePage() {
         .catch((err) => console.error("Erro ao buscar dashboard:", err));
     }
 
-    console.log("user:", user)
+    console.log("user:", user);
 
     // 2. Criar uma função async interna para buscar dados da empresa
     const fetchEmpresaData = async () => {
@@ -83,13 +83,31 @@ export function HomePage() {
 
   if (!user) return <div>Carregando informações do usuário...</div>;
 
+  const email = user.user.email?.toLowerCase();
   const isAdmin = user.user.papel?.toLowerCase() === "administrador";
+  const isMaster = email === "ajafs@admin.com";
 
-  const accessibleMenuItems = isAdmin
-    ? allMenuItems.filter((item) => item.url !== "/")
-    : allMenuItems.filter(
-        (item) => item.url !== "/" && user.user.telasPermitidas?.includes(item.url)
+  const accessibleMenuItems = useMemo(() => {
+    // 🔹 Caso seja o superadmin master, exibe tudo exceto a home
+    if (isMaster) {
+      return allMenuItems.filter((item) => item.url !== "/");
+    }
+
+    // 🔹 Caso seja admin, exibe tudo exceto o super_admin e a home
+    if (isAdmin) {
+      return allMenuItems.filter(
+        (item) => item.url !== "/" && item.key !== "super_admin"
       );
+    }
+
+    // 🔹 Caso comum, filtra apenas telas permitidas e oculta super_admin
+    return allMenuItems.filter(
+      (item) =>
+        item.url !== "/" &&
+        item.key !== "super_admin" &&
+        user.user.telasPermitidas?.includes(item.url)
+    );
+  }, [isAdmin, isMaster, user]);
 
   return (
     <div className="container mx-auto p-6 space-y-8">
@@ -103,11 +121,20 @@ export function HomePage() {
         <h1 className="text-3xl font-bold">
           Bem-vindo(a), {user.user.nome}!
           <p className="text-muted-foreground capitalize text-sm font-normal">
-          {user.user.papel?.toUpperCase()}(A)
-        </p>
+            {user.user.papel?.toUpperCase()}(A)
+          </p>
         </h1>
-        
-        <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR4PmLASrRCL1jyqcfM1e96WSV2H7cO63HMTQ&s" alt="logo da empresa" className="p-2 w-28 cursor-pointer" />
+        {isMaster && (
+          <span className="ml-2 text-xs px-2 py-1 rounded bg-primary text-primary-foreground uppercase">
+            Acesso Master
+          </span>
+        )}
+
+        <img
+          src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR4PmLASrRCL1jyqcfM1e96WSV2H7cO63HMTQ&s"
+          alt="logo da empresa"
+          className="p-2 w-28 cursor-pointer"
+        />
       </motion.div>
 
       {/* 🔄 ALTERADO: Cards de Informações */}
@@ -184,7 +211,9 @@ export function HomePage() {
       {/* Se for ADMIN, visão geral do sistema */}
       {isAdmin && dashboard && (
         <section>
-          <h2 className="text-2xl font-semibold mb-4">Visão Geral do Sistema</h2>
+          <h2 className="text-2xl font-semibold mb-4">
+            Visão Geral do Sistema
+          </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
             {[
               { title: "Produtos", value: dashboard.totalProdutos },
