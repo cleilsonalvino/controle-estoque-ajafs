@@ -3,10 +3,12 @@ import {
   useContext,
   useState,
   useEffect,
+  useCallback,
   ReactNode,
 } from "react";
 import api from "@/lib/api";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/useAuth";
 
 export interface Empresa {
   id: string;
@@ -30,94 +32,185 @@ export interface Empresa {
   atualizadoEm: Date;
 }
 
+// 📊 Dados do dashboard
+export interface DashboardStats {
+  totalEmpresas: number;
+  totalUsuarios: number;
+  totalProdutos: number;
+  totalVendas: number;
+  topEmpresas: any[];
+  vendasMensais: {
+    empresa: string;
+    mes: string;
+    total: number;
+  }[];
+}
+
 interface EmpresaContextType {
   empresa: Empresa | null;
+  empresas: Empresa[];
+  dashboard: DashboardStats | null;
   loading: boolean;
-  fetchEmpresa: () => Promise<void>;
+  loadingList: boolean;
+
+  fetchEmpresa: (empresaId?: string) => Promise<void>;
+  fetchEmpresas: () => Promise<void>;
+  fetchDashboard: () => Promise<void>;
+
   createEmpresa: (
     newEmpresa: Omit<Empresa, "id">
   ) => Promise<Empresa | undefined>;
   updateEmpresa: (
-    updatedEmpresa: Partial<Empresa>
-  ) => Promise<Empresa | undefined>;
-  // ✅ CORREÇÃO: A função deve retornar os dados da empresa ou undefined
-  findUniqueEmpresa: (
+    updatedEmpresa: Partial<Empresa>,
     empresaId: string
   ) => Promise<Empresa | undefined>;
+  findUniqueEmpresa: (empresaId: string) => Promise<Empresa | undefined>;
 }
 
 const EmpresaContext = createContext<EmpresaContextType>({
   empresa: null,
+  empresas: [],
+  dashboard: null,
   loading: false,
+  loadingList: false,
   fetchEmpresa: async () => {},
+  fetchEmpresas: async () => {},
+  fetchDashboard: async () => {},
   createEmpresa: async () => undefined,
   updateEmpresa: async () => undefined,
-  // ✅ CORREÇÃO: Atualiza o valor padrão do contexto
   findUniqueEmpresa: async () => undefined,
 });
 
-interface EmpresaProviderProps {
-  children: ReactNode;
-}
-
-export const EmpresaProvider = ({ children }: EmpresaProviderProps) => {
+export const EmpresaProvider = ({ children }: { children: ReactNode }) => {
+  const { user, isLoading: authLoading, isAuthenticated } = useAuth();
   const [empresa, setEmpresa] = useState<Empresa | null>(null);
+  const [empresas, setEmpresas] = useState<Empresa[]>([]);
+  const [dashboard, setDashboard] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadingList, setLoadingList] = useState(false);
 
-  // Esta função busca a empresa "principal" ou "logada" e salva globalmente
-  const fetchEmpresa = async () => {
+  // ======================================================
+  // 🔹 Buscar lista de todas as empresas (Super Admin)
+  // ======================================================
+  const fetchEmpresas = async () => {
+    try {
+      setLoadingList(true);
+      const { data } = await api.get("/empresa");
+      setEmpresas(Array.isArray(data) ? data : data.empresas || []);
+    } catch (error) {
+      console.error("Erro ao buscar empresas:", error);
+      toast.error("Erro ao carregar lista de empresas");
+    } finally {
+      setLoadingList(false);
+    }
+  };
+
+  // ======================================================
+  // 📊 Buscar dados do dashboard global
+  // ======================================================
+  const fetchDashboard = async () => {
     try {
       setLoading(true);
-      const { data } = await api.get<Empresa>("/empresa");
-      setEmpresa(data);
+
+      const { data } = await api.get("/empresa/super/dashboard");
+
+      // ✅ Garante que o valor final é DashboardStats puro
+      const stats: DashboardStats = (data?.data ?? data) as DashboardStats;
+      setDashboard(stats);
     } catch (error) {
-      console.error("Erro ao buscar dados da empresa:", error);
-      // It's okay if it fails, it might not exist yet
+      console.error("Erro ao carregar dashboard:", error);
+      toast.error("Erro ao carregar dados do painel de gestão");
     } finally {
       setLoading(false);
     }
   };
 
+  // ======================================================
+  // 🔹 Buscar dados da empresa
+  // ======================================================
+  const fetchEmpresa = useCallback(
+    async (empresaId?: string) => {
+      if (!empresaId || empresa?.id === empresaId) return;
+      try {
+        setLoading(true);
+        const { data } = await api.get<Empresa>(`/empresa/${empresaId}`);
+        setEmpresa(data);
+      } catch (error) {
+        console.error("Erro ao buscar dados da empresa:", error);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [empresa]
+  );
+
+  // ======================================================
+  // 🔹 Buscar empresa do usuário logado automaticamente
+  // ======================================================
+  useEffect(() => {
+    if (authLoading) return;
+    if (isAuthenticated && user?.empresa?.id && !empresa) {
+      fetchEmpresa(user.empresa.id);
+    }
+  }, [authLoading, isAuthenticated, user, empresa, fetchEmpresa]);
+
+  // ======================================================
+  // 🔹 Criar empresa
+  // ======================================================
   const createEmpresa = async (newEmpresa: Omit<Empresa, "id">) => {
     try {
-      const { data } = await api.post<Empresa>("/empresa/create", newEmpresa);
+      setLoading(true);
+      const { data } = await api.post<Empresa>("/empresa", newEmpresa);
       setEmpresa(data);
-      toast.success("Dados da empresa criados com sucesso!");
+      toast.success("Empresa criada com sucesso!");
+      await fetchEmpresas();
       return data;
     } catch (error) {
-      console.error("Erro ao criar dados da empresa:", error);
-      toast.error("Erro ao criar dados da empresa");
+      console.error(error);
+      toast.error("Erro ao criar empresa");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const updateEmpresa = async (updatedEmpresa: Partial<Empresa>) => {
-    try {
-      const { data } = await api.put<Empresa>("/empresa", updatedEmpresa);
-      setEmpresa(data);
-      toast.success("Dados da empresa atualizados com sucesso!");
-      return data;
-    } catch (error) {
-      console.error("Erro ao atualizar dados da empresa:", error);
-      toast.error("Erro ao atualizar dados da empresa");
-    }
-  };
-
-  // ✅ CORREÇÃO: Esta função agora busca uma empresa específica e RETORNA os dados
-  const findUniqueEmpresa = async (
+  // ======================================================
+  // 🔹 Atualizar empresa
+  // ======================================================
+  const updateEmpresa = async (
+    updatedData: Partial<Empresa>,
     empresaId: string
-  ): Promise<Empresa | undefined> => {
+  ) => {
     try {
-      const { data } = await api.get<Empresa>(`/empresa/${empresaId}`);
-      // ❌ NÃO ATUALIZE O ESTADO GLOBAL AQUI:
-      // setEmpresa(data);
-      
-      // ✅ RETORNE OS DADOS:
+      setLoading(true);
+      const { data } = await api.put<Empresa>(
+        `/empresa/${empresaId}`,
+        updatedData
+      );
+      setEmpresa(data);
+      toast.success("Empresa atualizada com sucesso!");
       return data;
     } catch (error) {
-      console.error("Erro ao buscar dados da empresa:", error);
-      toast.error("Erro ao buscar dados da empresa");
-      // Propaga o erro para o componente (HomePage) poder tratar
-      throw error; 
+      console.error(error);
+      toast.error("Erro ao atualizar empresa");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ======================================================
+  // 🔹 Buscar empresa específica (sem alterar o estado global)
+  // ======================================================
+  const findUniqueEmpresa = async (empresaId: string) => {
+    try {
+      setLoading(true);
+      const { data } = await api.get<Empresa>(`/empresa/${empresaId}`);
+      return data || data;
+    } catch (error) {
+      console.error("Erro ao buscar empresa:", error);
+      toast.error("Erro ao buscar empresa");
+      throw error;
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -125,8 +218,13 @@ export const EmpresaProvider = ({ children }: EmpresaProviderProps) => {
     <EmpresaContext.Provider
       value={{
         empresa,
+        empresas,
+        dashboard,
         loading,
+        loadingList,
         fetchEmpresa,
+        fetchEmpresas,
+        fetchDashboard,
         createEmpresa,
         updateEmpresa,
         findUniqueEmpresa,

@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/useAuth";
 import { allMenuItems } from "@/config/menuItems";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { motion } from "framer-motion";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -18,7 +18,7 @@ import {
   User,
 } from "lucide-react";
 import api from "@/lib/api";
-import { useEmpresa } from "@/contexts/EmpresaContext"; // ✅ NOVO: Importar o hook da empresa
+import { useEmpresa } from "@/contexts/EmpresaContext";
 import { toast } from "sonner";
 
 const iconMap: Record<string, React.ElementType> = {
@@ -35,83 +35,81 @@ const iconMap: Record<string, React.ElementType> = {
 
 export function HomePage() {
   const { user } = useAuth();
-  // ✅ CORREÇÃO: Pegar apenas a função do context
   const { findUniqueEmpresa } = useEmpresa();
+
   const [dashboard, setDashboard] = useState<any>(null);
-
-  // ✅ CORREÇÃO: Vamos usar 'empresaDados' para guardar os dados
   const [empresaDados, setEmpresaDados] = useState<any>(null);
-  // ✅ CORREÇÃO: Criar um estado de loading local
   const [loadingEmpresaData, setLoadingEmpresaData] = useState(false);
+  const [loadingDashboard, setLoadingDashboard] = useState(false);
 
+  // ✅ useCallback para impedir recriação de função em toda renderização
+  const fetchEmpresaData = useCallback(async (empresaId: string) => {
+    if (!empresaId) return;
+
+    console.log(user)
+    try {
+      setLoadingEmpresaData(true);
+      const data = await findUniqueEmpresa(empresaId);
+      setEmpresaDados(data);
+    } catch (error) {
+      console.error("Erro ao buscar dados da empresa:", error);
+      toast.error("Erro ao buscar dados da empresa");
+    } finally {
+      setLoadingEmpresaData(false);
+    }
+  }, [findUniqueEmpresa]);
+
+  const fetchDashboard = useCallback(async () => {
+    try {
+      setLoadingDashboard(true);
+      const { data } = await api.get("/dashboard");
+      setDashboard(data);
+    } catch (err) {
+      console.error("Erro ao buscar dashboard:", err);
+    } finally {
+      setLoadingDashboard(false);
+    }
+  }, []);
+
+  // ✅ Rodar uma única vez por refresh
   useEffect(() => {
-    // 1. Lógica do Dashboard (como estava antes)
-    if (user?.user.papel === "ADMINISTRADOR") {
-      api
-        .get("/dashboard")
-        .then((res) => setDashboard(res.data))
-        .catch((err) => console.error("Erro ao buscar dashboard:", err));
+    if (!user) return;
+
+    // Evita chamadas múltiplas
+    if (user.papel === "ADMINISTRADOR" && !dashboard) {
+      fetchDashboard();
     }
 
-    console.log("user:", user);
-
-    // 2. Criar uma função async interna para buscar dados da empresa
-    const fetchEmpresaData = async () => {
-      // ✅ FIX 1: A "Guarda"
-      // Só executa se o user e o empresaId existirem
-      if (!user || !user.user.empresa.id) {
-        return; // Sai da função se o usuário ou o ID não estiverem prontos
-      }
-
-      setLoadingEmpresaData(true);
-
-      // ✅ FIX 2: O 'try/catch' e 'await' corretos
-      try {
-        const data = await findUniqueEmpresa(user.user.empresa.id);
-        setEmpresaDados(data);
-      } catch (error) {
-        console.error("Erro ao buscar dados da empresa:", error);
-        toast.error("Erro ao buscar dados da empresa");
-      } finally {
-        setLoadingEmpresaData(false);
-      }
-    };
-
-    // 3. Chamar a função async interna
-    fetchEmpresaData();
-  }, [user, findUniqueEmpresa]); // Dependências corretas
+    if (user.empresa?.id && !empresaDados) {
+      fetchEmpresaData(user.empresa.id);
+    }
+  }, [user, fetchDashboard, fetchEmpresaData, dashboard, empresaDados]);
 
   if (!user) return <div>Carregando informações do usuário...</div>;
 
-  const email = user.user.email?.toLowerCase();
-  const isAdmin = user.user.papel?.toLowerCase() === "administrador";
+  const email = user.email?.toLowerCase();
+  const isAdmin = user.papel?.toLowerCase() === "administrador";
   const isMaster = email === "ajafs@admin.com";
 
   const accessibleMenuItems = useMemo(() => {
-    // 🔹 Caso seja o superadmin master, exibe tudo exceto a home
     if (isMaster) {
       return allMenuItems.filter((item) => item.url !== "/");
     }
-
-    // 🔹 Caso seja admin, exibe tudo exceto o super_admin e a home
     if (isAdmin) {
       return allMenuItems.filter(
         (item) => item.url !== "/" && item.key !== "super_admin"
       );
     }
-
-    // 🔹 Caso comum, filtra apenas telas permitidas e oculta super_admin
     return allMenuItems.filter(
       (item) =>
         item.url !== "/" &&
         item.key !== "super_admin" &&
-        user.user.telasPermitidas?.includes(item.url)
+        user.telasPermitidas?.includes(item.url)
     );
   }, [isAdmin, isMaster, user]);
 
   return (
     <div className="container mx-auto p-6 space-y-8">
-      {/* Cabeçalho com informações do usuário */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -119,9 +117,9 @@ export function HomePage() {
         className="flex flex-row items-center space-y-2 justify-between"
       >
         <h1 className="text-3xl font-bold">
-          Bem-vindo(a), {user.user.nome}!
+          Bem-vindo(a), {user.nome}!
           <p className="text-muted-foreground capitalize text-sm font-normal">
-            {user.user.papel?.toUpperCase()}(A)
+            {user.papel?.toUpperCase()}(A)
           </p>
         </h1>
         {isMaster && (
@@ -129,7 +127,6 @@ export function HomePage() {
             Acesso Master
           </span>
         )}
-
         <img
           src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR4PmLASrRCL1jyqcfM1e96WSV2H7cO63HMTQ&s"
           alt="logo da empresa"
@@ -137,47 +134,23 @@ export function HomePage() {
         />
       </motion.div>
 
-      {/* 🔄 ALTERADO: Cards de Informações */}
+      {/* Card de informações da empresa */}
       <div className="flex flex-wrap gap-4">
-        {/* Card 1: Informações da Empresa (do useEmpresa) */}
         <Card className="flex-1 min-w-[350px] max-w-2xl shadow-md">
           <CardHeader>
             <CardTitle>Informações da Empresa</CardTitle>
           </CardHeader>
           <CardContent className="grid grid-cols-2 gap-4 text-sm">
-            {/* ✅ CORREÇÃO: Usar o estado de loading local */}
             {loadingEmpresaData ? (
               <p>Carregando dados da empresa...</p>
-            ) : // ✅ CORREÇÃO: Usar o estado 'empresaDados'
-            empresaDados ? (
+            ) : empresaDados ? (
               <>
-                <div>
-                  <strong>Razão Social:</strong>
-                  {/* ✅ CORREÇÃO: Ler de 'empresaDados' */}
-                  <p>{empresaDados.razaoSocial}</p>
-                </div>
-                <div>
-                  <strong>Nome Fantasia:</strong>
-                  <p>{empresaDados.nomeFantasia}</p>
-                </div>
-                <div>
-                  <strong>CNPJ:</strong>
-                  <p>{empresaDados.cnpj}</p>
-                </div>
-                <div>
-                  <strong>Telefone:</strong>
-                  <p>{empresaDados.telefone}</p>
-                </div>
-                <div>
-                  <strong>Email:</strong>
-                  <p>{empresaDados.email ?? "--"}</p>
-                </div>
-                <div>
-                  <strong>Cidade/Estado:</strong>
-                  <p>
-                    {empresaDados.cidade} / {empresaDados.estado}
-                  </p>
-                </div>
+                <div><strong>Razão Social:</strong><p>{empresaDados.razaoSocial}</p></div>
+                <div><strong>Nome Fantasia:</strong><p>{empresaDados.nomeFantasia}</p></div>
+                <div><strong>CNPJ:</strong><p>{empresaDados.cnpj}</p></div>
+                <div><strong>Telefone:</strong><p>{empresaDados.telefone}</p></div>
+                <div><strong>Email:</strong><p>{empresaDados.email ?? "--"}</p></div>
+                <div><strong>Cidade/Estado:</strong><p>{empresaDados.cidade} / {empresaDados.estado}</p></div>
               </>
             ) : (
               <p>Nenhuma informação da empresa cadastrada.</p>
@@ -185,35 +158,22 @@ export function HomePage() {
           </CardContent>
         </Card>
 
-        {/* Card 2: Informações do Perfil (do useAuth) */}
+        {/* Card de informações do usuário */}
         <Card className="flex-1 min-w-[350px] max-w-2xl shadow-md">
           <CardHeader>
             <CardTitle>Informações do Perfil</CardTitle>
           </CardHeader>
           <CardContent className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <strong>Nome:</strong>
-              <p>{user.user.nome}</p>
-            </div>
-            <div>
-              <strong>Email:</strong>
-              <p>{user.user.email}</p>
-            </div>
-            <div>
-              <strong>Status:</strong>
-              {/* ✅ CORREÇÃO: Lógica de status estava invertida */}
-              <p>Ativo</p>
-            </div>
+            <div><strong>Nome:</strong><p>{user.nome}</p></div>
+            <div><strong>Email:</strong><p>{user.email}</p></div>
+            <div><strong>Status:</strong><p>Ativo</p></div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Se for ADMIN, visão geral do sistema */}
       {isAdmin && dashboard && (
         <section>
-          <h2 className="text-2xl font-semibold mb-4">
-            Visão Geral do Sistema
-          </h2>
+          <h2 className="text-2xl font-semibold mb-4">Visão Geral do Sistema</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
             {[
               { title: "Produtos", value: dashboard.totalProdutos },
@@ -228,12 +188,8 @@ export function HomePage() {
                 transition={{ delay: i * 0.1 }}
               >
                 <Card className="text-center p-4 shadow-md hover:-translate-y-1 transition">
-                  <CardTitle className="text-lg font-semibold mb-2">
-                    {stat.title}
-                  </CardTitle>
-                  <p className="text-3xl font-bold text-primary">
-                    {stat.value ?? "--"}
-                  </p>
+                  <CardTitle className="text-lg font-semibold mb-2">{stat.title}</CardTitle>
+                  <p className="text-3xl font-bold text-primary">{stat.value ?? "--"}</p>
                 </Card>
               </motion.div>
             ))}
@@ -257,9 +213,7 @@ export function HomePage() {
                 <Link to={item.url}>
                   <Card className="h-full transform transition-transform duration-200 hover:-translate-y-1 hover:shadow-lg">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium">
-                        {item.title}
-                      </CardTitle>
+                      <CardTitle className="text-sm font-medium">{item.title}</CardTitle>
                       <Icon className="h-5 w-5 text-muted-foreground" />
                     </CardHeader>
                   </Card>

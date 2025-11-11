@@ -7,42 +7,44 @@ import {
 } from "react";
 import api from "@/lib/api";
 
-interface User {
-  user: {
+interface AuthUser {
+  id: string;
+  nome: string;
+  email: string;
+  papel: string;
+  telasPermitidas: string[];
+  ativo: boolean;
+  criadoEm: string;
+  empresa: {
     id: string;
     nome: string;
-    email: string;
-    papel: string;
-    telasPermitidas: string[];
-    ativo: boolean;
-    criadoEm: string;
-    empresa:{
-      id: string;
-      nome: string;
-      nomeFantasia: string;
-      razaoSocial: string;
-      cnpj: string;
-      telefone: string;
-      logoEmpresa: string;
-      endereco: string;
-      numero: string;
-      complemento: string;
-      bairro: string;
-      cidade: string;
-      estado: string;
-      cep: string;
-      inscEstadual: string;
-      inscMunicipal: string;
-      cnae: string;
-    }
+    nomeFantasia: string;
+    razaoSocial: string;
+    cnpj: string;
+    telefone: string;
+    logoEmpresa: string;
+    endereco: string;
+    numero: string;
+    complemento: string;
+    bairro: string;
+    cidade: string;
+    estado: string;
+    cep: string;
+    inscEstadual: string;
+    inscMunicipal: string;
+    cnae: string;
   };
 }
 
+interface User {
+  user: AuthUser;
+}
+
 interface AuthContextType {
-  user: User | null;
+  user: AuthUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, senha: string) => Promise<boolean>;
+  login: (email: string, senha: string) => Promise<any>;
   logout: () => void;
 }
 
@@ -50,12 +52,12 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   isAuthenticated: false,
   isLoading: true,
-  login: async () => false,
+  login: async () => {},
   logout: () => {},
 });
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -63,21 +65,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   // 🔹 Busca o perfil do usuário logado
   // ======================================================
   const fetchUserProfile = useCallback(async () => {
+    setIsLoading(true);
     try {
-      const { data } = await api.get("/auth/me");
-
+      const { data } = await api.get<{ user: AuthUser }>("/auth/me");
       if (data && data.user?.id && data.user?.empresa?.id) {
-        setUser(data);
+        setUser(data.user);
         setIsAuthenticated(true);
       } else {
         console.warn("Resposta incompleta da API /auth/me", data);
-        setIsAuthenticated(false);
         setUser(null);
+        setIsAuthenticated(false);
       }
     } catch (error) {
       console.error("Falha ao buscar perfil do usuário:", error);
-      setIsAuthenticated(false);
       setUser(null);
+      setIsAuthenticated(false);
     } finally {
       setIsLoading(false);
     }
@@ -87,17 +89,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   // 🔹 Verifica token no carregamento inicial
   // ======================================================
   useEffect(() => {
-  const token = localStorage.getItem("token");
-  if (token) {
-    api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-    fetchUserProfile();
-  } else {
-    // Evita chamadas desnecessárias sem token
-    setIsAuthenticated(false);
-    setIsLoading(false);
-  }
-}, [fetchUserProfile]);
+    const token = localStorage.getItem("token");
 
+    if (!token) {
+      setIsLoading(false);
+      return;
+    }
+
+    // Evita chamadas múltiplas
+    if (!user && !isAuthenticated) {
+      api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+      fetchUserProfile();
+    } else {
+      setIsLoading(false);
+    }
+  }, [user, isAuthenticated, fetchUserProfile]);
 
   // ======================================================
   // 🔹 Login
@@ -108,18 +114,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const { data } = await api.post("/auth/login", { email, senha });
 
       if (!data.token) throw new Error("Token não retornado pela API.");
-
-      // Armazena token e configura Axios
+      
       localStorage.setItem("token", data.token);
+      localStorage.setItem("user", JSON.stringify(data.user));
+
       api.defaults.headers.common["Authorization"] = `Bearer ${data.token}`;
 
-      // Busca o perfil do usuário
       await fetchUserProfile();
-
-      return true;
+      return {
+        success: true,
+        user: data.user.papel,
+      };
     } catch (error) {
       console.error("Erro no login:", error);
-      logout();
+      logout(); // logout já agrupa os states
       return false;
     } finally {
       setIsLoading(false);
@@ -134,7 +142,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     delete api.defaults.headers.common["Authorization"];
     setUser(null);
     setIsAuthenticated(false);
-    setIsLoading(false);
+    // Não definimos isLoading aqui para evitar piscar a tela se o logout for rápido
   };
 
   // ======================================================

@@ -8,8 +8,11 @@ empresaRouter.use(authMiddleware)
 
 empresaRouter.post('/create', empresaController.create)
 empresaRouter.get('/', empresaController.getAll)
+empresaRouter.get("/super/dashboard", empresaController.getDashboard);
 empresaRouter.get('/:id', empresaController.getById)
 empresaRouter.put('/:id', empresaController.update)
 empresaRouter.delete('/:id', empresaController.remove)
+
+
 
 export default empresaRouter

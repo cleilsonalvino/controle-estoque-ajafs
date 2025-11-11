@@ -19,7 +19,7 @@ const CupomFiscal = ({ saleItems, total, discount, paymentMethod, vendedor, data
     window.print();
   };
 
-  const empresa = user?.user?.empresa;
+  const empresa = user?.empresa;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50">

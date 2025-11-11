@@ -3,13 +3,13 @@ import { Navigate, Outlet } from "react-router-dom";
 
 interface PermissionGuardProps {
   permissionKey: string;
-  children: React.ReactNode;
+  children?: React.ReactNode;
 }
 
 export const PermissionGuard = ({ permissionKey, children }: PermissionGuardProps) => {
   const { user, isLoading } = useAuth();
 
-  // Enquanto carrega
+  // Enquanto o login ainda carrega
   if (isLoading) {
     return (
       <div className="w-full h-screen flex items-center justify-center">
@@ -23,24 +23,38 @@ export const PermissionGuard = ({ permissionKey, children }: PermissionGuardProp
     return <Navigate to="/login" replace />;
   }
 
-  const email = user.user.email?.toLowerCase();
+  const email = user.email?.toLowerCase();
+  const papel = user.papel?.toUpperCase();
 
-  // 🌟 Acesso exclusivo para o super-admin master
+  // 🌟 Acesso exclusivo da conta master (super-admin master)
   if (permissionKey === "super-admin") {
+    // Caso 1: SUPER_ADMIN comum → acesso permitido à tela "super-admin"
+    if (papel === "SUPER_ADMIN") {
+      return children ? <>{children}</> : <Outlet />;
+    }
+
+    // Caso 2: conta master (e-mail fixo)
     if (email === "ajafs@admin.com") {
       return children ? <>{children}</> : <Outlet />;
-    } else {
-      console.warn(`🚫 Acesso restrito à conta master (${email})`);
-      return <Navigate to="/" replace />;
     }
+
+    // Caso contrário, bloqueia
+    console.warn(`🚫 Acesso restrito ao SUPER_ADMIN (${email})`);
+    return <Navigate to="/" replace />;
   }
 
-  // 🔑 Verificação de permissão normal
+  // 🚫 SUPER_ADMIN tentando acessar outras telas → bloqueia tudo
+  if (papel === "SUPER_ADMIN" && permissionKey !== "super-admin") {
+    console.warn(`🚫 SUPER_ADMIN não pode acessar ${permissionKey}`);
+    return <Navigate to="/super-admin" replace />;
+  }
+
+  // 🔑 Verificação de permissão normal para usuários comuns
   const hasPermission =
-    user.user.telasPermitidas?.includes(permissionKey) ||
-    user.user.telasPermitidas?.includes(`/${permissionKey}`) ||
-    user.user.telasPermitidas?.includes("ADMINISTRADOR") ||
-    user.user.papel === "ADMINISTRADOR";
+    user.telasPermitidas?.includes(permissionKey) ||
+    user.telasPermitidas?.includes(`/${permissionKey}`) ||
+    user.telasPermitidas?.includes("ADMINISTRADOR") ||
+    user.papel === "ADMINISTRADOR";
 
   // 🚫 Sem permissão → redireciona pra home
   if (!hasPermission) {

@@ -28,7 +28,7 @@ export const allMenuItems = [
     icon: BarChart3,
   },
   { key: "sales", title: "Registrar Venda", url: "/sales", icon: ShoppingCart },
-  { key: "products", title: "Produtos", url: "/products", icon: Package },
+  { key: "products", title: "Gestão de produtos", url: "/products", icon: Package },
   {
     key: "movements",
     title: "Movimentações",

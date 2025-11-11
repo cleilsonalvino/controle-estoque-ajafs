@@ -3,13 +3,7 @@ import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/useAuth";
-import {
-  Package,
-  ChevronDown,
-  LogOut,
-  Menu,
-  ShoppingCart,
-} from "lucide-react";
+import { Package, ChevronDown, LogOut, Menu, ShoppingCart } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -26,13 +20,13 @@ export const AppNavbar = () => {
   const navigate = useNavigate();
 
   const isMobile = useIsMobile();
-  const email = user?.user?.email?.toLowerCase();
+  const email = user?.email?.toLowerCase();
 
   // 🔹 Itens visíveis considerando permissões e papel
   const visibleMenuItems = useMemo(() => {
     if (isLoading || !user) return [];
 
-    const isAdmin = user.user.papel?.toLowerCase() === "administrador";
+    const isAdmin = user.papel?.toLowerCase() === "administrador";
     const isMaster = email === "ajafs@admin.com";
 
     // 🔸 Se for o master, mostra tudo (incluindo super_admin)
@@ -43,11 +37,11 @@ export const AppNavbar = () => {
       return allMenuItems.filter((item) => item.key !== "super_admin");
 
     // 🔸 Para usuários comuns, mostra apenas as telas permitidas e oculta o super_admin
-    if (!user.user.telasPermitidas) return [];
+    if (!user.telasPermitidas) return [];
+
     return allMenuItems.filter(
       (item) =>
-        user.user.telasPermitidas.includes(item.url) &&
-        item.key !== "super_admin"
+        user.telasPermitidas.includes(item.url) && item.key !== "super_admin"
     );
   }, [user, isLoading, email]);
 
@@ -89,8 +83,7 @@ export const AppNavbar = () => {
 
   // 🔹 Bloqueio de scroll quando menu mobile está aberto
   useEffect(() => {
-    document.body.style.overflow =
-      isMobile && mobileOpen ? "hidden" : "unset";
+    document.body.style.overflow = isMobile && mobileOpen ? "hidden" : "unset";
     return () => {
       document.body.style.overflow = "unset";
     };
@@ -152,15 +145,17 @@ export const AppNavbar = () => {
 
         {/* Ações Direitas */}
         <div className="flex items-center space-x-3">
-          <Button
-            onClick={() => navigate("/sales")}
-            variant="default"
-            size="sm"
-            className="flex items-center space-x-2"
-          >
-            <ShoppingCart className="h-4 w-4" />
-            <span className="hidden md:inline">Abrir PDV</span>
-          </Button>
+          {(user.papel === "ADMINISTRADOR" || user.papel === "USUARIO") && (
+            <Button
+              onClick={() => navigate("/sales")}
+              variant="default"
+              size="sm"
+              className="flex items-center space-x-2"
+            >
+              <ShoppingCart className="h-4 w-4" />
+              <span>Abrir PDV</span>
+            </Button>
+          )}
 
           <Button
             onClick={handleLogout}
@@ -231,4 +226,3 @@ export const AppNavbar = () => {
     </header>
   );
 };
-

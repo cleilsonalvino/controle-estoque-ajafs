@@ -18,6 +18,10 @@ export const createUserService = async (data: any, empresaId: string) => {
 
 export const getUsersService = async (empresaId: string) => {
   const users = await prisma.usuario.findMany({ where: { empresaId } });
+  if (!users) {
+    throw new CustomError("Usuários não encontrados", 404);
+  }
+  console.log(users);
   return users;
 };
 
