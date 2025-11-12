@@ -8,8 +8,20 @@ export class StockService {
   // ============================================================
   // 🔹 CRIA MOVIMENTAÇÃO (ENTRADA / SAÍDA / AJUSTE)
   // ============================================================
-  public async createMovimentacao(data: CreateMovimentacaoDto, empresaId: string) {
-    const { produtoId, tipo, quantidade, observacao, fornecedorId, precoCusto, validade } = data;
+  public async createMovimentacao(
+    data: CreateMovimentacaoDto,
+    empresaId: string,
+    usuarioId: string
+  ) {
+    const {
+      produtoId,
+      tipo,
+      quantidade,
+      observacao,
+      fornecedorId,
+      precoCusto,
+      validade,
+    } = data;
 
     if (!quantidade || isNaN(Number(quantidade))) {
       throw new CustomError("Quantidade inválida", 400);
@@ -22,15 +34,25 @@ export class StockService {
       if (!produto) throw new CustomError("Produto não encontrado", 404);
 
       // helper FIFO
-      const consumirFIFO = async (qtdParaConsumir: number, tipoMov: TipoMovimentacao, obsPadrao: string) => {
+      const consumirFIFO = async (
+        qtdParaConsumir: number,
+        tipoMov: TipoMovimentacao,
+        obsPadrao: string
+      ) => {
         const lotes = await tx.lote.findMany({
           where: { produtoId, empresaId },
           orderBy: { criadoEm: "asc" },
         });
 
-        const estoqueTotal = lotes.reduce((acc, l) => acc + Number(l.quantidadeAtual), 0);
+        const estoqueTotal = lotes.reduce(
+          (acc, l) => acc + Number(l.quantidadeAtual),
+          0
+        );
         if (estoqueTotal < qtdParaConsumir) {
-          throw new CustomError("Estoque insuficiente para realizar a saída", 400);
+          throw new CustomError(
+            "Estoque insuficiente para realizar a saída",
+            400
+          );
         }
 
         let restante = Number(qtdParaConsumir);
@@ -52,6 +74,7 @@ export class StockService {
               observacao: observacao ?? obsPadrao,
               empresaId,
               loteId: lote.id,
+              usuarioId,
             },
           });
 
@@ -59,7 +82,9 @@ export class StockService {
         }
       };
 
-      const precoCustoAtualizado = data.precoCusto ? data.precoCusto.replace(",", ".") : null;
+      const precoCustoAtualizado = data.precoCusto
+        ? data.precoCusto.replace(",", ".")
+        : null;
 
       // ==============================
       // 🔸 ENTRADA
@@ -84,6 +109,7 @@ export class StockService {
             observacao: observacao ?? "Entrada de produto com lote",
             loteId: novoLote.id,
             empresaId,
+            usuarioId,
           },
         });
 
@@ -94,7 +120,11 @@ export class StockService {
       // 🔸 SAÍDA
       // ==============================
       if (tipo === TipoMovimentacao.SAIDA) {
-        await consumirFIFO(Number(quantidade), TipoMovimentacao.SAIDA, "Saída de produto (FIFO)");
+        await consumirFIFO(
+          Number(quantidade),
+          TipoMovimentacao.SAIDA,
+          "Saída de produto (FIFO)"
+        );
         const movimentacaoGeral = await tx.movimentacao.create({
           data: {
             produtoId,
@@ -102,6 +132,7 @@ export class StockService {
             quantidade,
             observacao: observacao ?? "Saída manual de produto",
             empresaId,
+            usuarioId: data.usuarioId,
           },
         });
         return movimentacaoGeral;
@@ -112,7 +143,11 @@ export class StockService {
       // ==============================
       if (tipo === TipoMovimentacao.AJUSTE) {
         const qtd = Number(quantidade);
-        if (qtd === 0) throw new CustomError("Ajuste com quantidade zero não é permitido", 400);
+        if (qtd === 0)
+          throw new CustomError(
+            "Ajuste com quantidade zero não é permitido",
+            400
+          );
 
         if (qtd > 0) {
           const loteAjuste = await tx.lote.create({
@@ -134,13 +169,18 @@ export class StockService {
               observacao: observacao ?? "Ajuste positivo de estoque",
               loteId: loteAjuste.id,
               empresaId,
+              usuarioId,
             },
           });
 
           return mov;
         } else {
           const qtdAbs = Math.abs(qtd);
-          await consumirFIFO(qtdAbs, TipoMovimentacao.AJUSTE, "Ajuste negativo de estoque (FIFO)");
+          await consumirFIFO(
+            qtdAbs,
+            TipoMovimentacao.AJUSTE,
+            "Ajuste negativo de estoque (FIFO)"
+          );
 
           const mov = await tx.movimentacao.create({
             data: {
@@ -150,6 +190,7 @@ export class StockService {
               observacao: observacao ?? "Ajuste negativo de estoque",
               empresaId,
               loteId: null, // Ajuste negativo não está associado a um lote específico
+              usuarioId: data.usuarioId,
             },
           });
 
@@ -164,7 +205,10 @@ export class StockService {
   // ============================================================
   // 🔹 LISTA MOVIMENTAÇÕES POR PRODUTO
   // ============================================================
-  public async getMovimentacoesByProdutoId(produtoId: string, empresaId: string) {
+  public async getMovimentacoesByProdutoId(
+    produtoId: string,
+    empresaId: string
+  ) {
     return prisma.movimentacao.findMany({
       where: { produtoId, empresaId },
       orderBy: { criadoEm: "desc" },
@@ -178,8 +222,17 @@ export class StockService {
     return prisma.movimentacao.findMany({
       where: { empresaId },
       orderBy: { criadoEm: "desc" },
-      include: {
-        produto: { select: { id: true, nome: true } },
+      select: {
+        id: true,
+        tipo: true,
+        quantidade: true,
+        criadoEm: true,
+        usuario: {
+          select: { id: true, nome: true },
+        },
+        produto: {
+          select: { id: true, nome: true },
+        },
       },
     });
   }
@@ -214,31 +267,46 @@ export class StockService {
       where: { produtoId, empresaId, quantidadeAtual: { gt: 0 } },
     });
 
-    const estoqueTotal = lotes.reduce((total, lote) => total + Number(lote.quantidadeAtual), 0);
+    const estoqueTotal = lotes.reduce(
+      (total, lote) => total + Number(lote.quantidadeAtual),
+      0
+    );
     return { estoqueTotal };
   }
 
   // ============================================================
   // 🔹 DELETAR LOTE (e criar movimentação de ajuste)
   // ============================================================
-  public async deleteLote(loteId: string, produtoId: string, empresaId: string) {
-    const lote = await prisma.lote.findFirst({ where: { id: loteId, empresaId } });
+  public async deleteLote(
+    loteId: string,
+    produtoId: string,
+    empresaId: string,
+    usuarioId: string
+  ) {
+    const lote = await prisma.lote.findFirst({
+      where: { id: loteId, empresaId },
+    });
     if (!lote) throw new CustomError("Lote não encontrado.", 404);
     if (lote.produtoId !== produtoId)
       throw new CustomError("Lote não pertence ao produto especificado.", 400);
 
-    const produto = await prisma.produto.findFirst({ where: { id: produtoId, empresaId } });
+    const produto = await prisma.produto.findFirst({
+      where: { id: produtoId, empresaId },
+    });
 
     await prisma.lote.delete({ where: { id: loteId } });
 
     await prisma.movimentacao.create({
       data: {
-        observacao: `Lote ${loteId} deletado do produto ${produto?.nome || produtoId}`,
+        observacao: `Lote ${loteId} deletado do produto ${
+          produto?.nome || produtoId
+        }`,
         produtoId,
         quantidade: lote.quantidadeAtual,
         tipo: TipoMovimentacao.AJUSTE,
         empresaId,
         loteId,
+        usuarioId,
       },
     });
   }
@@ -262,7 +330,10 @@ export class StockService {
 
     for (const produto of produtos) {
       const lotes = produto.lote;
-      const quantidadeProduto = lotes.reduce((acc, l) => acc + Number(l.quantidadeAtual), 0);
+      const quantidadeProduto = lotes.reduce(
+        (acc, l) => acc + Number(l.quantidadeAtual),
+        0
+      );
       if (quantidadeProduto === 0) continue;
 
       const custoTotal = lotes.reduce(
@@ -278,7 +349,8 @@ export class StockService {
       quantidadeTotal += quantidadeProduto;
     }
 
-    const lucroMedioEstimado = quantidadeTotal > 0 ? lucroTotal / quantidadeTotal : 0;
+    const lucroMedioEstimado =
+      quantidadeTotal > 0 ? lucroTotal / quantidadeTotal : 0;
     const lucroFormatado = lucroMedioEstimado.toLocaleString("pt-BR", {
       style: "currency",
       currency: "BRL",

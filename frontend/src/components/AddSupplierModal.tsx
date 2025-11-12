@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -7,51 +6,66 @@ import { Label } from '@/components/ui/label';
 import { useSuppliers } from '../contexts/SupplierContext';
 import { toast } from 'sonner';
 
+// 🐛 CORREÇÃO 1: Adicionar o callback na interface de props
 interface AddSupplierModalProps {
-  isOpen: boolean;
-  onClose: () => void;
+  isOpen: boolean;
+  onClose: () => void;
+  onSupplierCreated: () => void; // <--- NOVO CALLBACK ADICIONADO
 }
 
-const AddSupplierModal: React.FC<AddSupplierModalProps> = ({ isOpen, onClose }) => {
-  const { createSupplier } = useSuppliers();
-  const [newSupplier, setNewSupplier] = useState({
-    nome: '',
-    contato: '',
-    email: '',
-    telefone: '',
-    endereco: '',
-  });
+const AddSupplierModal: React.FC<AddSupplierModalProps> = ({ isOpen, onClose, onSupplierCreated }) => { // 🐛 CORREÇÃO 2: Desestruturar o callback
+  const { createSupplier } = useSuppliers();
+  const [newSupplier, setNewSupplier] = useState({
+    nome: '',
+    contato: '',
+    email: '',
+    telefone: '',
+    endereco: '',
+  });
+  const [isSaving, setIsSaving] = useState(false);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { id, value } = e.target;
-    setNewSupplier(prev => ({ ...prev, [id]: value }));
-  };
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { id, value } = e.target;
+    setNewSupplier(prev => ({ ...prev, [id]: value }));
+  };
 
-  const handleSave = async () => {
-    // Basic validation
-    if (!newSupplier.nome) {
-      toast('Por favor, preencha pelo menos o nome do fornecedor.');
-      return;
+  const handleSave = async () => {
+    // Basic validation
+    if (!newSupplier.nome || !newSupplier.endereco) { // Adicionando endereço como obrigatório, conforme o seu código
+      toast.error('Por favor, preencha o Nome e o Endereço do fornecedor.');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      // Assumindo que createSupplier faz a chamada à API
+      await createSupplier({
+        nome: newSupplier.nome,
+        contato: newSupplier.contato,
+        email: newSupplier.email || null,
+        telefone: newSupplier.telefone,
+        endereco: newSupplier.endereco,
+      });
+        
+      toast.success("Fornecedor criado com sucesso!");
+        
+      // 🐛 CORREÇÃO 3: Chamar o callback para recarregar a lista no componente pai
+      onSupplierCreated(); 
+        
+      setNewSupplier({
+        nome: '',
+        contato: '',
+        email: '',
+        telefone: '',
+        endereco: '',
+      });
+      onClose();
+    } catch (error) {
+        toast.error("Falha ao salvar fornecedor.");
+    } finally {
+        setIsSaving(false);
     }
-
-    await createSupplier({
-      nome: newSupplier.nome,
-      contato: newSupplier.contato,
-      email: newSupplier.email || null,
-      telefone: newSupplier.telefone,
-      endereco: newSupplier.endereco,
-      criadoEm: new Date(), // These will be ignored by Omit<Supplier, "id"> but are good for type safety
-      atualizadoEm: new Date(), // Same as above
-    });
-    setNewSupplier({
-      nome: '',
-      contato: '',
-      email: '',
-      telefone: '',
-      endereco: '',
-    });
-    onClose();
-  };
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>

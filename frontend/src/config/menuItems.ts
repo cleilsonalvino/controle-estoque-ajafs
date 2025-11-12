@@ -27,8 +27,19 @@ export const allMenuItems = [
     url: "/dashboard-sales",
     icon: BarChart3,
   },
+  {
+    key: "pos-venda",
+    title: "Pós Venda",
+    url: "/pos-venda",
+    icon: BarChart3,
+  },
   { key: "sales", title: "Registrar Venda", url: "/sales", icon: ShoppingCart },
-  { key: "products", title: "Gestão de produtos", url: "/products", icon: Package },
+  {
+    key: "products",
+    title: "Gestão de produtos",
+    url: "/products",
+    icon: Package,
+  },
   {
     key: "movements",
     title: "Movimentações",
@@ -36,7 +47,12 @@ export const allMenuItems = [
     icon: ArrowUpDown,
   },
   { key: "suppliers", title: "Fornecedores", url: "/suppliers", icon: Users },
-  { key: "categories", title: "Categorias de produtos", url: "/categories", icon: Tag },
+  {
+    key: "categories",
+    title: "Categorias de produtos",
+    url: "/categories",
+    icon: Tag,
+  },
   {
     key: "tipos-servicos",
     title: "Tipos de Serviços",
@@ -52,5 +68,4 @@ export const allMenuItems = [
   { key: "clientes", title: "Clientes", url: "/clientes", icon: Users },
   { key: "vendedores", title: "Vendedores", url: "/vendedores", icon: Users },
   { key: "settings", title: "Configurações", url: "/settings", icon: Settings },
-  { key: "super_admin", title: "Admin", url: "/super-admin", icon: Ampersand }
 ];

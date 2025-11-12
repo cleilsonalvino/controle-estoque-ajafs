@@ -26,7 +26,7 @@ async function main() {
   const usuario = await prisma.usuario.create({
     data: {
       nome: 'CRA Admin',
-      email: 'admin@ajafs.com',
+      email: 'admin@cra.com',
       senha: '$2a$12$V/CA2x6172q.uBmf8PFXHe79yZ9YFd6414a1N8ZIkiIWEGLQTKCFe',
       papel: 'ADMINISTRADOR',
       empresaId: empresa.id,

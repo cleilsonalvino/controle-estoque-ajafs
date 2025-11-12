@@ -4,10 +4,9 @@ import { z } from "zod";
 export const createSupplierSchema = z.object({
   nome: z.string(),
   email: z.string().email().optional().nullable(),
-  contato: z.string().optional().nullable(),
-  telefone: z.string().optional().nullable(),
+  contato: z.string().optional(),
+  telefone: z.string().optional(),
   endereco: z.string().optional().nullable(),
-  empresaId: z.string().uuid(),
 });
 
 export const updateSupplierSchema = z.object({

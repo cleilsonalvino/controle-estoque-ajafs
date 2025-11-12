@@ -34,6 +34,7 @@ import EstoqueDashboard from "./pages/EstoqueDashboard";
 import { PermissionGuard } from "./components/PermissionGuard";
 import SuperAdminEmpresas from "./pages/admin/SuperAdminEmpresas";
 import { ServiceSalesProvider } from "./contexts/ServiceSalesContext";
+import PosVenda from "./pages/PosVenda";
 //import { TitleBar } from "./components/TitleBar";
 
 const queryClient = new QueryClient();
@@ -86,6 +87,14 @@ const App = () => (
                                       element={
                                         <PermissionGuard permissionKey="products">
                                           <Products />
+                                        </PermissionGuard>
+                                      }
+                                    />
+                                    <Route
+                                      path="/pos-venda"
+                                      element={
+                                        <PermissionGuard permissionKey="pos-venda">
+                                          <PosVenda />
                                         </PermissionGuard>
                                       }
                                     />

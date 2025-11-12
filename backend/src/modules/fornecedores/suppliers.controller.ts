@@ -13,6 +13,7 @@ import type { AuthenticatedRequest } from "../../app/middlewares/auth.middleware
 
 export const createSupplierController = async (req: AuthenticatedRequest, res: Response) => {
   const { empresaId } = req.user!;
+  console.log("Request Body:", req.body); // Log do corpo da requisição para depuração
   const validation = createSupplierSchema.safeParse(req.body);
 
   if (!validation.success) {

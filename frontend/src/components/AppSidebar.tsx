@@ -56,7 +56,7 @@ export const AppNavbar = () => {
     };
 
     visibleMenuItems.forEach((item) => {
-      if (["home", "estoque", "dashboard-sales", "sales"].includes(item.key)) {
+      if (["home", "estoque", "dashboard-sales", "sales", "pos-venda"].includes(item.key)) {
         grupos["Gestão"].push(item);
       } else if (
         [

@@ -1,5 +1,6 @@
 import { useAuth } from "@/contexts/useAuth";
 import { Navigate, Outlet } from "react-router-dom";
+import { toast } from "sonner";
 
 interface PermissionGuardProps {
   permissionKey: string;
@@ -59,6 +60,7 @@ export const PermissionGuard = ({ permissionKey, children }: PermissionGuardProp
   // 🚫 Sem permissão → redireciona pra home
   if (!hasPermission) {
     console.warn(`🚫 Acesso negado: ${permissionKey}`);
+    toast.error(`Você não tem permissão para acessar ${permissionKey}`);
     return <Navigate to="/" replace />;
   }
 

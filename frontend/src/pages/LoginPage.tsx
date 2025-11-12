@@ -139,17 +139,10 @@ export function LoginPage() {
             </form>
             <p className="text-center text-sm text-muted-foreground mt-4">
               © {new Date().getFullYear()}{" "}
-              <a href="https://www.ajafs.com.br" className="text-blue-500">
+              <a href="https://www.ajafs.com.br" className="text-blue-500" target="_blank">
                 AJAFS
               </a>{" "}
               - Todos os direitos reservados <br />
-              Desenvolvido por{" "}
-              <a
-                href="https://www.cleilsonalvino.com.br"
-                className="text-blue-500"
-              >
-                Cleilson Alvino
-              </a>
             </p>
           </CardContent>
         </Card>

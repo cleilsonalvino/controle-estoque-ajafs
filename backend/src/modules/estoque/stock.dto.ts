@@ -14,6 +14,8 @@ export const createMovimentacaoSchema = z
       .union([z.string({invalid_type_error: "Data de validade inválida"}).datetime(), z.string().date(), z.date()])
       .optional()
       .nullable(),
+
+    usuarioId: z.string({invalid_type_error: "Usuário inválido ou faltando"}).uuid(),
       
   })
   .superRefine((data, ctx) => {

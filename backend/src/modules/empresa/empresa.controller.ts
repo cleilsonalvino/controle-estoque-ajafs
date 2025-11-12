@@ -14,7 +14,7 @@ export const empresaController = {
       }
 
       const empresas = await empresaService.getAll();
-      return res.status(200).json({ message: "Empresas listadas com sucesso", data: empresas });
+      return res.status(200).json(empresas);
     } catch (error: any) {
       console.error("Erro ao listar empresas:", error);
       return res.status(error.statusCode || 500).json({ message: error.message });
@@ -47,7 +47,7 @@ export const empresaController = {
       const { empresaId, papel } = req.user!;
 
       const empresa = await empresaService.getById(id, empresaId, papel === "SUPER_ADMIN");
-      return res.status(200).json({ message: "Empresa encontrada", data: empresa });
+      return res.status(200).json(empresa);
     } catch (error: any) {
       console.error("Erro ao buscar empresa:", error);
       return res.status(error.statusCode || 500).json({ message: error.message });

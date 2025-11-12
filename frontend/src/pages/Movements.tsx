@@ -85,7 +85,7 @@ import {
 import { useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Produto } from "@/contexts/ProdutoContext";
-import { useSuppliers } from "@/contexts/SupplierContext";
+import { useSuppliers } from "@/contexts/SupplierContext"; // IMPORTANTE
 
 interface Movement {
   id: string;
@@ -94,7 +94,10 @@ interface Movement {
   quantity: number;
   reason: string;
   date: string;
-  user: string;
+  user: {
+    id: string;
+    nome: string;
+  };
   notes?: string;
   fornecedor?: string;
   precoCusto?: string;
@@ -131,10 +134,12 @@ const Movements = () => {
   const ITEMS_PER_PAGE = 10;
 
   const [products, setProducts] = useState<Produto[]>([]);
-  const [suppliers, setSuppliers] = useState<any[]>([]);
+  
+  // Use o useSuppliers para obter a lista e o método de busca
+  const { suppliers, fetchSuppliers } = useSuppliers(); // ESTADO E FUNÇÃO DO CONTEXTO
+  // setSuppliers não é mais necessário, pois a lista é gerida pelo contexto
+  
   const location = useLocation();
-  const {fetchSuppliers} = useSuppliers();
-
 
   const [isProductPopoverOpen, setIsProductPopoverOpen] = useState(false);
   const [productSearchTerm, setProductSearchTerm] = useState("");
@@ -142,12 +147,14 @@ const Movements = () => {
   const fetchAll = async () => {
     try {
       setLoading(true);
-      const [movementsResponse, productsResponse, suppliersResponse] =
-        await Promise.all([
-          api.get("/estoque/movimentacoes"),
-          api.get("/produtos"),
-          api.get("/fornecedores"),
-        ]);
+      
+      // ✅ Usa fetchSuppliers do contexto
+      await fetchSuppliers(); 
+
+      const [movementsResponse, productsResponse] = await Promise.all([
+        api.get("/estoque/movimentacoes"),
+        api.get("/produtos"),
+      ]);
 
       const movementsData = movementsResponse.data.map((item: any) => ({
         id: item.id,
@@ -168,12 +175,22 @@ const Movements = () => {
       );
       setMovements(movementsData);
       setProducts(productsResponse.data);
-      setSuppliers(suppliersResponse.data);
+      // setSuppliers(suppliersResponse.data); // REMOVIDO: Agora é gerido pelo contexto
     } catch (error) {
       toast.error("Falha ao carregar dados da página.");
     } finally {
       setLoading(false);
     }
+  };
+  
+  // ✅ FUNÇÃO CALLBACK PARA RECARREGAR APÓS CRIAÇÃO
+  const handleSupplierCreated = () => {
+    // 1. Recarrega a lista de fornecedores do contexto
+    fetchSuppliers(); 
+    // 2. Fecha o modal de criação
+    setShowAddSupplierModal(false);
+    // 3. (Opcional) Mostra um toast de sucesso, se não for feito no modal filho
+    toast.success("Fornecedor criado e lista atualizada!");
   };
 
   useEffect(() => {
@@ -187,7 +204,7 @@ const Movements = () => {
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [location.pathname]);
+  }, [location.pathname, fetchSuppliers]); // ADICIONAR fetchSuppliers como dependência
 
   const filteredMovements = useMemo(() => {
     return movements.filter((m) => {
@@ -195,7 +212,7 @@ const Movements = () => {
       const matchesSearch =
         m.product.toLowerCase().includes(searchTermLower) ||
         (m.notes && m.notes.toLowerCase().includes(searchTermLower)) ||
-        (m.user && m.user.toLowerCase().includes(searchTermLower));
+        (m.user && m.user.nome.toLowerCase().includes(searchTermLower));
       const matchesType = filterType === "all" || m.type === filterType;
       const movementDate = new Date(m.date);
       const matchesDate =
@@ -311,7 +328,7 @@ const Movements = () => {
         m.quantity,
         m.fornecedor,
         new Date(m.date).toLocaleString("pt-BR"),
-        m.user,
+        m.user.nome,
       ]),
     });
     doc.save("movimentacoes_estoque.pdf");
@@ -328,35 +345,35 @@ const Movements = () => {
     setForm((prev) => ({ ...prev, precoCusto: formatted }));
   };
 
-  // --- NOVA FUNÇÃO ---
-const handleSetLastCostPrice = (productId: string) => {
-  if (!productId) return;
+  // --- FUNÇÃO PARA PEGAR ÚLTIMO PREÇO DE CUSTO ---
+  const handleSetLastCostPrice = (productId: string) => {
+    if (!productId) return;
 
-  const selectedProduct = products.find((p) => p.id === productId);
-  if (!selectedProduct) return;
+    const selectedProduct = products.find((p) => p.id === productId);
+    if (!selectedProduct) return;
 
-  // Pega os lotes do produto, do mais novo pro mais antigo
-  const sortedLotes = selectedProduct.lote
-    ?.filter((l) => l.precoCusto != null)
-    .sort(
-      (a, b) => new Date(b.criadoEm).getTime() - new Date(a.criadoEm).getTime()
-    );
+    // Pega os lotes do produto, do mais novo pro mais antigo
+    const sortedLotes = selectedProduct.lote
+      ?.filter((l) => l.precoCusto != null)
+      .sort(
+        (a, b) => new Date(b.criadoEm).getTime() - new Date(a.criadoEm).getTime()
+      );
 
-  const lastLote = sortedLotes?.[0];
+    const lastLote = sortedLotes?.[0];
 
-  if (lastLote) {
-    const lastPrice = Number(lastLote.precoCusto)
-      .toFixed(2)
-      .replace(".", ",")
-      .replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    if (lastLote) {
+      const lastPrice = Number(lastLote.precoCusto)
+        .toFixed(2)
+        .replace(".", ",")
+        .replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 
-    toast.info(`Preço de custo anterior (R$ ${lastPrice}) preenchido.`);
+      toast.info(`Preço de custo anterior (R$ ${lastPrice}) preenchido.`);
 
-    setForm((prev) => ({ ...prev, precoCusto: lastPrice }));
-  } else {
-    toast.info("Nenhum preço de custo anterior encontrado para este produto.");
-  }
-};
+      setForm((prev) => ({ ...prev, precoCusto: lastPrice }));
+    } else {
+      toast.info("Nenhum preço de custo anterior encontrado para este produto.");
+    }
+  };
 
 
   return (
@@ -500,7 +517,7 @@ const handleSetLastCostPrice = (productId: string) => {
                     width={100}
                     tick={{ fontSize: 12 }}
                   />
-                  <Tooltip />
+                  <RechartTooltip />
                   <Bar dataKey="value" name="Quantidade" fill="#3b82f6" />
                 </BarChart>
               </ResponsiveContainer>
@@ -608,7 +625,7 @@ const handleSetLastCostPrice = (productId: string) => {
                         {m.type === "SAIDA" ? "-" : "+"} {m.quantity}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {format(new Date(m.date), "dd/MM/yy HH:mm")} · {m.user}
+                        {format(new Date(m.date), "dd/MM/yy HH:mm")} · {m.user.nome}
                       </p>
                     </div>
                   </div>
@@ -787,7 +804,8 @@ const handleSetLastCostPrice = (productId: string) => {
                           <SelectValue placeholder="Selecione o fornecedor" />
                         </SelectTrigger>
                         <SelectContent>
-                          {suppliers.map((f) => (
+                          {/* LISTA DE FORNECEDORES ATUALIZADA PELO CONTEXTO */}
+                          {suppliers.map((f: any) => (
                             <SelectItem key={f.id} value={f.id}>
                               {f.nome}
                             </SelectItem>
@@ -882,9 +900,11 @@ const handleSetLastCostPrice = (productId: string) => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        {/* Adicionado a prop onSupplierCreated para atualizar a lista */}
         <AddSupplierModal
           isOpen={showAddSupplierModal}
           onClose={() => setShowAddSupplierModal(false)}
+          onSupplierCreated={handleSupplierCreated} // <--- NOVO CALLBACK
         />
       </div>
     </TooltipProvider>

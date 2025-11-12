@@ -72,8 +72,9 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLocation } from "react-router-dom";
 import { toast as sonnerToast, toast } from "sonner";
-import { DataTable } from "@/components/ui/data-table"; 
+import { DataTable } from "@/components/ui/data-table";
 import { getProductColumns } from "@/components/tables/product-columns";
+import { useAuth } from "@/contexts/useAuth";
 
 /**
  * Modal de Detalhes do Produto
@@ -866,6 +867,12 @@ export const Products: React.FC = () => {
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
 
+  const { user } = useAuth();
+  const isAdmin =
+    user?.papel === "ADMINISTRADOR" ||
+    user?.papel === "SUPER_ADMIN" ||
+    user?.telasPermitidas?.includes("ADMINISTRADOR");
+
   // === REFRESH AUTOMÁTICO ===
   useEffect(() => {
     const fetchAll = async () => {
@@ -942,8 +949,6 @@ export const Products: React.FC = () => {
       p.lote?.reduce((acc, lote) => acc + Number(lote.quantidadeAtual), 0) <=
       Number(p.estoqueMinimo || 0)
   ).length;
-
-
 
   // === DADOS GRÁFICOS ===
   const topProdutosEstoque = produtosComEstoque
@@ -1025,16 +1030,49 @@ export const Products: React.FC = () => {
     setOpenDetalhes(true);
   };
 
+  const columns = useMemo(
+    () =>
+      getProductColumns({
+        onEdit: handleOpenEdit,
+        onDelete: handleDelete,
+        onView: handleOpenDetalhes,
+      }),
+    [produtos]
+  ); // Recria se as funções mudarem (raro)
 
 
-    const columns = useMemo(() => getProductColumns({
-      onEdit: handleOpenEdit,
-      onDelete: handleDelete,
-      onView: handleOpenDetalhes,
-  }), [produtos]); // Recria se as funções mudarem (raro)
+    // 🔒 Componente wrapper para aplicar blur e overlay automaticamente
+  const ProtectedCard = ({
+    title,
+    children,
+  }: {
+    title: string;
+    children: React.ReactNode;
+  }) => (
+    <div className="relative">
+      <Card className="shadow-md">
+        <CardHeader>
+          <CardTitle>{title}</CardTitle>
+        </CardHeader>
 
+        <CardContent
+          className={`h-64 transition-all duration-300 ${
+            isAdmin ? "" : "blur-sm pointer-events-none select-none"
+          }`}
+        >
+          {children}
+        </CardContent>
+      </Card>
 
-
+      {!isAdmin && (
+        <div className="absolute inset-0 flex items-center justify-center bg-white/60 backdrop-blur-sm rounded-lg">
+          <span className="text-sm text-gray-700 font-medium flex items-center gap-1">
+            🔒 Acesso restrito a administradores
+          </span>
+        </div>
+      )}
+    </div>
+  );
 
   if (loading && produtos.length === 0) {
     return (
@@ -1046,12 +1084,8 @@ export const Products: React.FC = () => {
     );
   }
 
-
-
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6">
-
-
       {/* === DASHBOARD ANALÍTICO === */}
       <div className="grid md:grid-cols-4 gap-4">
         <Card className="bg-gradient-to-r from-blue-50 to-blue-100 border-none shadow-sm">
@@ -1063,57 +1097,89 @@ export const Products: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-r from-green-50 to-green-100 border-none shadow-sm">
-          <CardContent className="p-4">
-            <p className="text-sm text-green-800">Valor Total em Estoque</p>
-            <h2 className="text-2xl font-bold text-green-700">
-              R${" "}
-              {totalEstoque.toLocaleString("pt-BR", {
-                minimumFractionDigits: 2,
-              })}
-            </h2>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-r from-yellow-50 to-yellow-100 border-none shadow-sm">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-yellow-700">
+        <div className="relative">
+          {/* CARD PRINCIPAL */}
+          <Card className="bg-gradient-to-r from-green-50 to-green-100 border-none shadow-sm">
+            <CardContent
+              className={`p-4 transition-all duration-300 ${
+                isAdmin ? "" : "blur-sm pointer-events-none select-none"
+              }`}
+            >
+              <p className="text-sm text-green-800">Valor Total em Estoque</p>
+              <h2 className="text-2xl font-bold text-green-700">
                 R${" "}
-                {lucroTotalEstimado.toLocaleString("pt-BR", {
+                {totalEstoque.toLocaleString("pt-BR", {
                   minimumFractionDigits: 2,
                 })}
               </h2>
+            </CardContent>
+          </Card>
 
-              {/* Tooltip explicativo */}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Info className="w-4 h-4 text-muted-foreground cursor-pointer" />
-                </TooltipTrigger>
-                <TooltipContent
-                  side="top"
-                  className="max-w-xs text-sm leading-relaxed"
-                >
-                  <p>
-                    Lucro Estimado: diferença entre o preço de venda e o custo
-                    dos produtos em estoque. Representa quanto a empresa pode
-                    ganhar se vender todo o estoque pelo preço de venda atual.
-                  </p>
-                </TooltipContent>
-              </Tooltip>
+          {/* OVERLAY PARA QUEM NÃO É ADMIN */}
+          {!isAdmin && (
+            <div className="absolute inset-0 flex items-center justify-center bg-white/50 backdrop-blur-sm rounded-lg">
+              <span className="text-sm text-gray-700 font-medium text-center">
+                🔒 Acesso restrito a administradores
+              </span>
             </div>
+          )}
+        </div>
 
-            {/* Seta indicando lucro positivo ou negativo */}
-            <p className="text-sm text-yellow-800 flex items-center mt-2 gap-1">
-              Lucro Estimado ({percentualLucro.toFixed(1)}%)
-              {lucroTotalEstimado > 0 ? (
-                <TrendingUp className="text-green-400 w-5 h-5" />
-              ) : (
-                <TrendingDown className="text-red-400 w-5 h-5" />
-              )}
-            </p>
-          </CardContent>
-        </Card>
+        <div className="relative">
+          {/* CARD PRINCIPAL */}
+          <Card className="bg-gradient-to-r from-yellow-50 to-yellow-100 border-none shadow-sm">
+            <CardContent
+              className={`p-4 transition-all duration-300 ${
+                isAdmin ? "" : "blur-sm pointer-events-none select-none"
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-yellow-700">
+                  R${" "}
+                  {lucroTotalEstimado.toLocaleString("pt-BR", {
+                    minimumFractionDigits: 2,
+                  })}
+                </h2>
+
+                {/* Tooltip explicativo */}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="w-4 h-4 text-muted-foreground cursor-pointer" />
+                  </TooltipTrigger>
+                  <TooltipContent
+                    side="top"
+                    className="max-w-xs text-sm leading-relaxed"
+                  >
+                    <p>
+                      Lucro Estimado: diferença entre o preço de venda e o custo
+                      dos produtos em estoque. Representa quanto a empresa pode
+                      ganhar se vender todo o estoque pelo preço de venda atual.
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+
+              {/* Seta indicando lucro positivo ou negativo */}
+              <p className="text-sm text-yellow-800 flex items-center mt-2 gap-1">
+                Lucro Estimado ({percentualLucro.toFixed(1)}%)
+                {lucroTotalEstimado > 0 ? (
+                  <TrendingUp className="text-green-400 w-5 h-5" />
+                ) : (
+                  <TrendingDown className="text-red-400 w-5 h-5" />
+                )}
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* OVERLAY PARA NÃO ADMINISTRADORES */}
+          {!isAdmin && (
+            <div className="absolute inset-0 flex items-center justify-center bg-white/60 backdrop-blur-sm rounded-lg">
+              <span className="text-sm text-gray-700 font-medium flex items-center gap-1 text-center">
+                🔒 Acesso restrito a administradores
+              </span>
+            </div>
+          )}
+        </div>
 
         <Card className="bg-gradient-to-r from-red-50 to-red-100 border-none shadow-sm">
           <CardContent className="p-4">
@@ -1126,73 +1192,58 @@ export const Products: React.FC = () => {
       </div>
 
       {/* === GRÁFICOS === */}
-      <div className="grid lg:grid-cols-3 md:grid-cols-2 gap-6 mt-6">
-        {/* Top 5 em estoque */}
-        <Card className="shadow-md">
-          <CardHeader>
-            <CardTitle>Top 5 Produtos em Estoque</CardTitle>
-          </CardHeader>
-          <CardContent className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={topProdutosEstoque}>
-                <XAxis dataKey="nome" />
-                <YAxis />
-                <RechartTooltip />
-                <Bar dataKey="estoque" fill="#3B82F6" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+    <div className="grid lg:grid-cols-3 md:grid-cols-2 gap-6 mt-6">
+      {/* === Top 5 em estoque === */}
+      <ProtectedCard title="Top 5 Produtos em Estoque">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={topProdutosEstoque}>
+            <XAxis dataKey="nome" />
+            <YAxis />
+            <RechartTooltip />
+            <Bar dataKey="estoque" fill="#3B82F6" />
+          </BarChart>
+        </ResponsiveContainer>
+      </ProtectedCard>
 
-        {/* Custo x Venda */}
-        <Card className="shadow-md">
-          <CardHeader>
-            <CardTitle>Relação Custo x Venda</CardTitle>
-          </CardHeader>
-          <CardContent className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={custoVendaData}>
-                <XAxis dataKey="nome" />
-                <YAxis />
-                <Legend />
-                <RechartTooltip />
-                <Bar dataKey="custo" fill="#F87171" name="Custo" />
-                <Bar dataKey="venda" fill="#10B981" name="Venda" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+      {/* === Relação Custo x Venda === */}
+      <ProtectedCard title="Relação Custo x Venda">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={custoVendaData}>
+            <XAxis dataKey="nome" />
+            <YAxis />
+            <Legend />
+            <RechartTooltip />
+            <Bar dataKey="custo" fill="#F87171" name="Custo" />
+            <Bar dataKey="venda" fill="#10B981" name="Venda" />
+          </BarChart>
+        </ResponsiveContainer>
+      </ProtectedCard>
 
-        {/* Distribuição por categoria */}
-        <Card className="shadow-md">
-          <CardHeader>
-            <CardTitle>Distribuição por Categoria</CardTitle>
-          </CardHeader>
-          <CardContent className="h-64 flex items-center justify-center">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={categoriaData}
-                  dataKey="valor"
-                  nameKey="nome"
-                  outerRadius={90}
-                  label
-                >
-                  {categoriaData.map((_, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={COLORS[index % COLORS.length]}
-                    />
-                  ))}
-                </Pie>
-                <RechartTooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
+      {/* === Distribuição por Categoria === */}
+      <ProtectedCard title="Distribuição por Categoria">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={categoriaData}
+              dataKey="valor"
+              nameKey="nome"
+              outerRadius={90}
+              label
+            >
+              {categoriaData.map((_, index) => (
+                <Cell
+                  key={`cell-${index}`}
+                  fill={COLORS[index % COLORS.length]}
+                />
+              ))}
+            </Pie>
+            <RechartTooltip />
+          </PieChart>
+        </ResponsiveContainer>
+      </ProtectedCard>
+    </div>
 
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Produtos</h1>
           <p className="text-sm text-muted-foreground">
@@ -1204,7 +1255,7 @@ export const Products: React.FC = () => {
           Adicionar Produto
         </Button>
       </div>
-      
+
       <DataTable columns={columns} data={produtos} />
 
       {selectedProduct && (
