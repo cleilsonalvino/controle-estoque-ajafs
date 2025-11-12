@@ -57,7 +57,7 @@ import GerarRelatorioNF from "@/components/GerarRelatorioNF";
 import SaleDetalhesModal from "@/components/SaleDetalhesModal";
 import ClienteDetalhesModal from "@/components/ClienteDetalhesModal";
 import { Sale } from "@/contexts/SalesContext"; // Removido SaleData se não for usado
-import api from "@/lib/api";
+import {api} from "@/lib/api";
 import { useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import TopSellingProducts from "@/components/TopSellingProducts";

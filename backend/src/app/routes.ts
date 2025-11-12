@@ -12,6 +12,9 @@ import servicesRouter from "../modules/servicos/services.router";
 import categoriaServicoRouter from "../modules/categorias-servicos/categoria-servico.router";
 import empresaRouter from "../modules/empresa/empresa.router";
 import Dashboardrouter from "../modules/dashboard/dashboard.router";
+import { cobrancaRoutes } from "@modules/inter/routes/cobranca.routes";
+import { authRoutes } from "@modules/inter/routes/auth.routes";
+import { posVendaRouter, feedbackRouter } from "../modules/pos-venda/pos-venda.router";
 
 const router = Router();
 
@@ -28,5 +31,11 @@ router.use("/servicos", servicesRouter);
 router.use("/categorias-servicos", categoriaServicoRouter);
 router.use("/empresa", empresaRouter);
 router.use("/dashboard", Dashboardrouter);
+router.use("/pos-venda", posVendaRouter);
+router.use("/feedback", feedbackRouter);
+
+// Rota base
+router.use("/inter/cobranca", cobrancaRoutes);
+router.use("/inter/auth", authRoutes);
 
 export default router;

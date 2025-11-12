@@ -1,6 +1,6 @@
 import AddSupplierModal from "@/components/AddSupplierModal";
 import { useEffect, useState, useMemo } from "react";
-import api from "@/lib/api"; // Assumindo que sua config do Axios/API está aqui
+import { api } from "@/lib/api"; // Assumindo que sua config do Axios/API está aqui
 import { toast } from "sonner";
 import {
   Dialog,
@@ -94,7 +94,7 @@ interface Movement {
   quantity: number;
   reason: string;
   date: string;
-  user: {
+  usuario: {
     id: string;
     nome: string;
   };
@@ -134,11 +134,11 @@ const Movements = () => {
   const ITEMS_PER_PAGE = 10;
 
   const [products, setProducts] = useState<Produto[]>([]);
-  
+
   // Use o useSuppliers para obter a lista e o método de busca
   const { suppliers, fetchSuppliers } = useSuppliers(); // ESTADO E FUNÇÃO DO CONTEXTO
   // setSuppliers não é mais necessário, pois a lista é gerida pelo contexto
-  
+
   const location = useLocation();
 
   const [isProductPopoverOpen, setIsProductPopoverOpen] = useState(false);
@@ -147,14 +147,16 @@ const Movements = () => {
   const fetchAll = async () => {
     try {
       setLoading(true);
-      
+
       // ✅ Usa fetchSuppliers do contexto
-      await fetchSuppliers(); 
+      await fetchSuppliers();
 
       const [movementsResponse, productsResponse] = await Promise.all([
         api.get("/estoque/movimentacoes"),
         api.get("/produtos"),
       ]);
+
+      console.log(movementsResponse.data)
 
       const movementsData = movementsResponse.data.map((item: any) => ({
         id: item.id,
@@ -182,11 +184,11 @@ const Movements = () => {
       setLoading(false);
     }
   };
-  
+
   // ✅ FUNÇÃO CALLBACK PARA RECARREGAR APÓS CRIAÇÃO
   const handleSupplierCreated = () => {
     // 1. Recarrega a lista de fornecedores do contexto
-    fetchSuppliers(); 
+    fetchSuppliers();
     // 2. Fecha o modal de criação
     setShowAddSupplierModal(false);
     // 3. (Opcional) Mostra um toast de sucesso, se não for feito no modal filho
@@ -212,7 +214,7 @@ const Movements = () => {
       const matchesSearch =
         m.product.toLowerCase().includes(searchTermLower) ||
         (m.notes && m.notes.toLowerCase().includes(searchTermLower)) ||
-        (m.user && m.user.nome.toLowerCase().includes(searchTermLower));
+        (m.usuario && m.usuario.nome.toLowerCase().includes(searchTermLower));
       const matchesType = filterType === "all" || m.type === filterType;
       const movementDate = new Date(m.date);
       const matchesDate =
@@ -292,6 +294,7 @@ const Movements = () => {
       return;
     }
 
+    const { id } = JSON.parse(localStorage.getItem("user") || "{}");
 
     try {
       const payload = {
@@ -302,6 +305,7 @@ const Movements = () => {
         fornecedorId: form.tipo === "ENTRADA" ? form.fornecedorId : null,
         precoCusto: form.tipo === "ENTRADA" ? form.precoCusto : null,
         validade: form.tipo === "ENTRADA" ? form.validade || null : null,
+        usuarioId: id,
       };
 
       await api.post("/estoque/movimentacao", payload);
@@ -328,7 +332,7 @@ const Movements = () => {
         m.quantity,
         m.fornecedor,
         new Date(m.date).toLocaleString("pt-BR"),
-        m.user.nome,
+        m.usuario.nome,
       ]),
     });
     doc.save("movimentacoes_estoque.pdf");
@@ -356,10 +360,14 @@ const Movements = () => {
     const sortedLotes = selectedProduct.lote
       ?.filter((l) => l.precoCusto != null)
       .sort(
-        (a, b) => new Date(b.criadoEm).getTime() - new Date(a.criadoEm).getTime()
+        (a, b) =>
+          new Date(b.criadoEm).getTime() - new Date(a.criadoEm).getTime()
       );
 
     const lastLote = sortedLotes?.[0];
+
+    
+      console.log("[handleSetLastCostPrice]", paginatedMovements)
 
     if (lastLote) {
       const lastPrice = Number(lastLote.precoCusto)
@@ -371,10 +379,11 @@ const Movements = () => {
 
       setForm((prev) => ({ ...prev, precoCusto: lastPrice }));
     } else {
-      toast.info("Nenhum preço de custo anterior encontrado para este produto.");
+      toast.info(
+        "Nenhum preço de custo anterior encontrado para este produto."
+      );
     }
   };
-
 
   return (
     <TooltipProvider>
@@ -625,7 +634,8 @@ const Movements = () => {
                         {m.type === "SAIDA" ? "-" : "+"} {m.quantity}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {format(new Date(m.date), "dd/MM/yy HH:mm")} · {m.user.nome}
+                        {format(new Date(m.date), "dd/MM/yy HH:mm")} ·{" "}
+                        {m.usuario?.nome ?? "Usuário do Sistema"}
                       </p>
                     </div>
                   </div>
@@ -795,8 +805,8 @@ const Movements = () => {
                     <Label>Fornecedor*</Label>
                     <div className="flex items-center gap-2">
                       <Select
-                        onValueChange={(v) =>{
-                          setForm((prev) => ({ ...prev, fornecedorId: v }))
+                        onValueChange={(v) => {
+                          setForm((prev) => ({ ...prev, fornecedorId: v }));
                         }}
                         value={form.fornecedorId}
                       >

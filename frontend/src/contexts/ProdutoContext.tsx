@@ -6,7 +6,7 @@ import {
   ReactNode,
   useCallback,
 } from "react";
-import api from "@/lib/api"; // já configurado no seu projeto
+import {api} from "@/lib/api"; // já configurado no seu projeto
 import { toast } from "sonner"; // opcional, se quiser mostrar notificações
 import { isAxiosError } from "axios";
 import { useAuth } from "./useAuth";

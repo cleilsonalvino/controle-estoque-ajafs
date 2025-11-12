@@ -1,6 +1,6 @@
 
 import { createContext, useContext, useState, ReactNode, useEffect, useCallback } from "react";
-import api from "@/lib/api";
+import {api} from "@/lib/api";
 import { useAuth } from "./useAuth";
 
 export interface Cliente {

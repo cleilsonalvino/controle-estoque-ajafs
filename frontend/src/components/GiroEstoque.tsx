@@ -9,7 +9,7 @@ import {
   CartesianGrid,
 } from "recharts";
 import { Card } from "./ui/card";
-import api from "@/lib/api";
+import {api} from "@/lib/api";
 import { Loader2 } from "lucide-react";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 

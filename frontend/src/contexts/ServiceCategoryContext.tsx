@@ -1,6 +1,6 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
-import api from "@/lib/api";
+import {api} from "@/lib/api";
 import { toast } from "sonner";
 import { useAuth } from "./useAuth";
 

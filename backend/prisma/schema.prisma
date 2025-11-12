@@ -25,9 +25,9 @@ model Usuario {
   atualizadoEm    DateTime @updatedAt
   empresaId       String
 
-  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  empresa       Empresa        @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   movimentacoes Movimentacao[]
-  
+  posVendas     PosVenda[]
 }
 
 enum Papel {
@@ -168,6 +168,7 @@ model Venda {
   vendedor    Vendedor? @relation(fields: [vendedorId], references: [id])
   itens       ItemVenda[]
   tipoServicos tipoServico[]
+  posVenda    PosVenda?
 }
 
 // ================================
@@ -187,6 +188,67 @@ model ItemVenda {
 }
 
 // ================================
+// Pós-venda
+// ================================
+enum StatusPosVenda {
+  PENDENTE
+  EM_ANDAMENTO
+  FINALIZADO
+}
+
+model PosVenda {
+  id             String          @id @default(uuid())
+  vendaId        String          @unique
+  clienteId      String?
+  empresaId      String
+  usuarioId      String?
+  dataContato    DateTime?
+  tipoContato    String?
+  status         StatusPosVenda  @default(PENDENTE)
+  satisfacao     Int?
+  observacoes    String?
+  retornoCliente Boolean         @default(false)
+  criadoEm       DateTime        @default(now())
+  atualizadoEm   DateTime        @updatedAt
+
+  venda            Venda             @relation(fields: [vendaId], references: [id], onDelete: Cascade)
+  cliente          Cliente?          @relation(fields: [clienteId], references: [id], onDelete: SetNull)
+  empresa          Empresa           @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  usuario          Usuario?          @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+  feedbacks        FeedbackCliente[]
+  followUps        FollowUp[]
+}
+
+model FeedbackCliente {
+  id         String   @id @default(uuid())
+  posVendaId String
+  comentario String?
+  avaliacao  Int
+  respondido Boolean  @default(false)
+  criadoEm   DateTime @default(now())
+  empresaId  String
+
+  posVenda PosVenda @relation(fields: [posVendaId], references: [id], onDelete: Cascade)
+  empresa  Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+}
+
+model FollowUp {
+  id           String   @id @default(uuid())
+  posVendaId   String
+  dataAgendada DateTime
+  tipoAcao     String?
+  realizado    Boolean  @default(false)
+  observacao   String?
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+  empresaId    String
+
+  posVenda PosVenda @relation(fields: [posVendaId], references: [id], onDelete: Cascade)
+  empresa  Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+}
+
+
+// ================================
 // Clientes
 // ================================
 model Cliente {
@@ -204,8 +266,9 @@ model Cliente {
   @@unique([empresaId, cpf])
   @@unique([empresaId, email])
 
-  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
-  vendas  Venda[]
+  empresa   Empresa    @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  vendas    Venda[]
+  posVendas PosVenda[]
 }
 
 // ================================
@@ -341,4 +404,7 @@ model Empresa {
   tipoServicos      tipoServico[]
   lotes              Lote[]
   marcas             Marca[]
+  posVendas          PosVenda[]
+  feedbacksCliente   FeedbackCliente[]
+  followUps          FollowUp[]
 }

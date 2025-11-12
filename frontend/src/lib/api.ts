@@ -60,4 +60,18 @@ api.interceptors.response.use(
   }
 );
 
-export default api;
+export { api };
+
+// ==============================================
+// 🌐 Instância para rotas públicas (sem token)
+// ==============================================
+const apiPublic = axios.create({
+  baseURL: import.meta.env.VITE_API_URL,
+  timeout: 10000,
+  headers: {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+  },
+});
+
+export { apiPublic };

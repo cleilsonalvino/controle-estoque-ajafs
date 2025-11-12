@@ -7,7 +7,7 @@ import {
   useEffect,
   useCallback,
 } from "react";
-import axios from "@/lib/api"; // seu axios configurado
+import {api} from "@/lib/api"; // seu api configurado
 import { Produto } from "./ProdutoContext";
 import { useAuth } from "./useAuth";
 
@@ -85,7 +85,7 @@ export const SalesProvider = ({ children }: SalesProviderProps) => {
   const fetchSales = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await axios.get("/vendas");
+      const response = await api.get("/vendas");
       setSales(response.data);
     } catch (err) {
       console.error("Erro ao buscar vendas:", err);
@@ -96,7 +96,7 @@ export const SalesProvider = ({ children }: SalesProviderProps) => {
 
   const fetchProducts = useCallback(async () => {
     try {
-      const response = await axios.get("/produtos");
+      const response = await api.get("/produtos");
       setProducts(response.data);
     } catch (err) {
       console.error("Erro ao buscar produtos:", err);
@@ -105,7 +105,7 @@ export const SalesProvider = ({ children }: SalesProviderProps) => {
 
   const createSale = useCallback(async (saleData: SaleData) => {
     try {
-      const response = await axios.post("/vendas/create", saleData);
+      const response = await api.post("/vendas/create", saleData);
       setSales((prev) => [response.data, ...prev]);
       return response.data;
     } catch (err) {
@@ -116,7 +116,7 @@ export const SalesProvider = ({ children }: SalesProviderProps) => {
 
   const updateSale = useCallback(
     async (id: string, cliente: string, itens: SaleItem[]) => {
-      const response = await axios.put(`/vendas/${id}`, { cliente, itens });
+      const response = await api.put(`/vendas/${id}`, { cliente, itens });
       setSales((prev) => prev.map((s) => (s.id === id ? response.data : s)));
       return response.data;
     },
@@ -124,12 +124,12 @@ export const SalesProvider = ({ children }: SalesProviderProps) => {
   );
 
   const deleteSale = useCallback(async (id: string) => {
-    await axios.delete(`/vendas/${id}`);
+    await api.delete(`/vendas/${id}`);
     setSales((prev) => prev.filter((s) => s.id !== id));
   }, []);
 
   const cancelSale = useCallback(async (id: string) => {
-    await axios.patch(`/vendas/cancelar/${id}`);
+    await api.patch(`/vendas/cancelar/${id}`);
     setSales((prev) =>
       prev.map((s) => (s.id === id ? { ...s, status: "Cancelada" } : s))
     );

@@ -6,7 +6,7 @@ import {
   useCallback,
   ReactNode,
 } from "react";
-import api from "@/lib/api";
+import {api} from "@/lib/api";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/useAuth";
 

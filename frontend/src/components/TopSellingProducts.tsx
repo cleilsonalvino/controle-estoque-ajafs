@@ -8,7 +8,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import axios from "@/lib/api";
+import {api} from "@/lib/api";
 
 export default function TopSellingProducts() {
   const [topProducts, setTopProducts] = useState([]);
@@ -17,7 +17,7 @@ export default function TopSellingProducts() {
   useEffect(() => {
     async function fetchTopProducts() {
       try {
-        const { data } = await axios.get("/vendas/reports/top-products");
+        const { data } = await api.get("/vendas/reports/top-products");
         setTopProducts(data || []);
       } catch (error) {
         console.error("Erro ao carregar produtos mais vendidos:", error);

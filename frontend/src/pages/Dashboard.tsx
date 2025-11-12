@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useProdutos } from "@/contexts/ProdutoContext";
 import { useSales } from "@/contexts/SalesContext";
-import api from "@/lib/api";
+import {api} from "@/lib/api";
 import StockTurnoverChart from "@/components/GiroEstoque";
 import { useLocation } from "react-router-dom";
 import { toast } from "sonner";

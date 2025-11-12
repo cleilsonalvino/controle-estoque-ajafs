@@ -96,6 +96,16 @@ export const createVendaService = async (data: any, empresaId: string) => {
       }
     }
 
+    // Cria o registro de Pós-venda
+    await tx.posVenda.create({
+      data: {
+        vendaId: venda.id,
+        clienteId: venda.clienteId,
+        empresaId: venda.empresaId,
+        status: "PENDENTE",
+      },
+    });
+
     return venda;
   });
 };
@@ -146,6 +156,16 @@ export const createSaleServicesService = async (data: any, empresaId: string) =>
         precoUnitario: item.precoUnitario,
         empresaId,
       })),
+    });
+
+    // Cria o registro de Pós-venda
+    await tx.posVenda.create({
+        data: {
+            vendaId: venda.id,
+            clienteId: venda.clienteId,
+            empresaId: venda.empresaId,
+            status: "PENDENTE",
+        },
     });
 
     return venda;

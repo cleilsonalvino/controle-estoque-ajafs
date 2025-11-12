@@ -46,7 +46,7 @@ import {
 } from "@/components/ui/table";
 import { Category as Categoria } from "@/contexts/CategoryContext";
 import { Supplier as Fornecedor } from "@/contexts/SupplierContext";
-import api from "@/lib/api";
+import {api} from "@/lib/api";
 // CORREÇÃO: Removida a importação de 'RechartsTooltip' e importado o 'Tooltip' padrão.
 import {
   Tooltip,

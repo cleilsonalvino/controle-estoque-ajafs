@@ -30,7 +30,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { useEmpresa, Empresa } from "@/contexts/EmpresaContext";
 import { toast as sonnerToast } from "sonner";
-import api from "@/lib/api";
+import { api } from "@/lib/api";
 import { allMenuItems } from "@/config/menuItems";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useForm, Controller } from "react-hook-form";

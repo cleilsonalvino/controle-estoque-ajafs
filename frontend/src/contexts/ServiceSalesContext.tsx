@@ -7,7 +7,7 @@ import {
   useCallback,
   ReactNode,
 } from "react";
-import axios from "@/lib/api";
+import {api} from "@/lib/api";
 import { useAuth } from "./useAuth";
 import { toast } from "sonner";
 
@@ -65,7 +65,7 @@ export const ServiceSalesProvider = ({ children }: { children: ReactNode }) => {
     setLoading(true);
     try {
       // 🔹 Faz a requisição filtrando por tipoVenda = "Serviço"
-      const { data } = await axios.get("/vendas/filtrar", {
+      const { data } = await api.get("/vendas/filtrar", {
         params: { tipoVenda: "Servico" },
       });
 
@@ -87,7 +87,7 @@ export const ServiceSalesProvider = ({ children }: { children: ReactNode }) => {
   const createServiceSale = useCallback(
     async (data: ServiceSaleData): Promise<ServiceSale> => {
       try {
-        const response = await axios.post<ServiceSale>(
+        const response = await api.post<ServiceSale>(
           "/vendas/create-sales-services",
           data
         );
@@ -105,7 +105,7 @@ export const ServiceSalesProvider = ({ children }: { children: ReactNode }) => {
 
   const deleteServiceSale = useCallback(async (id: string) => {
     try {
-      await axios.delete(`/vendas/servicos/${id}`);
+      await api.delete(`/vendas/servicos/${id}`);
       setServiceSales((prev) => prev.filter((s) => s.id !== id));
     } catch (err) {
       console.error("Erro ao excluir serviço:", err);

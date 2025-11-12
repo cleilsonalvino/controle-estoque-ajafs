@@ -17,7 +17,7 @@ import {
   Warehouse,
   User,
 } from "lucide-react";
-import api from "@/lib/api";
+import {api} from "@/lib/api";
 import { useEmpresa } from "@/contexts/EmpresaContext";
 import { toast } from "sonner";
 
