@@ -1,0 +1,169 @@
+openapi: 3.0.0
+info:
+  title: API Inventário Brilhante
+  description: Documentação completa da API do sistema de gestão empresarial Inventário Brilhante.
+  version: 1.0.0
+servers:
+  - url: /api
+    description: Servidor Principal
+security:
+  - bearerAuth: []
+tags:
+  - name: Auth
+    description: Autenticação de usuários
+  - name: Dashboard
+    description: Visão geral e estatísticas do sistema
+  - name: Empresa
+    description: Gestão de Empresas (acesso Super Admin)
+  - name: Usuários
+    description: Gestão de Usuários
+  - name: Clientes
+    description: Gestão de Clientes
+  - name: Fornecedores
+    description: Gestão de Fornecedores
+  - name: Vendedores
+    description: Gestão de Vendedores
+  - name: Produtos e Categorias
+    description: Gestão de Produtos e suas Categorias
+  - name: Serviços e Categorias
+    description: Gestão de Serviços e suas Categorias
+  - name: Estoque
+    description: Gestão de Lotes e Movimentações de Estoque
+  - name: Vendas
+    description: Gestão de Vendas de produtos e serviços
+  - name: Pós-Venda
+    description: Acompanhamento de Pós-Venda e Feedbacks
+  - name: Financeiro
+    description: Módulo Financeiro completo
+paths:
+  /auth/login:
+    $ref: './paths/auth.yaml#/login'
+  /auth/me:
+    $ref: './paths/auth.yaml#/me'
+  /dashboard:
+    $ref: './paths/dashboard.yaml#/dashboard'
+  /empresa:
+    $ref: './paths/empresa.yaml#/collection'
+  /empresa/{id}:
+    $ref: './paths/empresa.yaml#/record'
+  /empresa/super/dashboard:
+    $ref: './paths/empresa.yaml#/superDashboard'
+  /usuarios:
+    $ref: './paths/usuarios.yaml#/collection'
+  /usuarios/{id}:
+    $ref: './paths/usuarios.yaml#/record'
+  /clientes:
+    $ref: './paths/clientes.yaml#/collection'
+  /clientes/create:
+    $ref: './paths/clientes.yaml#/create'
+  /clientes/{id}:
+    $ref: './paths/clientes.yaml#/record'
+  /fornecedores:
+    $ref: './paths/fornecedores.yaml#/collection'
+  /fornecedores/create:
+    $ref: './paths/fornecedores.yaml#/create'
+  /fornecedores/{id}:
+    $ref: './paths/fornecedores.yaml#/record'
+  /vendedores:
+    $ref: './paths/vendedores.yaml#/collection'
+  /vendedores/create:
+    $ref: './paths/vendedores.yaml#/create'
+  /vendedores/{id}:
+    $ref: './paths/vendedores.yaml#/record'
+  /produtos:
+    $ref: './paths/produtos.yaml#/collection'
+  /produtos/create:
+    $ref: './paths/produtos.yaml#/create'
+  /produtos/{id}:
+    $ref: './paths/produtos.yaml#/record'
+  /produtos/marcas-produtos:
+    $ref: './paths/produtos.yaml#/marcas'
+  /produtos/create-marca-produto:
+    $ref: './paths/produtos.yaml#/createMarca'
+  /categorias:
+    $ref: './paths/categorias_produto.yaml#/collection'
+  /categorias/create:
+    $ref: './paths/categorias_produto.yaml#/create'
+  /categorias/{id}:
+    $ref: './paths/categorias_produto.yaml#/record'
+  /servicos:
+    $ref: './paths/servicos.yaml#/collection'
+  /servicos/create:
+    $ref: './paths/servicos.yaml#/create'
+  /servicos/{id}:
+    $ref: './paths/servicos.yaml#/record'
+  /categorias-servicos:
+    $ref: './paths/categorias_servico.yaml#/collection'
+  /categorias-servicos/create:
+    $ref: './paths/categorias_servico.yaml#/create'
+  /categorias-servicos/{id}:
+    $ref: './paths/categorias_servico.yaml#/record'
+  /estoque/movimentacao:
+    $ref: './paths/estoque.yaml#/movimentacao'
+  /estoque/movimentacoes:
+    $ref: './paths/estoque.yaml#/collection'
+  /estoque/movimentacoes/{produtoId}:
+    $ref: './paths/estoque.yaml#/byProduto'
+  /vendas:
+    $ref: './paths/vendas.yaml#/collection'
+  /vendas/create:
+    $ref: './paths/vendas.yaml#/create'
+  /vendas/{id}:
+    $ref: './paths/vendas.yaml#/record'
+  /vendas/cancelar/{id}:
+    $ref: './paths/vendas.yaml#/cancelar'
+  /pos-venda:
+    $ref: './paths/pos_venda.yaml#/collection'
+  /pos-venda/{id}:
+    $ref: './paths/pos_venda.yaml#/record'
+  /feedback/{id}:
+    $ref: './paths/pos_venda.yaml#/feedback'
+  /financeiro/dashboard:
+    $ref: './paths/financeiro.yaml#/dashboard'
+  /financeiro/categorias:
+    $ref: './paths/financeiro.yaml#/categorias'
+  /financeiro/categorias/{id}:
+    $ref: './paths/financeiro.yaml#/categoriaById'
+  /financeiro/contas-bancarias:
+    $ref: './paths/financeiro.yaml#/contasBancarias'
+  /financeiro/contas-bancarias/{id}:
+    $ref: './paths/financeiro.yaml#/contaBancariaById'
+  /financeiro/contas-bancarias/transferir:
+    $ref: './paths/financeiro.yaml#/transferir'
+  /financeiro/movimentacoes:
+    $ref: './paths/financeiro.yaml#/movimentacoes'
+  /financeiro/movimentacoes/{id}:
+    $ref: './paths/financeiro.yaml#/movimentacaoById'
+  /financeiro/contas-pagar:
+    $ref: './paths/financeiro.yaml#/contasPagar'
+  /financeiro/contas-pagar/{id}:
+    $ref: './paths/financeiro.yaml#/contaPagarById'
+  /financeiro/contas-pagar/{id}/pagar:
+    $ref: './paths/financeiro.yaml#/pagarConta'
+  /financeiro/contas-receber:
+    $ref: './paths/financeiro.yaml#/contasReceber'
+  /financeiro/contas-receber/{id}:
+    $ref: './paths/financeiro.yaml#/contaReceberById'
+  /financeiro/contas-receber/{id}/receber:
+    $ref: './paths/financeiro.yaml#/receberConta'
+  /financeiro/relatorios/fluxo-caixa:
+    $ref: './paths/financeiro.yaml#/relatorioFluxoCaixa'
+  /financeiro/relatorios/resumo-mensal:
+    $ref: './paths/financeiro.yaml#/relatorioResumoMensal'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  responses:
+    Unauthorized:
+      description: Token de autenticação ausente ou inválido.
+    Forbidden:
+      description: Acesso não autorizado para o recurso.
+    NotFound:
+      description: Recurso não encontrado.
+    BadRequest:
+      description: Erro de validação ou requisição mal formatada.
+  schemas:
+    $ref: './schemas/index.yaml'

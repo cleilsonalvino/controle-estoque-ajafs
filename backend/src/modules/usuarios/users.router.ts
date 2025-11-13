@@ -7,15 +7,16 @@ import {
   updateUserController,
   deleteUserController,
 } from "./users.controller";
+import upload from "../../app/config/multer";
 
 const usersRouter = Router();
 
 usersRouter.use(authMiddleware);
 
-usersRouter.post("/", createUserController);
+usersRouter.post("/", upload.single('urlImagem'), createUserController);
 usersRouter.get("/", authMiddleware, getUsersController);
 usersRouter.get("/:id", authMiddleware, getUserByIdController);
-usersRouter.put("/:id", authMiddleware, updateUserController);
+usersRouter.put("/:id", authMiddleware, upload.single('urlImagem'), updateUserController);
 usersRouter.delete("/:id", authMiddleware, deleteUserController);
 
 

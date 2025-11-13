@@ -13,6 +13,10 @@ export const createVendedorController = async (req: AuthenticatedRequest, res: R
     const { empresaId } = req.user!;
     const data = CreateVendedorSchema.parse(req.body);
 
+    if (req.file) {
+      (data as any).urlImagem = `uploads/vendedores/${req.file.filename}`;
+    }
+
     const vendedor = await vendedorService.create(data, empresaId);
     res.status(201).json(vendedor);
   } catch (error) {
@@ -50,6 +54,11 @@ export const updateVendedorController = async (req: AuthenticatedRequest, res: R
   try {
     const { empresaId } = req.user!;
     const data = UpdateVendedorSchema.parse(req.body);
+    
+    if (req.file) {
+      (data as any).urlImagem = `uploads/vendedores/${req.file.filename}`;
+    }
+
     const vendedor = await vendedorService.update(
       req.params.id as string,
       data,

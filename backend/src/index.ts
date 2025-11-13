@@ -6,4 +6,5 @@ const PORT = process.env.PORT;
 
 app.listen(PORT, () => {
   console.log(chalk.green(`Servidor rodando na porta ${PORT}`));
+  console.log(chalk.green(`Documentação dísponivel em http://localhost:${PORT}/api/docs`));
 });

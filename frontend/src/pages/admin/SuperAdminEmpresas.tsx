@@ -11,7 +11,7 @@ import {
   ShoppingBag,
   TrendingUp,
 } from "lucide-react";
-import { AppNavbar } from "@/components/AppSidebar";
+import  {AppSidebar} from "@/components/AppSidebar";
 import {
   Card,
   CardHeader,
@@ -90,7 +90,7 @@ export default function SuperAdminEmpresas() {
   // ======================================================
   return (
     <div className="container mx-auto p-6 space-y-8">
-      <AppNavbar />
+      <AppSidebar />
 
       {/* CABEÇALHO */}
       <motion.div

@@ -1,0 +1,294 @@
+dashboard:
+  get:
+    tags: [Financeiro]
+    summary: Obtém os dados consolidados para o dashboard financeiro
+    security: [bearerAuth: []]
+    responses:
+      '200':
+        description: Sucesso
+      '401':
+        $ref: '#/components/responses/Unauthorized'
+categorias:
+  get:
+    tags: [Financeiro]
+    summary: Lista todas as categorias financeiras da empresa
+    parameters:
+      - { name: tipo, in: query, schema: { type: string, enum: [ENTRADA, SAIDA] } }
+    responses:
+      '200':
+        description: Lista de categorias.
+  post:
+    tags: [Financeiro]
+    summary: Cria uma nova categoria financeira (Admin)
+    requestBody:
+      content:
+        application/json:
+          schema: { $ref: '../schemas/index.yaml#/CreateCategoriaFinanceira' }
+    responses:
+      '201':
+        description: Categoria criada.
+      '403':
+        $ref: '#/components/responses/Forbidden'
+categoriaById:
+  put:
+    tags: [Financeiro]
+    summary: Atualiza uma categoria financeira (Admin)
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    requestBody:
+      content:
+        application/json:
+          schema: { $ref: '../schemas/index.yaml#/UpdateCategoriaFinanceira' }
+    responses:
+      '200':
+        description: Categoria atualizada.
+      '403':
+        $ref: '#/components/responses/Forbidden'
+  delete:
+    tags: [Financeiro]
+    summary: Arquiva uma categoria financeira (Admin)
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    responses:
+      '204':
+        description: Categoria arquivada.
+      '403':
+        $ref: '#/components/responses/Forbidden'
+contasBancarias:
+  get:
+    tags: [Financeiro]
+    summary: Lista as contas bancárias da empresa
+    responses:
+      '200':
+        description: Lista de contas.
+  post:
+    tags: [Financeiro]
+    summary: Cria uma nova conta bancária (Admin)
+    requestBody:
+      content:
+        application/json:
+          schema: { $ref: '../schemas/index.yaml#/CreateContaBancaria' }
+    responses:
+      '201':
+        description: Conta criada.
+      '403':
+        $ref: '#/components/responses/Forbidden'
+contaBancariaById:
+  put:
+    tags: [Financeiro]
+    summary: Atualiza uma conta bancária (Admin)
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    requestBody:
+      content:
+        application/json:
+          schema: { $ref: '../schemas/index.yaml#/UpdateContaBancaria' }
+    responses:
+      '200':
+        description: Conta atualizada.
+      '403':
+        $ref: '#/components/responses/Forbidden'
+  delete:
+    tags: [Financeiro]
+    summary: Exclui uma conta bancária (Admin)
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    responses:
+      '204':
+        description: Conta excluída.
+      '403':
+        $ref: '#/components/responses/Forbidden'
+transferir:
+  post:
+    tags: [Financeiro]
+    summary: Transfere um valor entre contas bancárias (Admin)
+    requestBody:
+      content:
+        application/json:
+          schema: { $ref: '../schemas/index.yaml#/Transferencia' }
+    responses:
+      '200':
+        description: Transferência realizada.
+      '403':
+        $ref: '#/components/responses/Forbidden'
+movimentacoes:
+  get:
+    tags: [Financeiro]
+    summary: Lista as movimentações financeiras
+    responses:
+      '200':
+        description: Lista de movimentações.
+  post:
+    tags: [Financeiro]
+    summary: Cria uma nova movimentação financeira (Admin)
+    requestBody:
+      content:
+        application/json:
+          schema: { $ref: '../schemas/index.yaml#/CreateMovimentacaoFinanceira' }
+    responses:
+      '201':
+        description: Movimentação criada.
+      '403':
+        $ref: '#/components/responses/Forbidden'
+movimentacaoById:
+  put:
+    tags: [Financeiro]
+    summary: Atualiza uma movimentação financeira (Admin)
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    requestBody:
+      content:
+        application/json:
+          schema: { $ref: '../schemas/index.yaml#/UpdateMovimentacaoFinanceira' }
+    responses:
+      '200':
+        description: Movimentação atualizada.
+      '403':
+        $ref: '#/components/responses/Forbidden'
+  delete:
+    tags: [Financeiro]
+    summary: Remove uma movimentação financeira (Admin)
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    responses:
+      '204':
+        description: Movimentação removida.
+      '403':
+        $ref: '#/components/responses/Forbidden'
+contasPagar:
+  get:
+    tags: [Financeiro]
+    summary: Lista as contas a pagar
+    responses:
+      '200':
+        description: Lista de contas a pagar.
+  post:
+    tags: [Financeiro]
+    summary: Cria uma nova conta a pagar (Admin)
+    requestBody:
+      content:
+        application/json:
+          schema: { $ref: '../schemas/index.yaml#/CreateContaPagar' }
+    responses:
+      '201':
+        description: Conta a pagar criada.
+      '403':
+        $ref: '#/components/responses/Forbidden'
+contaPagarById:
+  put:
+    tags: [Financeiro]
+    summary: Atualiza uma conta a pagar (Admin)
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    requestBody:
+      content:
+        application/json:
+          schema: { $ref: '../schemas/index.yaml#/UpdateContaPagar' }
+    responses:
+      '200':
+        description: Conta atualizada.
+      '403':
+        $ref: '#/components/responses/Forbidden'
+  delete:
+    tags: [Financeiro]
+    summary: Deleta uma conta a pagar (Admin)
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    responses:
+      '204':
+        description: Conta deletada.
+      '403':
+        $ref: '#/components/responses/Forbidden'
+pagarConta:
+  post:
+    tags: [Financeiro]
+    summary: Marca uma conta como paga (Admin)
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    requestBody:
+      content:
+        application/json:
+          schema: { $ref: '../schemas/index.yaml#/MarcarContaPaga' }
+    responses:
+      '200':
+        description: Conta paga.
+      '403':
+        $ref: '#/components/responses/Forbidden'
+contasReceber:
+  get:
+    tags: [Financeiro]
+    summary: Lista as contas a receber
+    responses:
+      '200':
+        description: Lista de contas a receber.
+  post:
+    tags: [Financeiro]
+    summary: Cria uma nova conta a receber (Admin)
+    requestBody:
+      content:
+        application/json:
+          schema: { $ref: '../schemas/index.yaml#/CreateContaReceber' }
+    responses:
+      '201':
+        description: Conta a receber criada.
+      '403':
+        $ref: '#/components/responses/Forbidden'
+contaReceberById:
+  put:
+    tags: [Financeiro]
+    summary: Atualiza uma conta a receber (Admin)
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    requestBody:
+      content:
+        application/json:
+          schema: { $ref: '../schemas/index.yaml#/UpdateContaReceber' }
+    responses:
+      '200':
+        description: Conta atualizada.
+      '403':
+        $ref: '#/components/responses/Forbidden'
+  delete:
+    tags: [Financeiro]
+    summary: Deleta uma conta a receber (Admin)
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    responses:
+      '204':
+        description: Conta deletada.
+      '403':
+        $ref: '#/components/responses/Forbidden'
+receberConta:
+  post:
+    tags: [Financeiro]
+    summary: Marca uma conta como recebida (Admin)
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    requestBody:
+      content:
+        application/json:
+          schema: { $ref: '../schemas/index.yaml#/MarcarContaRecebida' }
+    responses:
+      '200':
+        description: Conta recebida.
+      '403':
+        $ref: '#/components/responses/Forbidden'
+relatorioFluxoCaixa:
+  get:
+    tags: [Financeiro]
+    summary: Gera um relatório de fluxo de caixa
+    parameters:
+      - { name: inicio, in: query, required: true, schema: { type: string, format: date } }
+      - { name: fim, in: query, required: true, schema: { type: string, format: date } }
+    responses:
+      '200':
+        description: Relatório gerado.
+relatorioResumoMensal:
+  get:
+    tags: [Financeiro]
+    summary: Gera um relatório de resumo mensal
+    parameters:
+      - { name: mes, in: query, required: true, schema: { type: string, example: "2025-11" } }
+    responses:
+      '200':
+        description: Relatório gerado.

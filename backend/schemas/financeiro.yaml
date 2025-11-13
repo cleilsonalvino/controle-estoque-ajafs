@@ -1,0 +1,140 @@
+CategoriaFinanceira:
+  type: object
+  properties:
+    id: { type: string, format: uuid }
+    nome: { type: string }
+    tipo: { type: string, enum: [ENTRADA, SAIDA] }
+    ativo: { type: boolean }
+CreateCategoriaFinanceira:
+  type: object
+  properties:
+    nome: { type: string, minLength: 3 }
+    tipo: { type: string, enum: [ENTRADA, SAIDA] }
+    descricao: { type: string }
+  required: [nome, tipo]
+UpdateCategoriaFinanceira:
+  type: object
+  properties:
+    nome: { type: string, minLength: 3 }
+    tipo: { type: string, enum: [ENTRADA, SAIDA] }
+    descricao: { type: string }
+ContaBancaria:
+  type: object
+  properties:
+    id: { type: string, format: uuid }
+    nome: { type: string }
+    tipoConta: { type: string, enum: [CORRENTE, POUPANCA, CARTEIRA, OUTRO] }
+    saldoAtual: { type: number, format: float }
+    ativo: { type: boolean }
+CreateContaBancaria:
+  type: object
+  properties:
+    nome: { type: string, minLength: 3 }
+    banco: { type: string }
+    tipoConta: { type: string, enum: [CORRENTE, POUPANCA, CARTEIRA, OUTRO] }
+    saldoInicial: { type: number, exclusiveMinimum: 0 }
+  required: [nome, tipoConta, saldoInicial]
+UpdateContaBancaria:
+  type: object
+  properties:
+    nome: { type: string, minLength: 3 }
+    banco: { type: string }
+    tipoConta: { type: string, enum: [CORRENTE, POUPANCA, CARTEIRA, OUTRO] }
+MovimentacaoFinanceira:
+  type: object
+  properties:
+    id: { type: string, format: uuid }
+    tipo: { type: string, enum: [ENTRADA, SAIDA] }
+    descricao: { type: string }
+    valor: { type: number, format: float }
+    data: { type: string, format: date-time }
+    status: { type: string, enum: [PENDENTE, LIQUIDADA, CANCELADA] }
+    categoriaId: { type: string, format: uuid }
+    contaBancariaId: { type: string, format: uuid }
+CreateMovimentacaoFinanceira:
+  type: object
+  properties:
+    tipo: { type: string, enum: [ENTRADA, SAIDA] }
+    descricao: { type: string }
+    valor: { type: number, exclusiveMinimum: 0 }
+    data: { type: string, format: date-time }
+    categoriaId: { type: string, format: uuid }
+    contaBancariaId: { type: string, format: uuid }
+  required: [tipo, valor, data, categoriaId, contaBancariaId]
+UpdateMovimentacaoFinanceira:
+  type: object
+  properties:
+    tipo: { type: string, enum: [ENTRADA, SAIDA] }
+    descricao: { type: string }
+    valor: { type: number, exclusiveMinimum: 0 }
+    data: { type: string, format: date-time }
+    categoriaId: { type: string, format: uuid }
+    contaBancariaId: { type: string, format: uuid }
+ContaPagar:
+  type: object
+  properties:
+    id: { type: string, format: uuid }
+    descricao: { type: string }
+    valorTotal: { type: number, format: float }
+    dataVencimento: { type: string, format: date-time }
+    status: { type: string, enum: [PENDENTE, PAGO, ATRASADO, CANCELADO] }
+CreateContaPagar:
+  type: object
+  properties:
+    descricao: { type: string, minLength: 3 }
+    valorTotal: { type: number, exclusiveMinimum: 0 }
+    dataVencimento: { type: string, format: date-time }
+    categoriaId: { type: string, format: uuid }
+  required: [descricao, valorTotal, dataVencimento, categoriaId]
+UpdateContaPagar:
+  type: object
+  properties:
+    descricao: { type: string, minLength: 3 }
+    valorTotal: { type: number, exclusiveMinimum: 0 }
+    dataVencimento: { type: string, format: date-time }
+    categoriaId: { type: string, format: uuid }
+MarcarContaPaga:
+  type: object
+  properties:
+    dataPagamento: { type: string, format: date-time }
+    valorPago: { type: number, exclusiveMinimum: 0 }
+    contaBancariaId: { type: string, format: uuid }
+  required: [dataPagamento, valorPago, contaBancariaId]
+ContaReceber:
+  type: object
+  properties:
+    id: { type: string, format: uuid }
+    descricao: { type: string }
+    valorTotal: { type: number, format: float }
+    dataVencimento: { type: string, format: date-time }
+    status: { type: string, enum: [PENDENTE, RECEBIDO, ATRASADO, CANCELADO] }
+CreateContaReceber:
+  type: object
+  properties:
+    descricao: { type: string, minLength: 3 }
+    valorTotal: { type: number, exclusiveMinimum: 0 }
+    dataVencimento: { type: string, format: date-time }
+    categoriaId: { type: string, format: uuid }
+  required: [descricao, valorTotal, dataVencimento, categoriaId]
+UpdateContaReceber:
+  type: object
+  properties:
+    descricao: { type: string, minLength: 3 }
+    valorTotal: { type: number, exclusiveMinimum: 0 }
+    dataVencimento: { type: string, format: date-time }
+    categoriaId: { type: string, format: uuid }
+MarcarContaRecebida:
+  type: object
+  properties:
+    dataRecebimento: { type: string, format: date-time }
+    valorRecebido: { type: number, exclusiveMinimum: 0 }
+    contaBancariaId: { type: string, format: uuid }
+  required: [dataRecebimento, valorRecebido, contaBancariaId]
+Transferencia:
+  type: object
+  properties:
+    contaOrigemId: { type: string, format: uuid }
+    contaDestinoId: { type: string, format: uuid }
+    valor: { type: number, exclusiveMinimum: 0 }
+    data: { type: string, format: date-time }
+  required: [contaOrigemId, contaDestinoId, valor, data]

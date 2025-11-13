@@ -1,16 +1,20 @@
 import { Outlet } from "react-router-dom";
-import { AppNavbar } from "@/components/AppSidebar"; // (que agora é a barra superior)
+import { AppSidebar } from "@/components/AppSidebar";
+import { TitleBar } from "@/components/TitleBar";
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 
 export const Layout = () => {
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      {/* Navbar fixa no topo */}
-      <AppNavbar />
-
-      {/* Conteúdo principal (com padding-top para não ficar atrás da navbar) */}
-      <main className="flex-1 overflow-auto pt-20 px-4">
-        <Outlet />
-      </main>
-    </div>
+    <SidebarProvider>
+      <div className="min-h-screen bg-background flex">
+        <AppSidebar />
+        <SidebarInset>
+          <TitleBar />
+          <main className="flex-1 overflow-auto p-4">
+            <Outlet />
+          </main>
+        </SidebarInset>
+      </div>
+    </SidebarProvider>
   );
 };

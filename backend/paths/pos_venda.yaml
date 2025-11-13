@@ -1,0 +1,94 @@
+collection:
+  get:
+    tags: [Pós-Venda]
+    summary: Lista os registros de pós-venda
+    security: [bearerAuth: []]
+    responses:
+      '200':
+        description: Lista de registros.
+        content:
+          application/json:
+            schema:
+              type: array
+              items: { $ref: '../schemas/index.yaml#/PosVenda' }
+  post:
+    tags: [Pós-Venda]
+    summary: Cria um novo registro de pós-venda
+    security: [bearerAuth: []]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: '../schemas/index.yaml#/CreatePosVenda' }
+    responses:
+      '201':
+        description: Registro criado.
+        content:
+          application/json:
+            schema: { $ref: '../schemas/index.yaml#/PosVenda' }
+record:
+  get:
+    tags: [Pós-Venda]
+    summary: Busca um registro de pós-venda pelo ID
+    security: [bearerAuth: []]
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    responses:
+      '200':
+        description: Dados do registro.
+        content:
+          application/json:
+            schema: { $ref: '../schemas/index.yaml#/PosVenda' }
+      '404': { $ref: '#/components/responses/NotFound' }
+  put:
+    tags: [Pós-Venda]
+    summary: Atualiza um registro de pós-venda
+    security: [bearerAuth: []]
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: '../schemas/index.yaml#/UpdatePosVenda' }
+    responses:
+      '200':
+        description: Registro atualizado.
+        content:
+          application/json:
+            schema: { $ref: '../schemas/index.yaml#/PosVenda' }
+      '404': { $ref: '#/components/responses/NotFound' }
+  delete:
+    tags: [Pós-Venda]
+    summary: Deleta um registro de pós-venda
+    security: [bearerAuth: []]
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    responses:
+      '204': { description: Registro deletado. }
+      '404': { $ref: '#/components/responses/NotFound' }
+feedback:
+  get:
+    tags: [Pós-Venda]
+    summary: Busca dados para o formulário público de feedback
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    responses:
+      '200':
+        description: Dados para o formulário.
+  post:
+    tags: [Pós-Venda]
+    summary: Envia um novo feedback (público)
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: '../schemas/index.yaml#/CreateFeedback' }
+    responses:
+      '201':
+        description: Feedback enviado.
+        content:
+          application/json:
+            schema: { $ref: '../schemas/index.yaml#/Feedback' }

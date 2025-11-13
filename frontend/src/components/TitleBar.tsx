@@ -1,37 +1,48 @@
-import React from "react";
-import { X, Minus, Maximize2, Minimize2, Option } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/useAuth";
+import { LogOut, ShoppingCart } from "lucide-react";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 
-export function TitleBar() {
-  const handleClose = () => window.api.close();
-  const handleMinimize = () => window.api.minimize();
-  const handleMaximize = () => window.api.maximize();
-  const handleDevOps = () => window.api.devOps();
+export const TitleBar = () => {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
 
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
 
   return (
-    <div
-      style={{
-        height: "30px",
-        display: "flex",
-        justifyContent: "flex-end",
-        alignItems: "center",
-        background: "#3654D9",
-        color: "white",
-        padding: "0 10px",
-        WebkitAppRegion: "drag", // permite arrastar a janela
-      } as React.CSSProperties}>
-        <button className="m-2 hover:bg-white hover:text-black transition-colors duration-300" onClick={handleDevOps} style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
-        <Option size={16} />
-      </button>
-      <button className="m-2 hover:bg-white hover:text-black transition-colors duration-300" onClick={handleMinimize} style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
-        <Minus size={16} />
-      </button>
-      <button className="m-2 hover:bg-white hover:text-black transition-colors duration-300" onClick={handleMaximize} style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
-        <Maximize2 size={16} />
-      </button>
-      <button className="m-2 hover:bg-white hover:text-black transition-colors duration-300" onClick={handleClose} style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
-        <X size={16} />
-      </button>
-    </div>
+    <header className="sticky top-0 z-40 w-full border-b bg-background">
+      <div className="flex items-center justify-between px-4 py-2">
+        <div className="flex items-center space-x-2">
+          <SidebarTrigger />
+          <h1 className="text-lg font-semibold">Dashboard</h1>
+        </div>
+        <div className="flex items-center space-x-3">
+          {(user.papel === "ADMINISTRADOR" || user.papel === "USUARIO") && (
+            <Button
+              onClick={() => navigate("/sales")}
+              variant="default"
+              size="sm"
+              className="flex items-center space-x-2"
+            >
+              <ShoppingCart className="h-4 w-4" />
+              <span>Abrir PDV</span>
+            </Button>
+          )}
+          <Button
+            onClick={handleLogout}
+            variant="ghost"
+            size="sm"
+            className="flex items-center space-x-2"
+          >
+            <LogOut className="h-5 w-5" />
+            <span className="hidden md:inline">Sair</span>
+          </Button>
+        </div>
+      </div>
+    </header>
   );
-}
+};

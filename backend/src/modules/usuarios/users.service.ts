@@ -1,6 +1,8 @@
 import { PrismaClient } from "@prisma/client";
 import { hash } from "bcrypt";
 import { CustomError } from "../../shared/errors";
+import fs from 'fs';
+import path from 'path';
 
 const prisma = new PrismaClient();
 
@@ -40,7 +42,15 @@ export const updateUserService = async (
   data: any,
   empresaId: string
 ) => {
-  await getUserByIdService(id, empresaId);
+  const oldUser = await getUserByIdService(id, empresaId);
+
+  if (data.urlImagem && oldUser.urlImagem) {
+    const oldImagePath = path.resolve(__dirname, '..', '..', '..', oldUser.urlImagem);
+    fs.unlink(oldImagePath, (err) => {
+      if (err) console.error("Erro ao deletar imagem antiga do usuário:", err);
+    });
+  }
+
   if (data.senha) {
     data.senha = await hash(data.senha, 10);
   }
@@ -52,8 +62,16 @@ export const updateUserService = async (
 };
 
 export const deleteUserService = async (id: string, empresaId: string) => {
-  await getUserByIdService(id, empresaId);
+  const user = await getUserByIdService(id, empresaId);
+  
   await prisma.usuario.delete({
     where: { id, empresaId },
   });
+
+  if (user.urlImagem) {
+    const imagePath = path.resolve(__dirname, '..', '..', '..', user.urlImagem);
+    fs.unlink(imagePath, (err) => {
+      if (err) console.error("Erro ao deletar imagem do usuário:", err);
+    });
+  }
 };

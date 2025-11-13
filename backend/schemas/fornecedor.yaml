@@ -1,0 +1,25 @@
+Fornecedor:
+  type: object
+  properties:
+    id: { type: string, format: uuid }
+    nome: { type: string }
+    email: { type: string, format: email }
+    contato: { type: string }
+    telefone: { type: string }
+    endereco: { type: string }
+CreateSupplier:
+  type: object
+  properties:
+    nome: { type: string, example: "Fornecedor Principal" }
+    email: { type: string, format: email }
+    contato: { type: string }
+    telefone: { type: string }
+    endereco: { type: string }
+  required: [nome]
+UpdateSupplier:
+  type: object
+  properties:
+    nome: { type: string }
+    email: { type: string, format: email }
+    telefone: { type: string }
+    descricao: { type: string }

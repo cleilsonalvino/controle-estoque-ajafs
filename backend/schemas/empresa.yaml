@@ -1,0 +1,51 @@
+Empresa:
+  type: object
+  properties:
+    id: { type: string, format: uuid }
+    nome: { type: string }
+    cnpj: { type: string }
+    telefone: { type: string }
+    email: { type: string, format: email }
+    razaoSocial: { type: string }
+    nomeFantasia: { type: string }
+    cep: { type: string }
+    estado: { type: string }
+    cidade: { type: string }
+    endereco: { type: string }
+    numero: { type: string }
+    bairro: { type: string }
+    criadoEm: { type: string, format: date-time }
+CreateEmpresa:
+  type: object
+  properties:
+    nome: { type: string, example: "Minha Empresa" }
+    cnpj: { type: string, example: "00111222000133" }
+    telefone: { type: string, example: "11999998888" }
+    email: { type: string, format: email, example: "contato@minhaempresa.com" }
+    razaoSocial: { type: string }
+    nomeFantasia: { type: string }
+    inscEstadual: { type: string }
+    inscMunicipal: { type: string }
+    cnae: { type: string }
+    cep: { type: string }
+    estado: { type: string }
+    cidade: { type: string }
+    endereco: { type: string }
+    numero: { type: string }
+    complemento: { type: string }
+    bairro: { type: string }
+  required: [nome, cnpj, telefone, razaoSocial, nomeFantasia, cep, estado, cidade, endereco, numero, bairro]
+UpdateEmpresa:
+  type: object
+  properties:
+    nome: { type: string }
+    telefone: { type: string }
+    email: { type: string, format: email }
+    razaoSocial: { type: string }
+    nomeFantasia: { type: string }
+    cep: { type: string }
+    estado: { type: string }
+    cidade: { type: string }
+    endereco: { type: string }
+    numero: { type: string }
+    bairro: { type: string }

@@ -1,0 +1,71 @@
+collection:
+  get:
+    tags: [Fornecedores]
+    summary: Lista todos os fornecedores da empresa
+    security: [bearerAuth: []]
+    responses:
+      '200':
+        description: Lista de fornecedores.
+        content:
+          application/json:
+            schema:
+              type: array
+              items: { $ref: '../schemas/index.yaml#/Fornecedor' }
+create:
+  post:
+    tags: [Fornecedores]
+    summary: Cria um novo fornecedor
+    security: [bearerAuth: []]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: '../schemas/index.yaml#/CreateSupplier' }
+    responses:
+      '201':
+        description: Fornecedor criado.
+        content:
+          application/json:
+            schema: { $ref: '../schemas/index.yaml#/Fornecedor' }
+      '400': { $ref: '#/components/responses/BadRequest' }
+record:
+  get:
+    tags: [Fornecedores]
+    summary: Busca um fornecedor pelo ID
+    security: [bearerAuth: []]
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    responses:
+      '200':
+        description: Dados do fornecedor.
+        content:
+          application/json:
+            schema: { $ref: '../schemas/index.yaml#/Fornecedor' }
+      '404': { $ref: '#/components/responses/NotFound' }
+  put:
+    tags: [Fornecedores]
+    summary: Atualiza um fornecedor
+    security: [bearerAuth: []]
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: '../schemas/index.yaml#/UpdateSupplier' }
+    responses:
+      '200':
+        description: Fornecedor atualizado.
+        content:
+          application/json:
+            schema: { $ref: '../schemas/index.yaml#/Fornecedor' }
+      '404': { $ref: '#/components/responses/NotFound' }
+  delete:
+    tags: [Fornecedores]
+    summary: Deleta um fornecedor
+    security: [bearerAuth: []]
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    responses:
+      '204': { description: Fornecedor deletado. }
+      '404': { $ref: '#/components/responses/NotFound' }

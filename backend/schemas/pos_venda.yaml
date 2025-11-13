@@ -1,0 +1,47 @@
+PosVenda:
+  type: object
+  properties:
+    id: { type: string, format: uuid }
+    vendaId: { type: string, format: uuid }
+    clienteId: { type: string, format: uuid }
+    status: { type: string, enum: [PENDENTE, EM_ANDAMENTO, FINALIZADO] }
+    satisfacao: { type: integer, minimum: 1, maximum: 5 }
+    observacoes: { type: string }
+CreatePosVenda:
+  type: object
+  properties:
+    vendaId: { type: string, format: uuid }
+    clienteId: { type: string, format: uuid }
+    tipoContato: { type: string }
+    observacoes: { type: string }
+  required: [vendaId]
+UpdatePosVenda:
+  type: object
+  properties:
+    tipoContato: { type: string }
+    status: { type: string, enum: [PENDENTE, EM_ANDAMENTO, FINALIZADO] }
+    satisfacao: { type: integer, minimum: 1, maximum: 5 }
+    observacoes: { type: string }
+    retornoCliente: { type: boolean }
+Feedback:
+  type: object
+  properties:
+    id: { type: string, format: uuid }
+    posVendaId: { type: string, format: uuid }
+    comentario: { type: string }
+    avaliacao: { type: integer, minimum: 1, maximum: 5 }
+CreateFeedback:
+  type: object
+  properties:
+    avaliacao: { type: integer, minimum: 1, maximum: 5 }
+    comentario: { type: string }
+  required: [avaliacao]
+FollowUp:
+  type: object
+  properties:
+    id: { type: string, format: uuid }
+    posVendaId: { type: string, format: uuid }
+    dataAgendada: { type: string, format: date-time }
+    tipoAcao: { type: string }
+    realizado: { type: boolean }
+    observacao: { type: string }

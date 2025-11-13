@@ -1,5 +1,7 @@
 import { Prisma, PrismaClient } from "@prisma/client";
 import { CustomError } from "../../shared/errors";
+import fs from 'fs';
+import path from 'path';
 
 const prisma = new PrismaClient();
 
@@ -138,7 +140,15 @@ export const updateProductService = async (
   data: any,
   empresaId: string
 ) => {
-  await getProductByIdService(id, empresaId);
+  const oldProduct = await getProductByIdService(id, empresaId);
+
+  // Se uma nova imagem foi enviada, deleta a antiga
+  if (data.urlImage && oldProduct.urlImage) {
+    const oldImagePath = path.resolve(__dirname, '..', '..', '..', oldProduct.urlImage);
+    fs.unlink(oldImagePath, (err) => {
+      if (err) console.error("Erro ao deletar imagem antiga:", err);
+    });
+  }
 
   const product = await prisma.produto.update({
     where: { id, empresaId },
@@ -149,11 +159,19 @@ export const updateProductService = async (
 };
 
 export const deleteProductService = async (id: string, empresaId: string) => {
-  await getProductByIdService(id, empresaId);
+  const product = await getProductByIdService(id, empresaId);
 
   const deletedProduct = await prisma.produto.delete({
     where: { id, empresaId },
   });
+
+  // Deleta a imagem associada
+  if (product.urlImage) {
+    const imagePath = path.resolve(__dirname, '..', '..', '..', product.urlImage);
+    fs.unlink(imagePath, (err) => {
+      if (err) console.error("Erro ao deletar imagem do produto:", err);
+    });
+  }
 
   return deletedProduct;
 };

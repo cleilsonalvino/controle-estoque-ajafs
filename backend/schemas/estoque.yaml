@@ -1,0 +1,21 @@
+MovimentacaoEstoque:
+  type: object
+  properties:
+    id: { type: string, format: uuid }
+    produtoId: { type: string, format: uuid }
+    tipo: { type: string, enum: [ENTRADA, SAIDA, AJUSTE] }
+    quantidade: { type: number, format: float }
+    observacao: { type: string }
+    criadoEm: { type: string, format: date-time }
+    usuarioId: { type: string, format: uuid }
+CreateMovimentacaoEstoque:
+  type: object
+  properties:
+    produtoId: { type: string, format: uuid }
+    tipo: { type: string, enum: [ENTRADA, SAIDA, AJUSTE] }
+    quantidade: { type: number, exclusiveMinimum: 0 }
+    observacao: { type: string }
+    fornecedorId: { type: string, format: uuid, description: "Obrigatório para ENTRADA" }
+    precoCusto: { type: string, description: "Obrigatório para ENTRADA" }
+    validade: { type: string, format: date-time }
+  required: [produtoId, tipo, quantidade]

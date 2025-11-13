@@ -1,0 +1,29 @@
+Cliente:
+  type: object
+  properties:
+    id: { type: string, format: uuid }
+    codigo: { type: string }
+    nome: { type: string }
+    cpf: { type: string }
+    email: { type: string, format: email }
+    telefone: { type: string }
+    endereco: { type: string }
+    empresaId: { type: string, format: uuid }
+    criadoEm: { type: string, format: date-time }
+CreateCliente:
+  type: object
+  properties:
+    nome: { type: string, minLength: 3, example: "João da Silva" }
+    email: { type: string, format: email, example: "joao.silva@example.com" }
+    cpf: { type: string, maxLength: 11 }
+    telefone: { type: string, maxLength: 11 }
+    endereco: { type: string }
+  required: [nome]
+UpdateCliente:
+  type: object
+  properties:
+    nome: { type: string, minLength: 3 }
+    email: { type: string, format: email }
+    cpf: { type: string, maxLength: 11 }
+    telefone: { type: string, maxLength: 11 }
+    endereco: { type: string }

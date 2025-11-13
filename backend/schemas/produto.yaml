@@ -1,0 +1,46 @@
+Produto:
+  type: object
+  properties:
+    id: { type: string, format: uuid }
+    nome: { type: string }
+    codigoBarras: { type: string }
+    descricao: { type: string }
+    precoVenda: { type: number, format: float }
+    urlImage: { type: string, format: uri }
+    categoriaId: { type: string, format: uuid }
+    marcaId: { type: string, format: uuid }
+    empresaId: { type: string, format: uuid }
+CreateProduct:
+  type: object
+  properties:
+    nome: { type: string, example: "Produto Exemplo" }
+    descricao: { type: string }
+    precoVenda: { type: string, example: "19.99" }
+    urlImage: { type: string, format: uri }
+    codigoBarras: { type: string }
+    estoqueMinimo: { type: number, default: 0 }
+    categoriaId: { type: string, format: uuid }
+    marcaId: { type: string, format: uuid }
+  required: [nome]
+UpdateProduct:
+  type: object
+  properties:
+    nome: { type: string }
+    descricao: { type: string }
+    precoVenda: { type: string }
+    urlImage: { type: string, format: uri }
+    codigoBarras: { type: string }
+    estoqueMinimo: { type: number }
+    categoriaId: { type: string, format: uuid }
+    marcaId: { type: string, format: uuid }
+Marca:
+  type: object
+  properties:
+    id: { type: string, format: uuid }
+    nome: { type: string }
+CategoriaProduto:
+  type: object
+  properties:
+    id: { type: string, format: uuid }
+    nome: { type: string }
+    descricao: { type: string }

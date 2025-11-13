@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
   Settings as SettingsIcon,
   Save,
@@ -17,6 +17,14 @@ import {
   CardTitle,
   CardFooter,
 } from "@/components/ui/card";
+import {
+  Dialog, // 👈 NOVO: Componentes do Modal
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,7 +46,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import InputMask from "react-input-mask";
 import axios from "axios";
-import { set } from "date-fns";
+import {
+  TooltipProvider,
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
 
 // ==========================
 // 🔹 Esquemas de Validação
@@ -57,14 +70,13 @@ const empresaSchema = z.object({
   bairro: z.string().optional(),
 });
 
-// Esquema de usuário ajustado: senha e confirmarSenha são opcionais para edição
 const userSchema = z
   .object({
-    id: z.string().optional(), // Adicionado ID para edição
+    id: z.string().optional(),
     nome: z.string().min(1, "Nome é obrigatório"),
     email: z.string().min(1, "Email é obrigatório").email("Email inválido"),
-    senha: z.string().optional(), // Opcional para edição
-    confirmarSenha: z.string().optional(), // Opcional para edição
+    senha: z.string().optional(),
+    confirmarSenha: z.string().optional(),
     telasPermitidas: z.array(z.string()).default([]),
     papel: z.enum(["ADMINISTRADOR", "USUARIO"]),
   })
@@ -74,11 +86,9 @@ const userSchema = z
   })
   .refine(
     (data) => {
-      // Se a senha foi fornecida, a confirmação de senha também deve ser
       if (data.senha && data.senha.length > 0) {
-        return data.senha.length >= 6; // Verifica o mínimo de 6 caracteres
+        return data.senha.length >= 6;
       }
-      // Se não for fornecida, ok (para edição)
       return true;
     },
     {
@@ -107,7 +117,6 @@ const estadosBrasileiros = [
   { sigla: "RR", nome: "Roraima" },
 ];
 
-// O tipo de usuário retornado da API, ajustado para incluir 'id' e 'telasPermitidas'
 type UserAPI = {
   id: string;
   nome: string;
@@ -118,14 +127,16 @@ type UserAPI = {
 
 const Settings = () => {
   const { empresa, loading, createEmpresa, updateEmpresa } = useEmpresa();
-  const [isEditing, setIsEditing] = useState(false); // Edição da empresa
-  const [editingUser, setEditingUser] = useState<UserAPI | null>(null); // Usuário sendo editado
-  const [users, setUsers] = useState<UserAPI[]>([]); // Lista de usuários
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingUser, setEditingUser] = useState<UserAPI | null>(null);
+  const [users, setUsers] = useState<UserAPI[]>([]);
 
-  // NOTE: userLogado é usado apenas para desabilitar a exclusão do próprio usuário logado
+  // 👈 NOVO: Estado para controlar a abertura do modal de usuário
+  const [isUserModalOpen, setIsUserModalOpen] = useState(false);
+
   const userLogado = JSON.parse(localStorage.getItem("user") || "{}");
 
-  // --- Formulário da Empresa (Sem alterações na lógica) ---
+  // --- Formulário da Empresa ---
   const {
     handleSubmit: handleSubmitEmpresa,
     control: controlEmpresa,
@@ -138,21 +149,65 @@ const Settings = () => {
     reset: resetEmpresaForm,
     register: registerEmpresa,
   } = useForm<EmpresaFormData>({ resolver: zodResolver(empresaSchema) });
-  // --------------------------------------------------------
 
-  // --- Formulário do Usuário (Criação e Edição) ---
+  // --- Formulário do Usuário ---
   const {
     register: registerUser,
     handleSubmit: handleSubmitUser,
     control: controlUser,
-    formState: { errors: userErrors, isSubmitting: isUserSubmitting, isDirty: isUserDirty },
+    formState: {
+      errors: userErrors,
+      isSubmitting: isUserSubmitting,
+      isDirty: isUserDirty,
+    },
     reset: resetUserForm,
     setValue: setUserValue,
   } = useForm<UserFormData>({
     resolver: zodResolver(userSchema),
-    defaultValues: { telasPermitidas: [], papel: "USUARIO" }, // Valor padrão para 'papel'
+    defaultValues: { telasPermitidas: [], papel: "USUARIO" },
   });
-  // ------------------------------------------------
+
+  // ✅ Lógica de Agrupamento para Permissões
+  const groupedMenuPermissions = useMemo(() => {
+    const grupos: Record<string, typeof allMenuItems> = {
+      Gestão: [],
+      Financeiro: [],
+      Cadastros: [],
+      Serviços: [],
+      Outros: [],
+    };
+
+    const filteredItems = allMenuItems.filter((item) => item.url !== "/");
+
+    filteredItems.forEach((item) => {
+      if (item.key.startsWith("financeiro-")) {
+        grupos["Financeiro"].push(item);
+      } else if (
+        ["estoque", "dashboard-sales", "sales", "pos-venda"].includes(item.key)
+      ) {
+        grupos["Gestão"].push(item);
+      } else if (
+        [
+          "products",
+          "movements",
+          "suppliers",
+          "categories",
+          "clientes",
+          "vendedores",
+        ].includes(item.key)
+      ) {
+        grupos["Cadastros"].push(item);
+      } else if (["tipos-servicos", "service-categories"].includes(item.key)) {
+        grupos["Serviços"].push(item);
+      } else if (["settings", "super_admin"].includes(item.key)) {
+        grupos["Outros"].push(item);
+      } else {
+        grupos["Outros"].push(item);
+      }
+    });
+
+    return Object.entries(grupos).filter(([, itens]) => itens.length > 0);
+  }, []);
 
   // ✅ Carregar empresa no formulário
   useEffect(() => {
@@ -193,7 +248,7 @@ const Settings = () => {
   };
 
   // ===================================
-  // 🚀 Lógica de Usuários
+  // 🚀 Lógica de Usuários (Ajustada para o Modal)
   // ===================================
 
   // ✅ Busca lista de usuários
@@ -210,7 +265,14 @@ const Settings = () => {
     getUsers();
   }, []);
 
-  // 📝 Configura o formulário para edição ao clicar no botão "Editar"
+  // 👈 NOVO: Função para fechar o modal e limpar o estado de edição
+  const handleCloseUserModal = () => {
+    setIsUserModalOpen(false);
+    setEditingUser(null);
+    resetUserForm();
+  };
+
+  // 📝 Configura o formulário para EDIÇÃO e abre o modal
   const onEditUser = (user: UserAPI) => {
     setEditingUser(user);
     // Preenche o formulário com os dados do usuário
@@ -220,45 +282,45 @@ const Settings = () => {
       email: user.email,
       papel: user.papel,
       telasPermitidas: user.telasPermitidas || [], // Garante que é um array
-      // Senha e confirmarSenha ficam vazios
     });
-    // Rola para o formulário de usuário (opcional, mas melhora UX)
-    document
-      .getElementById("cadastro-usuario-card")
-      ?.scrollIntoView({ behavior: "smooth" });
+    // ABRIR MODAL
+    setIsUserModalOpen(true);
+  };
+
+  // 📝 Configura o formulário para CRIAÇÃO e abre o modal
+  const onNewUser = () => {
+    setEditingUser(null);
+    resetUserForm();
+    setIsUserModalOpen(true);
   };
 
   // ✅ Ação de criação/edição de usuário
   const handleUserSubmit = async (data: UserFormData) => {
     const { confirmarSenha, ...payload } = data;
 
-    // Se estiver editando
-    if (editingUser?.id) {
-      // Remove senha se estiver vazia para não alterar
-      if (!payload.senha) {
-        delete payload.senha;
-      }
-      
-      try {
-        // Envia a requisição de atualização
+    try {
+      if (editingUser?.id) {
+        // Remove senha se estiver vazia para não alterar
+        if (!payload.senha) {
+          delete payload.senha;
+        }
+
         await api.put(`/usuarios/${editingUser.id}`, payload);
         sonnerToast.success("Usuário atualizado com sucesso!");
-        setEditingUser(null); // Sai do modo de edição
-        resetUserForm(); // Limpa o formulário
-        getUsers(); // Atualiza a lista
-      } catch {
-        sonnerToast.error("Erro ao atualizar usuário. Tente novamente.");
-      }
-    } else {
-      // Lógica de criação (original)
-      try {
+      } else {
         await api.post("/usuarios", payload);
         sonnerToast.success("Usuário criado com sucesso!");
-        resetUserForm();
-        getUsers(); // Atualiza a lista
-      } catch {
-        sonnerToast.error("Erro ao criar usuário. Tente novamente.");
       }
+
+      // AÇÕES DE SUCESSO
+      handleCloseUserModal(); // Fecha o modal e limpa o formulário
+      getUsers(); // Atualiza a lista
+    } catch {
+      sonnerToast.error(
+        `Erro ao ${
+          editingUser ? "atualizar" : "criar"
+        } usuário. Tente novamente.`
+      );
     }
   };
 
@@ -269,21 +331,19 @@ const Settings = () => {
         await api.delete(`/usuarios/${userId}`);
         sonnerToast.success("Usuário excluído com sucesso!");
         getUsers();
-        // Se o usuário excluído era o que estava sendo editado, limpa o estado de edição
+        // Se o usuário excluído era o que estava sendo editado, fecha o modal
         if (editingUser?.id === userId) {
-          setEditingUser(null);
-          resetUserForm();
+          handleCloseUserModal();
         }
       } catch {
         sonnerToast.error("Erro ao excluir usuário. Tente novamente.");
       }
     }
   };
-  
-  // ✅ Cancelar edição do usuário
+
+  // ✅ Cancelar edição do usuário (apenas fecha o modal)
   const handleCancelUserEdit = () => {
-      setEditingUser(null);
-      resetUserForm();
+    handleCloseUserModal();
   };
 
   if (loading) return <p className="p-8">Carregando configurações...</p>;
@@ -389,7 +449,7 @@ const Settings = () => {
                     control={controlEmpresa}
                     render={({ field }) => (
                       <InputMask
-                        {...field} // ✅ Isso já inclui value, onChange e onBlur
+                        {...field}
                         mask="(99) 99999-9999"
                         disabled={!isEditing}
                       >
@@ -534,17 +594,24 @@ const Settings = () => {
         <Separator />
 
         {/* ==================== */}
-        {/* Card: Lista de Usuários */}
+        {/* Card: Lista de Usuários (com botão para abrir modal de criação) */}
         {/* ==================== */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-xl">
-              <UserPlus className="h-5 w-5" />
-              Lista de Usuários Cadastrados
-            </CardTitle>
-            <CardDescription>
-              Visualize, edite e gerencie as contas de acesso.
-            </CardDescription>
+          <CardHeader className="flex flex-row justify-between items-start">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-xl">
+                <UserPlus className="h-5 w-5" />
+                Lista de Usuários Cadastrados
+              </CardTitle>
+              <CardDescription>
+                Visualize, edite e gerencie as contas de acesso.
+              </CardDescription>
+            </div>
+            {/* 👈 BOTÃO PARA ABRIR O MODAL DE CRIAÇÃO */}
+            <Button onClick={onNewUser}>
+              <UserPlus className="h-4 w-4 mr-2" />
+              Novo Usuário
+            </Button>
           </CardHeader>
 
           <CardContent>
@@ -572,7 +639,7 @@ const Settings = () => {
                         </td>
                         <td className="px-4 py-2 border">
                           <div className="flex gap-2">
-                            {/* Botão de Edição */}
+                            {/* Botão de Edição (chama onEditUser para abrir o modal) */}
                             <Button
                               variant="outline"
                               size="sm"
@@ -617,32 +684,37 @@ const Settings = () => {
           </CardContent>
         </Card>
 
-        {/* ==================== */}
-        {/* Card: Cadastrar/Editar Usuário */}
-        {/* ==================== */}
-        <form onSubmit={handleSubmitUser(handleUserSubmit)}>
-          <Card id="cadastro-usuario-card">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-xl">
+        {/* REMOVIDO: O formulário que estava embutido aqui foi movido para o Dialog abaixo */}
+      </div>
+
+      {/* ======================================= */}
+      {/* 🚀 NOVO: Dialog (Modal) para Edição/Criação */}
+      {/* ======================================= */}
+      <Dialog open={isUserModalOpen} onOpenChange={handleCloseUserModal}>
+        <DialogContent className="sm:max-w-[800px] h-screen overflow-y-auto scroll-smooth">
+          <form onSubmit={handleSubmitUser(handleUserSubmit)}>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-2xl font-bold">
                 {editingUser ? (
                   <>
-                    <UserPen className="h-5 w-5" />
+                    <UserPen className="h-6 w-6" />
                     Editar Usuário: **{editingUser.nome}**
                   </>
                 ) : (
                   <>
-                    <UserPlus className="h-5 w-5" />
+                    <UserPlus className="h-6 w-6" />
                     Cadastrar Novo Usuário
                   </>
                 )}
-              </CardTitle>
-              <CardDescription>
+              </DialogTitle>
+              <DialogDescription>
                 {editingUser
-                  ? "Altere os dados e permissões de acesso do usuário."
+                  ? "Altere os dados, permissões e, opcionalmente, a senha do usuário."
                   : "Crie contas de acesso para seus colaboradores."}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="py-4 space-y-4">
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="nome">Nome do usuário*</Label>
@@ -655,12 +727,11 @@ const Settings = () => {
                 </div>
                 <div>
                   <Label htmlFor="emailUser">Email*</Label>
-                  {/* O email não pode ser alterado se for o usuário logado para evitar problemas de autenticação */}
                   <Input
                     id="emailUser"
                     type="email"
                     {...registerUser("email")}
-                    disabled={editingUser?.id === userLogado.id} 
+                    disabled={editingUser?.id === userLogado.id}
                   />
                   {userErrors.email && (
                     <p className="text-red-500 text-sm mt-1">
@@ -672,7 +743,8 @@ const Settings = () => {
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="senha">
-                    Senha{editingUser ? " (Deixe em branco para não alterar)" : "*"}
+                    Senha
+                    {editingUser ? " (Deixe em branco para não alterar)" : "*"}
                   </Label>
                   <Input
                     id="senha"
@@ -711,7 +783,7 @@ const Settings = () => {
                       onValueChange={field.onChange}
                       value={field.value}
                       // Impede a alteração do próprio papel para evitar bloqueio
-                      disabled={editingUser?.id === userLogado.id} 
+                      disabled={editingUser?.id === userLogado.id}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione" />
@@ -734,59 +806,89 @@ const Settings = () => {
 
               <Separator />
               <h4 className="font-semibold">Permissões de Acesso</h4>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+
+              <div className="space-y-6">
                 <Controller
                   name="telasPermitidas"
                   control={controlUser}
                   render={({ field }) => (
-                    <>
-                      {allMenuItems
-                        .filter((item) => item.url !== "/") // Não permite dar permissão para a Home
-                        .map((item) => (
-                          <div
-                            key={item.url} // Usando URL como key
-                            className="flex items-center space-x-2"
-                          >
-                            <Checkbox
-                              id={`check-${item.url}`} // ID deve ser único
-                              checked={field.value?.includes(item.url)} // Compara com a URL
-                              // Desabilita alteração de permissão do próprio ADMIN logado para evitar auto-bloqueio
-                              disabled={editingUser?.id === userLogado.id && editingUser?.papel === "ADMINISTRADOR"}
-                              onCheckedChange={(checked) => {
-                                return checked
-                                  ? field.onChange([...field.value, item.url]) // Adiciona a URL
-                                  : field.onChange(
-                                      field.value?.filter(
-                                        (value) => value !== item.url // Remove a URL
-                                      )
-                                    );
-                              }}
-                            />
-                            <Label
-                              htmlFor={`check-${item.url}`} // Associa com o ID
-                              className="cursor-pointer"
-                            >
-                              {item.title}
-                            </Label>
+                    <TooltipProvider>
+                      {groupedMenuPermissions.map(([categoria, itens]) => (
+                        <div key={categoria}>
+                          <h5 className="font-medium text-sm text-gray-700 dark:text-gray-300 mb-2 border-b pb-1">
+                            {categoria}
+                          </h5>
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                            {itens.map((item) => (
+                              <Tooltip key={item.url}>
+                                <div className="flex items-center space-x-2">
+                                  {/* Checkbox */}
+                                  <Checkbox
+                                    id={`check-${item.url}`}
+                                    checked={field.value?.includes(item.url)}
+                                    // Desabilita alteração para o próprio ADMIN logado
+                                    disabled={
+                                      editingUser?.id === userLogado.id &&
+                                      editingUser?.papel === "ADMINISTRADOR"
+                                    }
+                                    onCheckedChange={(checked) => {
+                                      return checked
+                                        ? field.onChange([
+                                            ...field.value,
+                                            item.url,
+                                          ]) // Adiciona a URL
+                                        : field.onChange(
+                                            field.value?.filter(
+                                              (value) => value !== item.url // Remove a URL
+                                            )
+                                          );
+                                    }}
+                                  />
+
+                                  {/* TooltipTrigger: Envolve o Label */}
+                                  <TooltipTrigger asChild>
+                                    <Label
+                                      htmlFor={`check-${item.url}`}
+                                      className="cursor-pointer font-normal text-sm"
+                                    >
+                                      {item.title}
+                                    </Label>
+                                  </TooltipTrigger>
+
+                                  {/* TooltipContent: Exibe a descrição */}
+                                  <TooltipContent className="mt-2 absolute w-40" >
+                                    <p className="max-w-xs text-sm ">
+                                      {item.description ||
+                                        `Permissão para acessar a tela de ${item.title}.`}
+                                    </p>
+                                  </TooltipContent>
+                                </div>
+                              </Tooltip>
+                            ))}
                           </div>
-                        ))}
-                    </>
+                        </div>
+                      ))}
+                    </TooltipProvider>
                   )}
                 />
               </div>
-            </CardContent>
-            <CardFooter className="flex justify-end gap-2">
+            </div>
+
+            <DialogFooter className="mt-4">
               {editingUser && (
                 <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleCancelUserEdit}
+                  type="button"
+                  variant="outline"
+                  onClick={handleCancelUserEdit}
                 >
-                    <ListRestart className="h-4 w-4 mr-2" />
-                    Cancelar Edição
+                  <ListRestart className="h-4 w-4 mr-2" />
+                  Cancelar Edição
                 </Button>
               )}
-              <Button type="submit" disabled={isUserSubmitting || (editingUser && !isUserDirty)}>
+              <Button
+                type="submit"
+                disabled={isUserSubmitting || (editingUser && !isUserDirty)}
+              >
                 <Save className="h-4 w-4 mr-2" />
                 {isUserSubmitting
                   ? "Salvando..."
@@ -794,10 +896,10 @@ const Settings = () => {
                   ? "Salvar Alterações"
                   : "Criar Usuário"}
               </Button>
-            </CardFooter>
-          </Card>
-        </form>
-      </div>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

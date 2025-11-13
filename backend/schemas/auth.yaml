@@ -1,0 +1,11 @@
+LoginRequest:
+  type: object
+  properties:
+    email: { type: string, format: email, example: "admin@example.com" }
+    senha: { type: string, format: password, example: "string" }
+  required: [email, senha]
+LoginResponse:
+  type: object
+  properties:
+    token: { type: string, example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." }
+    user: { $ref: './usuario.yaml#/User' }

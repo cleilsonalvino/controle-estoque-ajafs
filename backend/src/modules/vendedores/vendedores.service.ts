@@ -1,6 +1,8 @@
 import { PrismaClient } from "@prisma/client";
 import { CustomError } from "../../shared/errors";
 import { type CreateVendedorDto, type UpdateVendedorDto } from "./vendedores.dto";
+import fs from 'fs';
+import path from 'path';
 
 const prisma = new PrismaClient();
 
@@ -33,7 +35,15 @@ export class VendedorService {
   }
 
   async update(id: string, data: UpdateVendedorDto, empresaId: string) {
-    await this.findOne(id, empresaId);
+    const oldVendedor = await this.findOne(id, empresaId);
+
+    if ((data as any).urlImagem && oldVendedor.urlImagem) {
+      const oldImagePath = path.resolve(__dirname, '..', '..', '..', oldVendedor.urlImagem);
+      fs.unlink(oldImagePath, (err) => {
+        if (err) console.error("Erro ao deletar imagem antiga do vendedor:", err);
+      });
+    }
+
     return await prisma.vendedor.update({
       where: { id, empresaId },
       data: data as any,
@@ -41,8 +51,16 @@ export class VendedorService {
   }
 
   async remove(id: string, empresaId: string) {
-    await this.findOne(id, empresaId);
-    return await prisma.vendedor.delete({ where: { id, empresaId } });
+    const vendedor = await this.findOne(id, empresaId);
+    
+    await prisma.vendedor.delete({ where: { id, empresaId } });
+
+    if (vendedor.urlImagem) {
+      const imagePath = path.resolve(__dirname, '..', '..', '..', vendedor.urlImagem);
+      fs.unlink(imagePath, (err) => {
+        if (err) console.error("Erro ao deletar imagem do vendedor:", err);
+      });
+    }
   }
 }
 

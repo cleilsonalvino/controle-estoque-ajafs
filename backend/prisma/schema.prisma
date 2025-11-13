@@ -21,6 +21,7 @@ model Usuario {
   telasPermitidas String[] @default([])
   papel           Papel    @default(USUARIO)
   ativo           Boolean  @default(true)
+  urlImagem       String?
   criadoEm        DateTime @default(now())
   atualizadoEm    DateTime @updatedAt
   empresaId       String
@@ -169,6 +170,10 @@ model Venda {
   itens       ItemVenda[]
   tipoServicos tipoServico[]
   posVenda    PosVenda?
+
+  // Relações Financeiro
+  movimentacoesFinanceiras MovimentacaoFinanceira[]
+  contasReceber            ContaReceber[]
 }
 
 // ================================
@@ -269,6 +274,10 @@ model Cliente {
   empresa   Empresa    @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   vendas    Venda[]
   posVendas PosVenda[]
+
+  // Relações Financeiro
+  movimentacoesFinanceiras MovimentacaoFinanceira[]
+  contasReceber            ContaReceber[]
 }
 
 // ================================
@@ -280,6 +289,7 @@ model Vendedor {
   nome         String
   email        String?
   meta         Decimal? @db.Decimal(14, 2)
+  urlImagem    String?
   empresaId    String
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
@@ -407,4 +417,169 @@ model Empresa {
   posVendas          PosVenda[]
   feedbacksCliente   FeedbackCliente[]
   followUps          FollowUp[]
+
+  // Relações Financeiro
+  categoriasFinanceiras CategoriaFinanceira[]
+  contasBancarias       ContaBancaria[]
+  movimentacoesFinanceiras MovimentacaoFinanceira[]
+  contasPagar           ContaPagar[]
+  contasReceber         ContaReceber[]
+}
+
+
+// ==============================================================================
+// MÓDULO FINANCEIRO
+// ==============================================================================
+
+// --------------------------------
+// Enums do Módulo Financeiro
+// --------------------------------
+
+enum FinanceiroTipoCategoria {
+  ENTRADA
+  SAIDA
+}
+
+enum FinanceiroTipoConta {
+  CORRENTE
+  POUPANCA
+  CARTEIRA
+  OUTRO
+}
+
+enum FinanceiroTipoMovimentacao {
+  ENTRADA
+  SAIDA
+}
+
+enum FinanceiroStatusMovimentacao {
+  PENDENTE
+  LIQUIDADA
+  CANCELADA
+}
+
+enum FinanceiroStatusConta {
+  PENDENTE
+  PAGO
+  ATRASADO
+  CANCELADO
+}
+
+enum FinanceiroPeriodicidadeRecorrencia {
+  SEMANAL
+  MENSAL
+  ANUAL
+}
+
+
+// --------------------------------
+// Models do Módulo Financeiro
+// --------------------------------
+
+model CategoriaFinanceira {
+  id        String                  @id @default(uuid())
+  nome      String
+  tipo      FinanceiroTipoCategoria
+  descricao String?
+  ativo     Boolean                 @default(true)
+  empresaId String
+  criadoEm  DateTime                @default(now())
+  atualizadoEm DateTime             @updatedAt
+
+  empresa      Empresa                @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  movimentacoes MovimentacaoFinanceira[]
+  contasPagar  ContaPagar[]
+  contasReceber ContaReceber[]
+
+  @@unique([empresaId, nome])
+}
+
+model ContaBancaria {
+  id           String              @id @default(uuid())
+  nome         String
+  banco        String?
+  tipoConta    FinanceiroTipoConta
+  saldoInicial Decimal             @db.Decimal(14, 2)
+  saldoAtual   Decimal             @db.Decimal(14, 2)
+  ativo        Boolean             @default(true)
+  empresaId    String
+  criadoEm     DateTime            @default(now())
+  atualizadoEm DateTime            @updatedAt
+
+  empresa      Empresa                @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  movimentacoes MovimentacaoFinanceira[]
+  contasPagar  ContaPagar[]
+  contasReceber ContaReceber[]
+
+  @@unique([empresaId, nome])
+}
+
+model MovimentacaoFinanceira {
+  id              String                       @id @default(uuid())
+  tipo            FinanceiroTipoMovimentacao
+  descricao       String?
+  valor           Decimal                      @db.Decimal(14, 2)
+  data            DateTime
+  status          FinanceiroStatusMovimentacao @default(LIQUIDADA)
+  metodoPagamento String?
+  empresaId       String
+  categoriaId     String
+  contaBancariaId String
+  vendaId         String?
+  clienteId       String?
+  criadoEm        DateTime                     @default(now())
+  atualizadoEm    DateTime                     @updatedAt
+
+  empresa       Empresa           @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  categoria     CategoriaFinanceira @relation(fields: [categoriaId], references: [id], onDelete: Restrict)
+  contaBancaria ContaBancaria     @relation(fields: [contaBancariaId], references: [id], onDelete: Restrict)
+  venda         Venda?            @relation(fields: [vendaId], references: [id], onDelete: SetNull)
+  cliente       Cliente?          @relation(fields: [clienteId], references: [id], onDelete: SetNull)
+}
+
+model ContaPagar {
+  id                       String                               @id @default(uuid())
+  descricao                String
+  fornecedor               String?
+  valorTotal               Decimal                              @db.Decimal(14, 2)
+  valorPago                Decimal                              @default(0) @db.Decimal(14, 2)
+  dataVencimento           DateTime
+  dataPagamento            DateTime?
+  status                   FinanceiroStatusConta                @default(PENDENTE)
+  recorrente               Boolean                              @default(false)
+  periodicidadeRecorrencia FinanceiroPeriodicidadeRecorrencia?
+  empresaId                String
+  categoriaId              String
+  contaBancariaId          String?
+  criadoEm                 DateTime                             @default(now())
+  atualizadoEm             DateTime                             @updatedAt
+
+  empresa       Empresa             @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  categoria     CategoriaFinanceira @relation(fields: [categoriaId], references: [id], onDelete: Restrict)
+  contaBancaria ContaBancaria?      @relation(fields: [contaBancariaId], references: [id], onDelete: SetNull)
+}
+
+model ContaReceber {
+  id                       String                               @id @default(uuid())
+  descricao                String
+  valorTotal               Decimal                              @db.Decimal(14, 2)
+  valorRecebido            Decimal                              @default(0) @db.Decimal(14, 2)
+  dataVencimento           DateTime
+  dataRecebimento          DateTime?
+  status                   FinanceiroStatusConta                @default(PENDENTE)
+  recorrente               Boolean                              @default(false)
+  periodicidadeRecorrencia FinanceiroPeriodicidadeRecorrencia?
+  empresaId                String
+  categoriaId              String
+  contaBancariaId          String?
+  clienteId                String?
+  vendaId                  String?
+  criadoEm                 DateTime                             @default(now())
+  atualizadoEm             DateTime                             @updatedAt
+
+  empresa       Empresa             @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  categoria     CategoriaFinanceira @relation(fields: [categoriaId], references: [id], onDelete: Restrict)
+  contaBancaria ContaBancaria?      @relation(fields: [contaBancariaId], references: [id], onDelete: SetNull)
+  cliente       Cliente?            @relation(fields: [clienteId], references: [id], onDelete: SetNull)
+  venda         Venda?              @relation(fields: [vendaId], references: [id], onDelete: SetNull)
 }

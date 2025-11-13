@@ -1,0 +1,84 @@
+collection:
+  get:
+    tags: [Vendas]
+    summary: Lista todas as vendas
+    security: [bearerAuth: []]
+    responses:
+      '200':
+        description: Lista de vendas.
+        content:
+          application/json:
+            schema:
+              type: array
+              items: { $ref: '../schemas/index.yaml#/Venda' }
+create:
+  post:
+    tags: [Vendas]
+    summary: Cria uma nova venda de produtos
+    security: [bearerAuth: []]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: '../schemas/index.yaml#/CreateVenda' }
+    responses:
+      '201':
+        description: Venda criada.
+        content:
+          application/json:
+            schema: { $ref: '../schemas/index.yaml#/Venda' }
+record:
+  get:
+    tags: [Vendas]
+    summary: Busca uma venda por ID
+    security: [bearerAuth: []]
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    responses:
+      '200':
+        description: Dados da venda.
+        content:
+          application/json:
+            schema: { $ref: '../schemas/index.yaml#/Venda' }
+      '404': { $ref: '#/components/responses/NotFound' }
+  put:
+    tags: [Vendas]
+    summary: Atualiza uma venda
+    security: [bearerAuth: []]
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: '../schemas/index.yaml#/UpdateVenda' }
+    responses:
+      '200':
+        description: Venda atualizada.
+        content:
+          application/json:
+            schema: { $ref: '../schemas/index.yaml#/Venda' }
+      '404': { $ref: '#/components/responses/NotFound' }
+  delete:
+    tags: [Vendas]
+    summary: Deleta uma venda
+    security: [bearerAuth: []]
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    responses:
+      '204': { description: Venda deletada. }
+      '404': { $ref: '#/components/responses/NotFound' }
+cancelar:
+  patch:
+    tags: [Vendas]
+    summary: Cancela uma venda
+    security: [bearerAuth: []]
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    responses:
+      '200':
+        description: Venda cancelada.
+        content:
+          application/json:
+            schema: { $ref: '../schemas/index.yaml#/Venda' }
+      '404': { $ref: '#/components/responses/NotFound' }

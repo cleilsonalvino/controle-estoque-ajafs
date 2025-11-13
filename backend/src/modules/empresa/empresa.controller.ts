@@ -30,7 +30,12 @@ export const empresaController = {
         throw new CustomError("Acesso negado. Apenas Super Admin pode criar empresas.", 403);
       }
 
-      const empresa = await empresaService.create(req.body);
+      const data = req.body;
+      if (req.file) {
+        data.logoEmpresa = `uploads/empresa/${req.file.filename}`;
+      }
+
+      const empresa = await empresaService.create(data);
       return res.status(201).json({ message: "Empresa criada com sucesso", data: empresa });
     } catch (error: any) {
       console.error("Erro ao criar empresa:", error);
@@ -48,7 +53,7 @@ export const empresaController = {
 
       const empresa = await empresaService.getById(id, empresaId, papel === "SUPER_ADMIN");
       return res.status(200).json(empresa);
-    } catch (error: any) {
+    } catch (error: any){
       console.error("Erro ao buscar empresa:", error);
       return res.status(error.statusCode || 500).json({ message: error.message });
     }
@@ -61,8 +66,13 @@ export const empresaController = {
     try {
       const { id } = req.params;
       const { empresaId, papel } = req.user!;
+      const data = req.body;
 
-      const empresa = await empresaService.update(id, req.body, empresaId, papel === "SUPER_ADMIN");
+      if (req.file) {
+        data.logoEmpresa = `uploads/empresa/${req.file.filename}`;
+      }
+
+      const empresa = await empresaService.update(id, data, empresaId, papel === "SUPER_ADMIN");
       return res.status(200).json({ message: "Empresa atualizada com sucesso", data: empresa });
     } catch (error: any) {
       console.error("Erro ao atualizar empresa:", error);

@@ -1,5 +1,5 @@
 import { type Request, type Response } from "express";
-import { createUserSchema } from "./users.dto";
+import { createUserSchema, updateUserSchema } from "./users.dto";
 import {
   createUserService,
   getUsersService,
@@ -11,7 +11,13 @@ import type { AuthenticatedRequest } from "../../app/middlewares/auth.middleware
 
 export const createUserController = async (req: AuthenticatedRequest, res: Response) => {
   const { empresaId } = req.user!;
-  const user = await createUserService(req.body, empresaId);
+  const data = createUserSchema.parse(req.body);
+
+  if (req.file) {
+    data.urlImagem = `uploads/usuarios/${req.file.filename}`;
+  }
+
+  const user = await createUserService(data, empresaId);
   res.status(201).json(user);
 };
 
@@ -31,7 +37,13 @@ export const getUserByIdController = async (req: AuthenticatedRequest, res: Resp
 export const updateUserController = async (req: AuthenticatedRequest, res: Response) => {
   const { id } = req.params;
   const { empresaId } = req.user!;
-  const user = await updateUserService(id as string, req.body, empresaId);
+  const data = updateUserSchema.parse(req.body);
+
+  if (req.file) {
+    data.urlImagem = `uploads/usuarios/${req.file.filename}`;
+  }
+
+  const user = await updateUserService(id as string, data, empresaId);
   res.status(200).json(user);
 };
 

@@ -1,0 +1,104 @@
+collection:
+  get:
+    tags: [Produtos e Categorias]
+    summary: Lista todos os produtos da empresa
+    security: [bearerAuth: []]
+    responses:
+      '200':
+        description: Lista de produtos.
+        content:
+          application/json:
+            schema:
+              type: array
+              items: { $ref: '../schemas/index.yaml#/Produto' }
+create:
+  post:
+    tags: [Produtos e Categorias]
+    summary: Cria um novo produto
+    security: [bearerAuth: []]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: '../schemas/index.yaml#/CreateProduct' }
+    responses:
+      '201':
+        description: Produto criado.
+        content:
+          application/json:
+            schema: { $ref: '../schemas/index.yaml#/Produto' }
+      '400': { $ref: '#/components/responses/BadRequest' }
+record:
+  get:
+    tags: [Produtos e Categorias]
+    summary: Busca um produto pelo ID
+    security: [bearerAuth: []]
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    responses:
+      '200':
+        description: Dados do produto.
+        content:
+          application/json:
+            schema: { $ref: '../schemas/index.yaml#/Produto' }
+      '404': { $ref: '#/components/responses/NotFound' }
+  put:
+    tags: [Produtos e Categorias]
+    summary: Atualiza um produto
+    security: [bearerAuth: []]
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: '../schemas/index.yaml#/UpdateProduct' }
+    responses:
+      '200':
+        description: Produto atualizado.
+        content:
+          application/json:
+            schema: { $ref: '../schemas/index.yaml#/Produto' }
+      '404': { $ref: '#/components/responses/NotFound' }
+  delete:
+    tags: [Produtos e Categorias]
+    summary: Deleta um produto
+    security: [bearerAuth: []]
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    responses:
+      '204': { description: Produto deletado. }
+      '404': { $ref: '#/components/responses/NotFound' }
+marcas:
+  get:
+    tags: [Produtos e Categorias]
+    summary: Lista todas as marcas de produtos
+    security: [bearerAuth: []]
+    responses:
+      '200':
+        description: Lista de marcas.
+        content:
+          application/json:
+            schema:
+              type: array
+              items: { $ref: '../schemas/index.yaml#/Marca' }
+createMarca:
+  post:
+    tags: [Produtos e Categorias]
+    summary: Cria uma nova marca de produto
+    security: [bearerAuth: []]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              nome: { type: string }
+            required: [nome]
+    responses:
+      '201':
+        description: Marca criada.
+        content:
+          application/json:
+            schema: { $ref: '../schemas/index.yaml#/Marca' }

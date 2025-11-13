@@ -15,6 +15,7 @@ import Dashboardrouter from "../modules/dashboard/dashboard.router";
 import { cobrancaRoutes } from "@modules/inter/routes/cobranca.routes";
 import { authRoutes } from "@modules/inter/routes/auth.routes";
 import { posVendaRouter, feedbackRouter } from "../modules/pos-venda/pos-venda.router";
+import financeiroRoutes from "../modules/financeiro/financeiro.routes";
 
 const router = Router();
 
@@ -33,6 +34,7 @@ router.use("/empresa", empresaRouter);
 router.use("/dashboard", Dashboardrouter);
 router.use("/pos-venda", posVendaRouter);
 router.use("/feedback", feedbackRouter);
+router.use("/financeiro", financeiroRoutes);
 
 // Rota base
 router.use("/inter/cobranca", cobrancaRoutes);

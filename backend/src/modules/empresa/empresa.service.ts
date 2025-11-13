@@ -1,5 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import { CustomError } from "../../shared/errors";
+import fs from 'fs';
+import path from 'path';
 
 const prisma = new PrismaClient();
 
@@ -52,9 +54,17 @@ export const empresaService = {
       throw new CustomError("Acesso não autorizado.", 403);
     }
 
-    const exists = await prisma.empresa.findUnique({ where: { id } });
-    if (!exists) {
+    const oldEmpresa = await prisma.empresa.findUnique({ where: { id } });
+    if (!oldEmpresa) {
       throw new CustomError("Empresa não encontrada.", 404);
+    }
+
+    // Se uma nova imagem foi enviada, deleta a antiga
+    if (data.logoEmpresa && oldEmpresa.logoEmpresa) {
+      const oldImagePath = path.resolve(__dirname, '..', '..', '..', oldEmpresa.logoEmpresa);
+      fs.unlink(oldImagePath, (err) => {
+        if (err) console.error("Erro ao deletar logo antigo:", err);
+      });
     }
 
     return prisma.empresa.update({
@@ -74,7 +84,15 @@ export const empresaService = {
       throw new CustomError("Empresa não encontrada.", 404);
     }
 
-    return prisma.empresa.delete({ where: { id } });
+    await prisma.empresa.delete({ where: { id } });
+
+    // Deleta a imagem associada
+    if (empresa.logoEmpresa) {
+      const imagePath = path.resolve(__dirname, '..', '..', '..', empresa.logoEmpresa);
+      fs.unlink(imagePath, (err) => {
+        if (err) console.error("Erro ao deletar logo da empresa:", err);
+      });
+    }
   },
 
   // 🔹 🔥 Estatísticas para o painel de gestão

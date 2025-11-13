@@ -16,17 +16,18 @@ import type { AuthenticatedRequest } from "../../app/middlewares/auth.middleware
 
 export const createProductController = async (req: AuthenticatedRequest, res: Response) => {
   const { empresaId } = req.user!;
-  console.log("Empresa ID no createProductController:", req.body);
   const validation = createProductSchema.safeParse(req.body);
 
   if (!validation.success) {
     return res.status(400).json({
       message: "Erro de validação nos dados do produto",
-      details: validation.error.format(), // mostra exatamente o campo errado
+      details: validation.error.format(),
     });
   }
 
-  const product = await createProductService(validation.data, empresaId);
+  const imagePath = req.file ? `uploads/produtos/${req.file.filename}` : undefined;
+
+  const product = await createProductService({ ...validation.data, urlImage: imagePath }, empresaId);
   return res.status(201).json(product);
 };
 
@@ -72,9 +73,11 @@ export const updateProductController = async (req: AuthenticatedRequest, res: Re
     });
   }
 
+  const imagePath = req.file ? `uploads/produtos/${req.file.filename}` : undefined;
+
   const product = await updateProductService(
     id as string,
-    validation.data,
+    { ...validation.data, urlImage: imagePath },
     empresaId
   );
   return res.status(200).json(product);
@@ -85,34 +88,4 @@ export const deleteProductController = async (req: AuthenticatedRequest, res: Re
   const { empresaId } = req.user!;
   await deleteProductService(id as string, empresaId);
   return res.status(204).send();
-};
-
-export const addCategoryToProductController = async (
-  req: AuthenticatedRequest,
-  res: Response
-) => {
-  const { id } = req.params;
-  const { empresaId } = req.user!;
-  const { categoryId } = req.body;
-  const product = await addCategoryToProductService(
-    id as string,
-    categoryId,
-    empresaId
-  );
-  return res.status(200).json(product);
-};
-
-export const addSupplierToProductController = async (
-  req: AuthenticatedRequest,
-  res: Response
-) => {
-  const { id } = req.params;
-  const { empresaId } = req.user!;
-  const { supplierId } = req.body;
-  const product = await addSupplierToProductService(
-    id as string,
-    supplierId,
-    empresaId
-  );
-  return res.status(200).json(product);
 };

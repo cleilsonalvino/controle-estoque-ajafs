@@ -1,0 +1,81 @@
+# Este arquivo agrega todos os schemas da aplicação.
+
+# Auth
+LoginRequest: { $ref: './auth.yaml#/LoginRequest' }
+LoginResponse: { $ref: './auth.yaml#/LoginResponse' }
+
+# Empresa
+Empresa: { $ref: './empresa.yaml#/Empresa' }
+CreateEmpresa: { $ref: './empresa.yaml#/CreateEmpresa' }
+UpdateEmpresa: { $ref: './empresa.yaml#/UpdateEmpresa' }
+
+# Usuário
+User: { $ref: './usuario.yaml#/User' }
+CreateUser: { $ref: './usuario.yaml#/CreateUser' }
+UpdateUser: { $ref: './usuario.yaml#/UpdateUser' }
+
+# Cliente
+Cliente: { $ref: './cliente.yaml#/Cliente' }
+CreateCliente: { $ref: './cliente.yaml#/CreateCliente' }
+UpdateCliente: { $ref: './cliente.yaml#/UpdateCliente' }
+
+# Fornecedor
+Fornecedor: { $ref: './fornecedor.yaml#/Fornecedor' }
+CreateSupplier: { $ref: './fornecedor.yaml#/CreateSupplier' }
+UpdateSupplier: { $ref: './fornecedor.yaml#/UpdateSupplier' }
+
+# Vendedor
+Vendedor: { $ref: './vendedor.yaml#/Vendedor' }
+CreateVendedor: { $ref: './vendedor.yaml#/CreateVendedor' }
+UpdateVendedor: { $ref: './vendedor.yaml#/UpdateVendedor' }
+
+# Produto
+Produto: { $ref: './produto.yaml#/Produto' }
+CreateProduct: { $ref: './produto.yaml#/CreateProduct' }
+UpdateProduct: { $ref: './produto.yaml#/UpdateProduct' }
+Marca: { $ref: './produto.yaml#/Marca' }
+CategoriaProduto: { $ref: './produto.yaml#/CategoriaProduto' }
+
+# Serviço
+Servico: { $ref: './servico.yaml#/Servico' }
+CreateService: { $ref: './servico.yaml#/CreateService' }
+UpdateService: { $ref: './servico.yaml#/UpdateService' }
+CategoriaServico: { $ref: './servico.yaml#/CategoriaServico' }
+
+# Estoque
+MovimentacaoEstoque: { $ref: './estoque.yaml#/MovimentacaoEstoque' }
+CreateMovimentacaoEstoque: { $ref: './estoque.yaml#/CreateMovimentacaoEstoque' }
+
+# Venda
+Venda: { $ref: './venda.yaml#/Venda' }
+ItemVenda: { $ref: './venda.yaml#/ItemVenda' }
+CreateVenda: { $ref: './venda.yaml#/CreateVenda' }
+UpdateVenda: { $ref: './venda.yaml#/UpdateVenda' }
+
+# Pós-Venda
+PosVenda: { $ref: './pos_venda.yaml#/PosVenda' }
+CreatePosVenda: { $ref: './pos_venda.yaml#/CreatePosVenda' }
+UpdatePosVenda: { $ref: './pos_venda.yaml#/UpdatePosVenda' }
+Feedback: { $ref: './pos_venda.yaml#/Feedback' }
+CreateFeedback: { $ref: './pos_venda.yaml#/CreateFeedback' }
+FollowUp: { $ref: './pos_venda.yaml#/FollowUp' }
+
+# Financeiro
+CategoriaFinanceira: { $ref: './financeiro.yaml#/CategoriaFinanceira' }
+CreateCategoriaFinanceira: { $ref: './financeiro.yaml#/CreateCategoriaFinanceira' }
+UpdateCategoriaFinanceira: { $ref: './financeiro.yaml#/UpdateCategoriaFinanceira' }
+ContaBancaria: { $ref: './financeiro.yaml#/ContaBancaria' }
+CreateContaBancaria: { $ref: './financeiro.yaml#/CreateContaBancaria' }
+UpdateContaBancaria: { $ref: './financeiro.yaml#/UpdateContaBancaria' }
+MovimentacaoFinanceira: { $ref: './financeiro.yaml#/MovimentacaoFinanceira' }
+CreateMovimentacaoFinanceira: { $ref: './financeiro.yaml#/CreateMovimentacaoFinanceira' }
+UpdateMovimentacaoFinanceira: { $ref: './financeiro.yaml#/UpdateMovimentacaoFinanceira' }
+ContaPagar: { $ref: './financeiro.yaml#/ContaPagar' }
+CreateContaPagar: { $ref: './financeiro.yaml#/CreateContaPagar' }
+UpdateContaPagar: { $ref: './financeiro.yaml#/UpdateContaPagar' }
+MarcarContaPaga: { $ref: './financeiro.yaml#/MarcarContaPaga' }
+ContaReceber: { $ref: './financeiro.yaml#/ContaReceber' }
+CreateContaReceber: { $ref: './financeiro.yaml#/CreateContaReceber' }
+UpdateContaReceber: { $ref: './financeiro.yaml#/UpdateContaReceber' }
+MarcarContaRecebida: { $ref: './financeiro.yaml#/MarcarContaRecebida' }
+Transferencia: { $ref: './financeiro.yaml#/Transferencia' }

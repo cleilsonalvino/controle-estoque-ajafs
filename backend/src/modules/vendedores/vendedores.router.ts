@@ -7,15 +7,16 @@ import {
   deleteVendedorController,
 } from './vendedores.controller';
 import { authMiddleware } from '../../app/middlewares/auth.middleware';
+import upload from '../../app/config/multer';
 
 const vendedoresRouter = Router();
 
 vendedoresRouter.use(authMiddleware);
 
-vendedoresRouter.post('/create', createVendedorController);
+vendedoresRouter.post('/create', upload.single('urlImagem'), createVendedorController);
 vendedoresRouter.get('/', getVendedoresController);
 vendedoresRouter.get('/:id', getVendedorByIdController);
-vendedoresRouter.patch('/:id', updateVendedorController);
+vendedoresRouter.patch('/:id', upload.single('urlImagem'), updateVendedorController);
 vendedoresRouter.delete('/:id', deleteVendedorController);
 
 export default vendedoresRouter;

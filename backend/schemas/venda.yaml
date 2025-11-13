@@ -1,0 +1,49 @@
+ItemVenda:
+  type: object
+  properties:
+    produtoId: { type: string, format: uuid }
+    quantidade: { type: number, format: float }
+    precoUnitario: { type: number, format: float }
+  required: [produtoId, quantidade, precoUnitario]
+Venda:
+  type: object
+  properties:
+    id: { type: string, format: uuid }
+    numero: { type: string }
+    clienteId: { type: string, format: uuid }
+    vendedorId: { type: string, format: uuid }
+    total: { type: number, format: float }
+    status: { type: string }
+    formaPagamento: { type: string }
+    criadoEm: { type: string, format: date-time }
+    itens:
+      type: array
+      items:
+        $ref: '#/ItemVenda'
+CreateVenda:
+  type: object
+  properties:
+    clienteId: { type: string, format: uuid }
+    vendedorId: { type: string, format: uuid }
+    status: { type: string, enum: [Pendente, Concluída, Cancelada] }
+    formaPagamento: { type: string, enum: [Pix, Cartão de Crédito, Dinheiro] }
+    desconto: { type: number }
+    observacoes: { type: string }
+    itens:
+      type: array
+      items:
+        $ref: '#/ItemVenda'
+  required: [itens]
+UpdateVenda:
+  type: object
+  properties:
+    clienteId: { type: string, format: uuid }
+    vendedorId: { type: string, format: uuid }
+    status: { type: string, enum: [Pendente, Concluída, Cancelada] }
+    formaPagamento: { type: string, enum: [Pix, Cartão de Crédito, Dinheiro] }
+    desconto: { type: number }
+    observacoes: { type: string }
+    itens:
+      type: array
+      items:
+        $ref: '#/ItemVenda'

@@ -1,0 +1,26 @@
+User:
+  type: object
+  properties:
+    id: { type: string, format: uuid }
+    nome: { type: string }
+    email: { type: string, format: email }
+    papel: { type: string, enum: [ADMINISTRADOR, USUARIO, SUPER_ADMIN] }
+    ativo: { type: boolean }
+    criadoEm: { type: string, format: date-time }
+    empresaId: { type: string, format: uuid }
+CreateUser:
+  type: object
+  properties:
+    nome: { type: string, minLength: 3, example: "Novo Usuário" }
+    email: { type: string, format: email, example: "usuario@example.com" }
+    senha: { type: string, minLength: 6, format: password }
+    papel: { type: string, enum: [ADMINISTRADOR, USUARIO] }
+  required: [nome, email, senha]
+UpdateUser:
+  type: object
+  properties:
+    nome: { type: string }
+    email: { type: string, format: email }
+    senha: { type: string, minLength: 6, format: password }
+    papel: { type: string, enum: [ADMINISTRADOR, USUARIO] }
+    ativo: { type: boolean }

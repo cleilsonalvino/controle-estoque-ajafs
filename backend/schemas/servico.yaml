@@ -1,0 +1,34 @@
+Servico:
+  type: object
+  properties:
+    id: { type: string, format: uuid }
+    nome: { type: string }
+    descricao: { type: string }
+    precoVenda: { type: number, format: float }
+    duracaoMinutos: { type: integer }
+    categoriaId: { type: string, format: uuid }
+CreateService:
+  type: object
+  properties:
+    nome: { type: string, minLength: 1, example: "Manutenção de Computador" }
+    descricao: { type: string }
+    precoCusto: { type: number, default: 0 }
+    precoVenda: { type: number, default: 0 }
+    duracaoMinutos: { type: integer }
+    categoriaId: { type: string, format: uuid }
+  required: [nome]
+UpdateService:
+  type: object
+  properties:
+    nome: { type: string, minLength: 1 }
+    descricao: { type: string }
+    precoCusto: { type: number }
+    precoVenda: { type: number }
+    duracaoMinutos: { type: integer }
+    categoriaId: { type: string, format: uuid }
+CategoriaServico:
+  type: object
+  properties:
+    id: { type: string, format: uuid }
+    nome: { type: string }
+    descricao: { type: string }
