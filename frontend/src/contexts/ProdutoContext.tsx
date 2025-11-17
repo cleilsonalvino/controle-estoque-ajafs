@@ -125,6 +125,7 @@ export const ProdutoProvider = ({ children }: ProdutoProviderProps) => {
   const getProdutoById = useCallback(async (id: string) => {
     try {
       const { data } = await api.get<Produto>(`/produtos/${id}`);
+      console.log(data);
       return data;
     } catch (error) {
       console.error("Erro ao buscar produto:", error);
@@ -132,46 +133,51 @@ export const ProdutoProvider = ({ children }: ProdutoProviderProps) => {
     }
   }, []);
 
-  const createProduto = useCallback(
-    async (novoProduto: Omit<Produto, "id">) => {
-      try {
-        const produtoParaEnviar = {
-          nome: novoProduto.nome,
-          descricao: novoProduto.descricao,
-          precoVenda: novoProduto.precoVenda,
-          estoqueMinimo: Number(novoProduto.estoqueMinimo),
-          categoriaId: novoProduto.categoria?.id || null,
-          marcaId: novoProduto.marca?.id || null,
-          urlImage: novoProduto.urlImage,
-          codigoBarras: novoProduto.codigoBarras,
-        };
+const createProduto = useCallback(
+  async (novoProduto: Omit<Produto, "id">) => {
+    try {
+      const formData = new FormData();
+      formData.append("nome", novoProduto.nome);
+      formData.append("descricao", novoProduto.descricao || "");
+      formData.append("precoVenda", String(novoProduto.precoVenda));
+      formData.append("estoqueMinimo", String(novoProduto.estoqueMinimo));
+      formData.append("categoriaId", novoProduto.categoria?.id || "");
+      formData.append("marcaId", novoProduto.marca?.id || "");
+      formData.append("codigoBarras", novoProduto.codigoBarras || "");
 
-        console.log("Produto para enviar:", produtoParaEnviar);
-
-        const { data } = await api.post<Produto>(
-          "/produtos/create",
-          produtoParaEnviar
-        );
-
-        return data;
-      } catch (error: unknown) {
-        console.error("Erro ao criar produto:", error);
-
-        // Mensagem específica se for erro do Axios
-        if (isAxiosError(error)) {
-          const mensagem =
-            error.response?.data?.message || "Erro ao criar produto.";
-          toast.error(mensagem);
-        } else {
-          // Qualquer outro erro inesperado
-          toast.error("Erro inesperado. Tente novamente.");
-        }
-
-        return null; // indica que a criação falhou
+      
+      
+      // 🔥 importante: o campo deve ter o mesmo nome do multer.single("urlImage")
+      if (novoProduto.urlImage && typeof novoProduto.urlImage !== 'string') {
+        formData.append("urlImage", novoProduto.urlImage);
       }
-    },
-    []
-  );
+
+      
+
+      const { data } = await api.post<Produto>("/produtos/create", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      return data;
+    } catch (error: unknown) {
+      console.error("Erro ao criar produto:", error);
+
+      if (isAxiosError(error)) {
+        const mensagem =
+          error.response?.data?.message || "Erro ao criar produto.";
+        toast.error(mensagem);
+      } else {
+        toast.error("Erro inesperado. Tente novamente.");
+      }
+
+      return null;
+    }
+  },
+  []
+);
+
 
   const updateProduto = useCallback(
     async (id: string, produtoAtualizado: Omit<Produto, "id">) => {

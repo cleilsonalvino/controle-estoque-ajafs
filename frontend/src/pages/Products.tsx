@@ -46,7 +46,7 @@ import {
 } from "@/components/ui/table";
 import { Category as Categoria } from "@/contexts/CategoryContext";
 import { Supplier as Fornecedor } from "@/contexts/SupplierContext";
-import {api} from "@/lib/api";
+import { api } from "@/lib/api";
 // CORREÇÃO: Removida a importação de 'RechartsTooltip' e importado o 'Tooltip' padrão.
 import {
   Tooltip,
@@ -84,23 +84,71 @@ const ProdutoDetalhesDialog: React.FC<{
   onOpenChange: (v: boolean) => void;
   produto: Produto | null;
 }> = ({ open, onOpenChange, produto }) => {
-  if (!produto) return null;
+  
+  // 1. Importamos a função de busca pelo ID
+  const { getProdutoById } = useProdutos();
+  
+  // 2. Estado local para armazenar os dados completos vindos da API
+  const [produtoDetalhado, setProdutoDetalhado] = useState<Produto | null>(produto);
+  const [isLoading, setIsLoading] = useState(false);
 
-  async function handledeleteLote(loteId: string, produtoId: string) {
-    if (!produtoId) {
-      console.error("Produto ID não definido!");
-      return;
+  // 3. Effect para buscar os dados atualizados ao abrir o modal
+  useEffect(() => {
+    if (open && produto?.id) {
+      setIsLoading(true);
+      getProdutoById(produto.id)
+        .then((dadosCompletos) => {
+          if (dadosCompletos) {
+            setProdutoDetalhado(dadosCompletos);
+          }
+        })
+        .catch((err) => {
+          console.error("Erro ao buscar detalhes:", err);
+          // Se falhar, mantém os dados parciais que vieram da tabela
+          setProdutoDetalhado(produto); 
+        })
+        .finally(() => {
+          setIsLoading(false);
+        });
+    } else {
+      // Reseta se fechar
+      setProdutoDetalhado(produto);
     }
+  }, [open, produto, getProdutoById]);
 
+  if (!produtoDetalhado) return null;
+
+  // Função auxiliar para deletar lote (mantida do seu código original)
+  async function handledeleteLote(loteId: string, produtoId: string) {
+    if (!produtoId) return;
     try {
       await api.delete(`/estoque/deletar-lote/${loteId}/produto/${produtoId}`);
       alert("Lote deletado com sucesso!");
-      onOpenChange(false);
+      
+      // Atualiza a view após deletar chamando a API novamente
+      const dadosAtualizados = await getProdutoById(produtoId);
+      if (dadosAtualizados) setProdutoDetalhado(dadosAtualizados);
+      
     } catch (err) {
       console.error("Erro ao deletar lote:", err);
       alert("Não foi possível deletar o lote.");
     }
   }
+
+  const getImageUrl = (path: string | null) => {
+  if (!path) return "https://placehold.co/600x400?text=Sem+Imagem";
+  
+  // Se já for um link externo (https://...), retorna ele mesmo
+  if (path.startsWith('http')) return path;
+  
+  // Se for caminho relativo, adiciona a URL do backend
+  // Remove barras duplicadas se houver
+  const cleanPath = path.startsWith('/') ? path.substring(1) : path;
+  return `${import.meta.env.VITE_API_URL}/${cleanPath}`;
+}
+
+console.log(getImageUrl(produtoDetalhado.urlImage));
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -108,125 +156,160 @@ const ProdutoDetalhesDialog: React.FC<{
         <DialogHeader>
           <DialogTitle className="text-2xl">Detalhes do Produto</DialogTitle>
           <DialogDescription id="dialog-description">
-            Preencha os dados do novo produto
+            Visualizando informações completas do produto
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6 py-2">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div>
-              <img
-                src={
-                  produto.urlImage ||
-                  "https://placehold.co/600x400?text=Foto+Produto"
-                }
-                alt={produto.nome}
-                className="w-full h-auto object-cover rounded-lg shadow-md"
-              />
-            </div>
-            <div className="space-y-4">
-              <div>
-                <h3 className="text-lg font-semibold">{produto.nome}</h3>
-                <p className="text-muted-foreground">{produto.descricao}</p>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Preço de Venda</Label>
-                  <p className="font-semibold">
-                    R${" "}
-                    {Number(produto.precoVenda).toLocaleString("pt-BR", {
-                      minimumFractionDigits: 2,
-                    })}
-                  </p>
-                </div>
-                <div>
-                  <Label>Estoque Mínimo</Label>
-                  <p className="font-semibold">{produto.estoqueMinimo}</p>
-                </div>
-                <div>
-                  <Label>Categoria</Label>
-                  <p className="font-semibold">
-                    {produto.categoria?.nome || "Sem categoria"}
-                  </p>
-                </div>
-                <div>
-                  <Label>Custo Médio</Label>
-                  <p className="font-semibold">
-                    {produto.custoMedio
-                      ? Number(produto.custoMedio).toLocaleString("pt-BR", {
-                          style: "currency",
-                          currency: "BRL",
-                        })
-                      : "Sem dados"}
-                  </p>
-                </div>
-              </div>
+        {isLoading ? (
+          // Skeleton simples enquanto carrega
+          <div className="space-y-4 py-4">
+            <Skeleton className="h-48 w-full rounded-lg" />
+            <div className="grid grid-cols-2 gap-4">
+               <Skeleton className="h-10 w-full" />
+               <Skeleton className="h-10 w-full" />
             </div>
           </div>
-
-          <div>
-            <h4 className="text-lg font-semibold mb-2">Lotes</h4>
-            <ShadcnTable>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Lote</TableHead>
-                  <TableHead>Validade</TableHead>
-                  <TableHead>Quantidade</TableHead>
-                  <TableHead>Preço de Custo</TableHead>
-                  <TableHead>Fornecedor</TableHead>
-                  <TableHead>Data de Compra</TableHead>
-                  <TableHead>Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {produto.lote?.map((lote) => (
-                  <TableRow key={lote.id}>
-                    <TableCell>{lote.id}</TableCell>
-                    <TableCell>
-                      {new Date(lote.validade).toLocaleDateString("pt-BR")}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {lote.quantidadeAtual}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      R${" "}
-                      {Number(lote.precoCusto).toLocaleString("pt-BR", {
+        ) : (
+          <div className="space-y-6 py-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* Imagem */}
+              <div>
+                <img
+                  src={
+                    getImageUrl(produtoDetalhado.urlImage) ||
+                    "https://placehold.co/600x400?text=Foto+Produto"
+                  }
+                  alt={produtoDetalhado.nome}
+                  className="w-full h-auto object-cover rounded-lg shadow-md"
+                />
+              </div>
+              
+              {/* Informações Gerais */}
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-lg font-semibold">{produtoDetalhado.nome}</h3>
+                  <p className="text-muted-foreground">
+                    {produtoDetalhado.descricao || "Sem descrição definida."}
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Preço de Venda</Label>
+                    <p className="font-semibold">
+                      R$ {Number(produtoDetalhado.precoVenda).toLocaleString("pt-BR", {
                         minimumFractionDigits: 2,
                       })}
-                    </TableCell>
-                    <TableCell>
-                      {lote.fornecedor?.nome || "Sem fornecedor"}
-                    </TableCell>
-                    <TableCell>
-                      {new Date(lote.dataCompra).toLocaleDateString("pt-BR")}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          onClick={() => {
-                            if (
-                              confirm("Deseja realmente deletar este lote?")
-                            ) {
-                              handledeleteLote(lote.id, produto.id);
-                            }
-                          }}
-                        >
-                          <Trash className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </ShadcnTable>
-            {(!produto.lote || produto.lote.length === 0) && (
-              <p className="text-center text-muted-foreground py-4">
-                Nenhum lote cadastrado para este produto.
-              </p>
-            )}
+                    </p>
+                  </div>
+                  <div>
+                    <Label>Estoque Mínimo</Label>
+                    <p className="font-semibold">{produtoDetalhado.estoqueMinimo}</p>
+                  </div>
+                  <div>
+                    <Label>Categoria</Label>
+                    <p className="font-semibold">
+                      {produtoDetalhado.categoria?.nome || "Sem categoria"}
+                    </p>
+                  </div>
+                  <div>
+                    <Label>Custo Médio</Label>
+                    <p className="font-semibold">
+                      {produtoDetalhado.custoMedio
+                        ? Number(produtoDetalhado.custoMedio).toLocaleString("pt-BR", {
+                            style: "currency",
+                            currency: "BRL",
+                          })
+                        : "Calculando..."}
+                    </p>
+                  </div>
+                  <div className="col-span-2">
+                     <Label>Código de Barras</Label>
+                     <p className="font-mono text-sm bg-slate-100 p-1 rounded w-fit mt-1">
+                        {produtoDetalhado.codigoBarras || "N/A"}
+                     </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Tabela de Lotes */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                 <h4 className="text-lg font-semibold">Lotes em Estoque</h4>
+                 <span className="text-sm text-muted-foreground">
+                    Total itens: {produtoDetalhado.lote?.reduce((acc, l) => acc + Number(l.quantidadeAtual), 0) || 0}
+                 </span>
+              </div>
+              
+              <div className="border rounded-md overflow-hidden">
+                <ShadcnTable>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Lote (ID)</TableHead>
+                      <TableHead>Validade</TableHead>
+                      <TableHead className="text-right">Qtd. Atual</TableHead>
+                      <TableHead className="text-right">Custo Unit.</TableHead>
+                      <TableHead>Fornecedor</TableHead>
+                      <TableHead>Compra</TableHead>
+                      <TableHead className="text-center">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {produtoDetalhado.lote?.map((lote) => (
+                      <TableRow key={lote.id}>
+                        <TableCell className="font-mono text-xs text-muted-foreground">
+                            {lote.id.slice(0, 8)}...
+                        </TableCell>
+                        <TableCell>
+                          {lote.validade 
+                            ? new Date(lote.validade).toLocaleDateString("pt-BR") 
+                            : "N/A"}
+                        </TableCell>
+                        <TableCell className="text-right font-medium">
+                          {lote.quantidadeAtual}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          R$ {Number(lote.precoCusto).toLocaleString("pt-BR", {
+                            minimumFractionDigits: 2,
+                          })}
+                        </TableCell>
+                        <TableCell>
+                          {lote.fornecedor?.nome || "—"}
+                        </TableCell>
+                        <TableCell>
+                          {new Date(lote.dataCompra).toLocaleDateString("pt-BR")}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
+                            onClick={() => {
+                              if (confirm("Deseja realmente deletar este lote? Isso afetará o estoque total.")) {
+                                handledeleteLote(lote.id, produtoDetalhado.id);
+                              }
+                            }}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </ShadcnTable>
+              </div>
+
+              {(!produtoDetalhado.lote || produtoDetalhado.lote.length === 0) && (
+                <div className="flex flex-col items-center justify-center py-8 text-muted-foreground bg-slate-50 rounded-b-md">
+                   <AlertTriangle className="w-8 h-8 mb-2 opacity-50" />
+                   <p>Nenhum lote ativo encontrado para este produto.</p>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
@@ -237,7 +320,6 @@ const ProdutoDetalhesDialog: React.FC<{
     </Dialog>
   );
 };
-
 const fetchCategorias = async (): Promise<Categoria[]> => {
   try {
     const response = await api.get<Categoria[]>("/categorias");
@@ -351,6 +433,18 @@ const EditProdutoDialog: React.FC<{
     }
   };
 
+    const getImageUrl = (path: string | null) => {
+  if (!path) return "https://placehold.co/600x400?text=Sem+Imagem";
+  
+  // Se já for um link externo (https://...), retorna ele mesmo
+  if (path.startsWith('http')) return path;
+  
+  // Se for caminho relativo, adiciona a URL do backend
+  // Remove barras duplicadas se houver
+  const cleanPath = path.startsWith('/') ? path.substring(1) : path;
+  return `${import.meta.env.VITE_API_URL}/${cleanPath}`;
+}
+
   if (!form) return null;
 
   return (
@@ -391,19 +485,29 @@ const EditProdutoDialog: React.FC<{
               />
             </div>
             <div className="space-y-2 col-span-3">
-              <Label htmlFor="urlImage">Url da Image</Label>
+              <Label htmlFor="urlImage">Imagem do Produto</Label>
               <Input
                 id="urlImage"
                 className="border-gray-500 "
-                value={form.urlImage ? form.urlImage : ""}
-                onChange={(e) => handleChange("urlImage", e.target.value)}
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                      handleChange("urlImage", reader.result as string);
+                    };
+                    reader.readAsDataURL(file);
+                  }
+                }}
               />
             </div>
 
             {form.urlImage && (
               <div className="mt-2 flex justify-center">
                 <img
-                  src={form.urlImage}
+                  src={getImageUrl(form.urlImage)}
                   alt="Prévia"
                   className="w-24 h-24 object-cover rounded-md border"
                   onError={(e) =>
@@ -525,6 +629,7 @@ const CreateProdutoDialog: React.FC<{
     id: "",
     nome: "",
   });
+  const [preview, setPreview] = useState<string | null>(null);
   const [novaMarca, setNovaMarca] = useState("");
   const [openDialogMarca, setOpenDialogMarca] = useState(false);
 
@@ -745,20 +850,29 @@ const CreateProdutoDialog: React.FC<{
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="image-create">URL da imagem</Label>
+            <Label htmlFor="image-create">Imagem do Produto</Label>
             <Input
               className="border-slate-900"
               id="image-create"
-              placeholder="Cole a URL da imagem do produto"
-              value={form.urlImage ?? ""}
-              onChange={(e) => handleChange("urlImage", e.target.value)}
+              type="file"
+              accept="image/*"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  // 🔥 salva o File no estado (para enviar via FormData)
+                  handleChange("urlImage", file);
+
+                  // Gera preview para mostrar na tela
+                  const previewUrl = URL.createObjectURL(file);
+                  setPreview(previewUrl);
+                }
+              }}
             />
 
-            {/* Se houver uma URL válida, mostra o preview */}
-            {form.urlImage && (
+            {preview && (
               <div className="mt-2 flex justify-center">
                 <img
-                  src={form.urlImage}
+                  src={preview}
                   alt="Prévia do produto"
                   className="w-32 h-32 object-contain border rounded-md shadow-sm bg-white"
                   onError={(e) => {
@@ -1040,8 +1154,7 @@ export const Products: React.FC = () => {
     [produtos]
   ); // Recria se as funções mudarem (raro)
 
-
-    // 🔒 Componente wrapper para aplicar blur e overlay automaticamente
+  // 🔒 Componente wrapper para aplicar blur e overlay automaticamente
   const ProtectedCard = ({
     title,
     children,
@@ -1192,56 +1305,56 @@ export const Products: React.FC = () => {
       </div>
 
       {/* === GRÁFICOS === */}
-    <div className="grid lg:grid-cols-3 md:grid-cols-2 gap-6 mt-6">
-      {/* === Top 5 em estoque === */}
-      <ProtectedCard title="Top 5 Produtos em Estoque">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={topProdutosEstoque}>
-            <XAxis dataKey="nome" />
-            <YAxis />
-            <RechartTooltip />
-            <Bar dataKey="estoque" fill="#3B82F6" />
-          </BarChart>
-        </ResponsiveContainer>
-      </ProtectedCard>
+      <div className="grid lg:grid-cols-3 md:grid-cols-2 gap-6 mt-6">
+        {/* === Top 5 em estoque === */}
+        <ProtectedCard title="Top 5 Produtos em Estoque">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={topProdutosEstoque}>
+              <XAxis dataKey="nome" />
+              <YAxis />
+              <RechartTooltip />
+              <Bar dataKey="estoque" fill="#3B82F6" />
+            </BarChart>
+          </ResponsiveContainer>
+        </ProtectedCard>
 
-      {/* === Relação Custo x Venda === */}
-      <ProtectedCard title="Relação Custo x Venda">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={custoVendaData}>
-            <XAxis dataKey="nome" />
-            <YAxis />
-            <Legend />
-            <RechartTooltip />
-            <Bar dataKey="custo" fill="#F87171" name="Custo" />
-            <Bar dataKey="venda" fill="#10B981" name="Venda" />
-          </BarChart>
-        </ResponsiveContainer>
-      </ProtectedCard>
+        {/* === Relação Custo x Venda === */}
+        <ProtectedCard title="Relação Custo x Venda">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={custoVendaData}>
+              <XAxis dataKey="nome" />
+              <YAxis />
+              <Legend />
+              <RechartTooltip />
+              <Bar dataKey="custo" fill="#F87171" name="Custo" />
+              <Bar dataKey="venda" fill="#10B981" name="Venda" />
+            </BarChart>
+          </ResponsiveContainer>
+        </ProtectedCard>
 
-      {/* === Distribuição por Categoria === */}
-      <ProtectedCard title="Distribuição por Categoria">
-        <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie
-              data={categoriaData}
-              dataKey="valor"
-              nameKey="nome"
-              outerRadius={90}
-              label
-            >
-              {categoriaData.map((_, index) => (
-                <Cell
-                  key={`cell-${index}`}
-                  fill={COLORS[index % COLORS.length]}
-                />
-              ))}
-            </Pie>
-            <RechartTooltip />
-          </PieChart>
-        </ResponsiveContainer>
-      </ProtectedCard>
-    </div>
+        {/* === Distribuição por Categoria === */}
+        <ProtectedCard title="Distribuição por Categoria">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={categoriaData}
+                dataKey="valor"
+                nameKey="nome"
+                outerRadius={90}
+                label
+              >
+                {categoriaData.map((_, index) => (
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={COLORS[index % COLORS.length]}
+                  />
+                ))}
+              </Pie>
+              <RechartTooltip />
+            </PieChart>
+          </ResponsiveContainer>
+        </ProtectedCard>
+      </div>
 
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
         <div>

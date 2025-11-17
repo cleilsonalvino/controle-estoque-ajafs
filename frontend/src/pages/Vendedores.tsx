@@ -128,7 +128,18 @@ const Vendedores = () => {
   const [selectedVendedor, setSelectedVendedor] = useState<Vendedor | null>(
     null
   );
-  const [formData, setFormData] = useState({ nome: "", email: "", meta: "" });
+
+  const [formData, setFormData] = useState<{
+    nome: string;
+    email: string;
+    meta: string;
+    urlImage: File | null;
+  }>({
+    nome: "",
+    email: "",
+    meta: "",
+    urlImage: null,
+  });
   const [isLoadingAction, setIsLoadingAction] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(1);
@@ -240,40 +251,49 @@ const Vendedores = () => {
   ) => {
     setModalType(type);
     setSelectedVendedor(vendedor || null);
-    if (type === "create") setFormData({ nome: "", email: "", meta: "" });
+    if (type === "create")
+      setFormData({ nome: "", email: "", meta: "", urlImage: null });
     if (type === "edit" && vendedor) {
       setFormData({
         nome: vendedor.nome,
         email: vendedor.email,
         meta: String(vendedor.meta || 0),
+        urlImage: vendedor.urlImage || null,
       });
     }
     setIsModalOpen(true);
   };
 
+  const [imageFile, setImageFile] = useState<File | null>(null);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData((prev) => ({ ...prev, [e.target.id]: e.target.value }));
+    if (e.target.type === 'file') {
+        const file = e.target.files?.[0];
+        if (file) {
+            setImageFile(file);
+            const previewUrl = URL.createObjectURL(file);
+            setPreview(previewUrl as any);
+        }
+    } else {
+        setFormData((prev) => ({ ...prev, [e.target.id]: e.target.value }));
+    }
   };
 
   const handleFormSubmit = async () => {
     try {
       setIsLoadingAction(true);
+      const dataToSend: Omit<Vendedor, 'id'> = { ...formData, meta: Number(formData.meta), urlImage: imageFile || formData.urlImage };
+
       if (modalType === "create") {
-        const newVendedor = await createVendedor({
-          nome: formData.nome,
-          email: formData.email,
-          meta: Number(formData.meta),
-        });
+        const newVendedor = await createVendedor(dataToSend);
         toast.success(`Vendedor ${newVendedor.nome} criado com sucesso!`);
       } else if (modalType === "edit" && selectedVendedor) {
-        await updateVendedor(selectedVendedor.id, {
-          nome: formData.nome,
-          email: formData.email,
-          meta: Number(formData.meta),
-        });
+        await updateVendedor(selectedVendedor.id, dataToSend);
         toast.success("Vendedor atualizado com sucesso!");
       }
       setIsModalOpen(false);
+      setImageFile(null);
+      setPreview(null);
     } catch (err) {
       console.error(err);
       toast.error("Erro ao salvar vendedor.");
@@ -369,6 +389,8 @@ const Vendedores = () => {
     "#EF4444",
     "#0EA5E9",
   ];
+
+  const [preview, setPreview] = useState<File | null>(null);
 
   return (
     <div className="p-6 space-y-6">
@@ -576,7 +598,6 @@ const Vendedores = () => {
             <TableBody>
               {paginatedVendedores.length > 0 ? (
                 paginatedVendedores.map((v) => (
-                  
                   <TableRow key={v.id}>
                     <TableCell>{v.codigo}</TableCell>
                     <TableCell>
@@ -744,6 +765,24 @@ const Vendedores = () => {
                     onChange={handleInputChange}
                   />
                 </div>
+                <div className="space-y-2">
+                    <Label htmlFor="urlImage">Foto do Vendedor</Label>
+                    <Input
+                        id="urlImage"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleInputChange}
+                    />
+                </div>
+                {(preview || formData.urlImage) && (
+                    <div className="mt-2 flex justify-center">
+                        <img
+                            src={preview || formData.urlImage}
+                            alt="Prévia"
+                            className="w-24 h-24 object-cover rounded-full border"
+                        />
+                    </div>
+                )}
               </div>
               <DialogFooter>
                 <DialogClose asChild>

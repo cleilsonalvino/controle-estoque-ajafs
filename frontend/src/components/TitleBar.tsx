@@ -20,28 +20,7 @@ export const TitleBar = () => {
           <SidebarTrigger />
           <h1 className="text-lg font-semibold">Dashboard</h1>
         </div>
-        <div className="flex items-center space-x-3">
-          {(user.papel === "ADMINISTRADOR" || user.papel === "USUARIO") && (
-            <Button
-              onClick={() => navigate("/sales")}
-              variant="default"
-              size="sm"
-              className="flex items-center space-x-2"
-            >
-              <ShoppingCart className="h-4 w-4" />
-              <span>Abrir PDV</span>
-            </Button>
-          )}
-          <Button
-            onClick={handleLogout}
-            variant="ghost"
-            size="sm"
-            className="flex items-center space-x-2"
-          >
-            <LogOut className="h-5 w-5" />
-            <span className="hidden md:inline">Sair</span>
-          </Button>
-        </div>
+
       </div>
     </header>
   );

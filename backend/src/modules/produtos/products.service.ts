@@ -1,7 +1,7 @@
 import { Prisma, PrismaClient } from "@prisma/client";
 import { CustomError } from "../../shared/errors";
-import fs from 'fs';
-import path from 'path';
+import fs from "fs";
+import path from "path";
 
 const prisma = new PrismaClient();
 
@@ -55,7 +55,10 @@ export const createProductService = async (data: any, empresaId: string) => {
   return createProduct;
 };
 
-export const createMarcaProdutoService = async (nome: string, empresaId: string) => {
+export const createMarcaProdutoService = async (
+  nome: string,
+  empresaId: string
+) => {
   const marca = await prisma.marca.create({
     data: {
       nome,
@@ -63,8 +66,7 @@ export const createMarcaProdutoService = async (nome: string, empresaId: string)
     },
   });
   return marca;
-}
-
+};
 
 export const getProductsService = async (empresaId: string) => {
   const products = await prisma.produto.findMany({
@@ -78,9 +80,9 @@ export const getProductsService = async (empresaId: string) => {
         },
       },
       marca: {
-        select:{
-          nome: true
-        }
+        select: {
+          nome: true,
+        },
       },
     },
   });
@@ -120,19 +122,59 @@ export const getMarcaProdutosService = async (empresaId: string) => {
     where: { empresaId },
   });
   return marcas;
-}
+};
 
 export const getProductByIdService = async (id: string, empresaId: string) => {
   const product = await prisma.produto.findFirst({
     where: { id, empresaId },
     include: {
-      lote: true,
+      categoria: true,
+      fornecedor: true, // Fornecedor geral do produto
+      marca: true, // Marca do produto
+      lote: {
+        include: {
+          fornecedor: true, // IMPORTANTE: Traz o fornecedor específico de cada lote
+        },
+        orderBy: {
+          validade: "asc", // Opcional: ordena lotes pela validade (vencem primeiro aparecem primeiro)
+        },
+      },
     },
   });
+
   if (!product) {
     throw new CustomError("Produto não encontrado", 404);
   }
-  return product;
+
+  // 1. Calcula a quantidade total somando os lotes
+  const quantidadeTotal = product.lote.reduce(
+    (acc, lote) => acc + Number(lote.quantidadeAtual),
+    0
+  );
+
+  // 2. Calcula o Custo Médio Ponderado
+  let totalValor = 0;
+  let totalQuantidade = 0;
+
+  product.lote.forEach((lote) => {
+    const precoCusto = Number(lote.precoCusto) || 0;
+    const quantidadeAtual = Number(lote.quantidadeAtual) || 0;
+
+    // Consideramos apenas lotes que têm quantidade para o cálculo do custo médio atual
+    if (quantidadeAtual > 0) {
+      totalValor += precoCusto * quantidadeAtual;
+      totalQuantidade += quantidadeAtual;
+    }
+  });
+
+  const custoMedio = totalQuantidade > 0 ? totalValor / totalQuantidade : 0;
+
+  // Retorna o produto com os campos calculados injetados
+  return {
+    ...product,
+    quantidadeTotal,
+    custoMedio,
+  };
 };
 
 export const updateProductService = async (
@@ -144,7 +186,13 @@ export const updateProductService = async (
 
   // Se uma nova imagem foi enviada, deleta a antiga
   if (data.urlImage && oldProduct.urlImage) {
-    const oldImagePath = path.resolve(__dirname, '..', '..', '..', oldProduct.urlImage);
+    const oldImagePath = path.resolve(
+      __dirname,
+      "..",
+      "..",
+      "..",
+      oldProduct.urlImage
+    );
     fs.unlink(oldImagePath, (err) => {
       if (err) console.error("Erro ao deletar imagem antiga:", err);
     });
@@ -167,7 +215,13 @@ export const deleteProductService = async (id: string, empresaId: string) => {
 
   // Deleta a imagem associada
   if (product.urlImage) {
-    const imagePath = path.resolve(__dirname, '..', '..', '..', product.urlImage);
+    const imagePath = path.resolve(
+      __dirname,
+      "..",
+      "..",
+      "..",
+      product.urlImage
+    );
     fs.unlink(imagePath, (err) => {
       if (err) console.error("Erro ao deletar imagem do produto:", err);
     });
@@ -229,4 +283,3 @@ export const addSupplierToProductService = async (
 
   return updatedProduct;
 };
-

@@ -39,25 +39,29 @@ export const AppSidebar = () => {
 
   const groupedMenu = useMemo(() => {
     const grupos: Record<string, typeof allMenuItems> = {
-      "Gestão": [],
-      "Financeiro": [],
-      "Cadastros": [],
-      "Serviços": [],
-      "Relatórios": [],
-      "Outros": [],
+      Gestão: [],
+      Cadastros: [],
+      Financeiro: [],
+      Serviços: [],
+      Relatórios: [],
+      Outros: [],
     };
 
     const userPapel = user?.papel?.toLowerCase();
-    const isFinanceiroAuthorized = userPapel === "administrador" || user?.email?.toLowerCase() === "ajafs@admin.com";
-
+    const isFinanceiroAuthorized =
+      userPapel === "administrador" ||
+      user?.email?.toLowerCase() === "ajafs@admin.com";
 
     visibleMenuItems.forEach((item) => {
       if (item.key.startsWith("financeiro-")) {
-        if(isFinanceiroAuthorized) {
+        if (isFinanceiroAuthorized) {
           grupos["Financeiro"].push(item);
         }
-      }
-      else if (["home", "estoque", "dashboard-sales", "sales", "pos-venda"].includes(item.key)) {
+      } else if (
+        ["home", "estoque", "dashboard-sales", "sales", "pos-venda"].includes(
+          item.key
+        )
+      ) {
         grupos["Gestão"].push(item);
       } else if (
         [
@@ -88,8 +92,11 @@ export const AppSidebar = () => {
   return (
     <Sidebar>
       <SidebarHeader>
-        <div className="p-2 w-28 cursor-pointer" onClick={() => (window.location.href = "/")}>
-            <img src="/logo-ajafs.png" alt="logo ajafs+ sistemas" />
+        <div
+          className="p-2 w-28 cursor-pointer"
+          onClick={() => (window.location.href = "/")}
+        >
+          <img src="/logo-ajafs.png" alt="logo ajafs+ sistemas" />
         </div>
       </SidebarHeader>
       <Separator />
@@ -126,4 +133,3 @@ export const AppSidebar = () => {
     </Sidebar>
   );
 };
-

@@ -15,7 +15,11 @@ const app = express();
 const swaggerDocument = YAML.load(path.join(__dirname, '..', 'swagger.yaml'));
 
 app.use(cors());
-app.use(helmet());
+app.use(
+  helmet({
+    crossOriginResourcePolicy: false, // Desativa o bloqueio de recursos entre origens
+  })
+);
 app.use(morgan("dev"));
 app.use(express.json());
 
@@ -26,6 +30,7 @@ app.use('/api/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 app.use("/api", router);
+
 
 app.get("/api", (req, res) => {
     res.send("API is running");

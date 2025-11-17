@@ -16,6 +16,7 @@ export interface Empresa {
   cnpj: string;
   telefone: string;
   email?: string | null;
+  urlImage?: string | null;
   razaoSocial: string;
   nomeFantasia: string;
   inscEstadual: string;
@@ -160,7 +161,22 @@ export const EmpresaProvider = ({ children }: { children: ReactNode }) => {
   const createEmpresa = async (newEmpresa: Omit<Empresa, "id">) => {
     try {
       setLoading(true);
-      const { data } = await api.post<Empresa>("/empresa", newEmpresa);
+      const formData = new FormData();
+
+      Object.keys(newEmpresa).forEach(key => {
+        const value = (newEmpresa as any)[key];
+        if (key === 'urlImage' && value instanceof File) {
+          formData.append(key, value);
+        } else if (value !== null && value !== undefined) {
+          formData.append(key, value);
+        }
+      });
+
+      const { data } = await api.post<Empresa>("/empresa", formData, {
+        headers: {
+            "Content-Type": "multipart/form-data",
+        },
+      });
       setEmpresa(data);
       toast.success("Empresa criada com sucesso!");
       await fetchEmpresas();
@@ -182,9 +198,25 @@ export const EmpresaProvider = ({ children }: { children: ReactNode }) => {
   ) => {
     try {
       setLoading(true);
+      const formData = new FormData();
+
+      Object.keys(updatedData).forEach(key => {
+        const value = (updatedData as any)[key];
+        if (key === 'urlImage' && value instanceof File) {
+          formData.append(key, value);
+        } else if (value !== null && value !== undefined) {
+          formData.append(key, value);
+        }
+      });
+
       const { data } = await api.put<Empresa>(
         `/empresa/${empresaId}`,
-        updatedData
+        formData,
+        {
+            headers: {
+                "Content-Type": "multipart/form-data",
+            },
+        }
       );
       setEmpresa(data);
       toast.success("Empresa atualizada com sucesso!");
