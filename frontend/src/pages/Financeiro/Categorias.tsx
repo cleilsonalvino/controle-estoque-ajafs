@@ -11,14 +11,27 @@ const CategoriasFinanceiras: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   return (
-    <div className="p-4 space-y-4">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Categorias Financeiras</h1>
-        <CategoriaFinanceiraModal open={isModalOpen} onOpenChange={setIsModalOpen}>
+    <div className="relative min-h-[calc(100vh-80px)]">
+
+      {/* CONTEÚDO COM BLUR */}
+      <div className="p-4 space-y-4 blur-sm pointer-events-none select-none">
+        <div className="flex justify-between items-center">
+          <h1 className="text-2xl font-bold">Categorias Financeiras</h1>
+          <CategoriaFinanceiraModal
+            open={isModalOpen}
+            onOpenChange={setIsModalOpen}
+          >
             <Button onClick={() => setIsModalOpen(true)}>Nova Categoria</Button>
-        </CategoriaFinanceiraModal>
+          </CategoriaFinanceiraModal>
+        </div>
+
+        <DataTable columns={categoriasFinanceirasColumns} data={categorias} />
       </div>
-      <DataTable columns={categoriasFinanceirasColumns} data={categorias} />
+
+      {/* OVERLAY */}
+      <div className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-sm text-white text-xl font-semibold">
+        🚧 Funcionalidade ainda não implementada
+      </div>
     </div>
   );
 };

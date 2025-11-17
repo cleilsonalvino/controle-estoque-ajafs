@@ -84,12 +84,13 @@ const ProdutoDetalhesDialog: React.FC<{
   onOpenChange: (v: boolean) => void;
   produto: Produto | null;
 }> = ({ open, onOpenChange, produto }) => {
-  
   // 1. Importamos a função de busca pelo ID
   const { getProdutoById } = useProdutos();
-  
+
   // 2. Estado local para armazenar os dados completos vindos da API
-  const [produtoDetalhado, setProdutoDetalhado] = useState<Produto | null>(produto);
+  const [produtoDetalhado, setProdutoDetalhado] = useState<Produto | null>(
+    produto
+  );
   const [isLoading, setIsLoading] = useState(false);
 
   // 3. Effect para buscar os dados atualizados ao abrir o modal
@@ -105,7 +106,7 @@ const ProdutoDetalhesDialog: React.FC<{
         .catch((err) => {
           console.error("Erro ao buscar detalhes:", err);
           // Se falhar, mantém os dados parciais que vieram da tabela
-          setProdutoDetalhado(produto); 
+          setProdutoDetalhado(produto);
         })
         .finally(() => {
           setIsLoading(false);
@@ -124,11 +125,10 @@ const ProdutoDetalhesDialog: React.FC<{
     try {
       await api.delete(`/estoque/deletar-lote/${loteId}/produto/${produtoId}`);
       alert("Lote deletado com sucesso!");
-      
+
       // Atualiza a view após deletar chamando a API novamente
       const dadosAtualizados = await getProdutoById(produtoId);
       if (dadosAtualizados) setProdutoDetalhado(dadosAtualizados);
-      
     } catch (err) {
       console.error("Erro ao deletar lote:", err);
       alert("Não foi possível deletar o lote.");
@@ -136,19 +136,18 @@ const ProdutoDetalhesDialog: React.FC<{
   }
 
   const getImageUrl = (path: string | null) => {
-  if (!path) return "https://placehold.co/600x400?text=Sem+Imagem";
-  
-  // Se já for um link externo (https://...), retorna ele mesmo
-  if (path.startsWith('http')) return path;
-  
-  // Se for caminho relativo, adiciona a URL do backend
-  // Remove barras duplicadas se houver
-  const cleanPath = path.startsWith('/') ? path.substring(1) : path;
-  return `${import.meta.env.VITE_API_URL}/${cleanPath}`;
-}
+    if (!path) return "https://placehold.co/600x400?text=Sem+Imagem";
 
-console.log(getImageUrl(produtoDetalhado.urlImage));
+    // Se já for um link externo (https://...), retorna ele mesmo
+    if (path.startsWith("http")) return path;
 
+    // Se for caminho relativo, adiciona a URL do backend
+    // Remove barras duplicadas se houver
+    const cleanPath = path.startsWith("/") ? path.substring(1) : path;
+    return `${import.meta.env.VITE_API_URL}/${cleanPath}`;
+  };
+
+  console.log(getImageUrl(produtoDetalhado.urlImage));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -165,8 +164,8 @@ console.log(getImageUrl(produtoDetalhado.urlImage));
           <div className="space-y-4 py-4">
             <Skeleton className="h-48 w-full rounded-lg" />
             <div className="grid grid-cols-2 gap-4">
-               <Skeleton className="h-10 w-full" />
-               <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
             </div>
           </div>
         ) : (
@@ -183,11 +182,13 @@ console.log(getImageUrl(produtoDetalhado.urlImage));
                   className="w-full h-auto object-cover rounded-lg shadow-md"
                 />
               </div>
-              
+
               {/* Informações Gerais */}
               <div className="space-y-4">
                 <div>
-                  <h3 className="text-lg font-semibold">{produtoDetalhado.nome}</h3>
+                  <h3 className="text-lg font-semibold">
+                    {produtoDetalhado.nome}
+                  </h3>
                   <p className="text-muted-foreground">
                     {produtoDetalhado.descricao || "Sem descrição definida."}
                   </p>
@@ -196,14 +197,20 @@ console.log(getImageUrl(produtoDetalhado.urlImage));
                   <div>
                     <Label>Preço de Venda</Label>
                     <p className="font-semibold">
-                      R$ {Number(produtoDetalhado.precoVenda).toLocaleString("pt-BR", {
-                        minimumFractionDigits: 2,
-                      })}
+                      R${" "}
+                      {Number(produtoDetalhado.precoVenda).toLocaleString(
+                        "pt-BR",
+                        {
+                          minimumFractionDigits: 2,
+                        }
+                      )}
                     </p>
                   </div>
                   <div>
                     <Label>Estoque Mínimo</Label>
-                    <p className="font-semibold">{produtoDetalhado.estoqueMinimo}</p>
+                    <p className="font-semibold">
+                      {produtoDetalhado.estoqueMinimo}
+                    </p>
                   </div>
                   <div>
                     <Label>Categoria</Label>
@@ -215,18 +222,21 @@ console.log(getImageUrl(produtoDetalhado.urlImage));
                     <Label>Custo Médio</Label>
                     <p className="font-semibold">
                       {produtoDetalhado.custoMedio
-                        ? Number(produtoDetalhado.custoMedio).toLocaleString("pt-BR", {
-                            style: "currency",
-                            currency: "BRL",
-                          })
+                        ? Number(produtoDetalhado.custoMedio).toLocaleString(
+                            "pt-BR",
+                            {
+                              style: "currency",
+                              currency: "BRL",
+                            }
+                          )
                         : "Calculando..."}
                     </p>
                   </div>
                   <div className="col-span-2">
-                     <Label>Código de Barras</Label>
-                     <p className="font-mono text-sm bg-slate-100 p-1 rounded w-fit mt-1">
-                        {produtoDetalhado.codigoBarras || "N/A"}
-                     </p>
+                    <Label>Código de Barras</Label>
+                    <p className="font-mono text-sm bg-slate-100 p-1 rounded w-fit mt-1">
+                      {produtoDetalhado.codigoBarras || "N/A"}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -237,12 +247,16 @@ console.log(getImageUrl(produtoDetalhado.urlImage));
             {/* Tabela de Lotes */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                 <h4 className="text-lg font-semibold">Lotes em Estoque</h4>
-                 <span className="text-sm text-muted-foreground">
-                    Total itens: {produtoDetalhado.lote?.reduce((acc, l) => acc + Number(l.quantidadeAtual), 0) || 0}
-                 </span>
+                <h4 className="text-lg font-semibold">Lotes em Estoque</h4>
+                <span className="text-sm text-muted-foreground">
+                  Total itens:{" "}
+                  {produtoDetalhado.lote?.reduce(
+                    (acc, l) => acc + Number(l.quantidadeAtual),
+                    0
+                  ) || 0}
+                </span>
               </div>
-              
+
               <div className="border rounded-md overflow-hidden">
                 <ShadcnTable>
                   <TableHeader>
@@ -260,26 +274,29 @@ console.log(getImageUrl(produtoDetalhado.urlImage));
                     {produtoDetalhado.lote?.map((lote) => (
                       <TableRow key={lote.id}>
                         <TableCell className="font-mono text-xs text-muted-foreground">
-                            {lote.id.slice(0, 8)}...
+                          {lote.id.slice(0, 8)}...
                         </TableCell>
                         <TableCell>
-                          {lote.validade 
-                            ? new Date(lote.validade).toLocaleDateString("pt-BR") 
+                          {lote.validade
+                            ? new Date(lote.validade).toLocaleDateString(
+                                "pt-BR"
+                              )
                             : "N/A"}
                         </TableCell>
                         <TableCell className="text-right font-medium">
                           {lote.quantidadeAtual}
                         </TableCell>
                         <TableCell className="text-right">
-                          R$ {Number(lote.precoCusto).toLocaleString("pt-BR", {
+                          R${" "}
+                          {Number(lote.precoCusto).toLocaleString("pt-BR", {
                             minimumFractionDigits: 2,
                           })}
                         </TableCell>
+                        <TableCell>{lote.fornecedor?.nome || "—"}</TableCell>
                         <TableCell>
-                          {lote.fornecedor?.nome || "—"}
-                        </TableCell>
-                        <TableCell>
-                          {new Date(lote.dataCompra).toLocaleDateString("pt-BR")}
+                          {new Date(lote.dataCompra).toLocaleDateString(
+                            "pt-BR"
+                          )}
                         </TableCell>
                         <TableCell className="text-center">
                           <Button
@@ -287,7 +304,11 @@ console.log(getImageUrl(produtoDetalhado.urlImage));
                             size="icon"
                             className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
                             onClick={() => {
-                              if (confirm("Deseja realmente deletar este lote? Isso afetará o estoque total.")) {
+                              if (
+                                confirm(
+                                  "Deseja realmente deletar este lote? Isso afetará o estoque total."
+                                )
+                              ) {
                                 handledeleteLote(lote.id, produtoDetalhado.id);
                               }
                             }}
@@ -301,10 +322,11 @@ console.log(getImageUrl(produtoDetalhado.urlImage));
                 </ShadcnTable>
               </div>
 
-              {(!produtoDetalhado.lote || produtoDetalhado.lote.length === 0) && (
+              {(!produtoDetalhado.lote ||
+                produtoDetalhado.lote.length === 0) && (
                 <div className="flex flex-col items-center justify-center py-8 text-muted-foreground bg-slate-50 rounded-b-md">
-                   <AlertTriangle className="w-8 h-8 mb-2 opacity-50" />
-                   <p>Nenhum lote ativo encontrado para este produto.</p>
+                  <AlertTriangle className="w-8 h-8 mb-2 opacity-50" />
+                  <p>Nenhum lote ativo encontrado para este produto.</p>
                 </div>
               )}
             </div>
@@ -433,17 +455,25 @@ const EditProdutoDialog: React.FC<{
     }
   };
 
-    const getImageUrl = (path: string | null) => {
-  if (!path) return "https://placehold.co/600x400?text=Sem+Imagem";
-  
-  // Se já for um link externo (https://...), retorna ele mesmo
-  if (path.startsWith('http')) return path;
-  
-  // Se for caminho relativo, adiciona a URL do backend
-  // Remove barras duplicadas se houver
-  const cleanPath = path.startsWith('/') ? path.substring(1) : path;
-  return `${import.meta.env.VITE_API_URL}/${cleanPath}`;
-}
+  const getImageUrl = (value: string | File | null) => {
+    if (!value) {
+      return "https://placehold.co/600x400?text=Sem+Imagem";
+    }
+
+    // Se for File (nova imagem escolhida)
+    if (value instanceof File) {
+      return URL.createObjectURL(value); // <- gera preview AUTOMÁTICO
+    }
+
+    // Se já for URL externa
+    if (value.startsWith("http")) {
+      return value;
+    }
+
+    // Se for caminho relativo salvo no banco
+    const cleanPath = value.startsWith("/") ? value.substring(1) : value;
+    return `${import.meta.env.VITE_API_URL}/${cleanPath}`;
+  };
 
   if (!form) return null;
 
@@ -494,11 +524,7 @@ const EditProdutoDialog: React.FC<{
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (file) {
-                    const reader = new FileReader();
-                    reader.onloadend = () => {
-                      handleChange("urlImage", reader.result as string);
-                    };
-                    reader.readAsDataURL(file);
+                    handleChange("urlImage", file); // guarda o arquivo
                   }
                 }}
               />
@@ -1067,26 +1093,52 @@ export const Products: React.FC = () => {
   // === DADOS GRÁFICOS ===
   const topProdutosEstoque = produtosComEstoque
     .map((p) => ({
-      nome: p.nome,
-      estoque: p.lote.reduce(
-        (sum, lote) => sum + Number(lote.quantidadeAtual),
-        0
-      ),
+      nome: p.nome || "Sem nome",
+      estoque:
+        p.lote?.reduce(
+          (sum, lote) => sum + Number(lote.quantidadeAtual || 0),
+          0
+        ) || 0,
     }))
     .sort((a, b) => b.estoque - a.estoque)
     .slice(0, 5);
 
   const custoVendaData = produtosComEstoque.map((p) => {
-    const custo =
-      p.lote.reduce((sum, lote) => sum + Number(lote.precoCusto), 0) /
-      (p.lote.length || 1);
-    return { nome: p.nome, custo, venda: Number(p.precoVenda) || 0 };
+    const totalCusto =
+      p.lote?.reduce((sum, lote) => sum + Number(lote.precoCusto || 0), 0) || 0;
+
+    const quantidadeLotes = p.lote?.length || 1;
+
+    const custo = totalCusto / quantidadeLotes;
+
+    return {
+      nome: p.nome || "Sem nome",
+      custo: Number(custo) || 0,
+      venda: Number(p.precoVenda) || 0,
+    };
   });
 
   const categoriaData = Object.entries(categorias).map(([nome, valor]) => ({
-    nome,
-    valor,
+    nome: nome || "Sem categoria",
+    valor: Number(valor) || 0,
   }));
+
+  // Garantir valores padrão para os gráficos
+  const safeTopProdutosEstoque = topProdutosEstoque?.length
+    ? topProdutosEstoque
+    : [{ nome: "Sem dados", estoque: 0 }];
+
+  const safeCustoVendaData = custoVendaData?.length
+    ? custoVendaData
+    : [{ nome: "Sem dados", custo: 0, venda: 0 }];
+
+  const safeCategoriaData = categoriaData?.length
+    ? categoriaData.map((item) => ({
+        nome: item.nome || "Sem categoria",
+        valor: item.valor > 0 ? item.valor : 1, // força renderização
+        valorReal: item.valor || 0, // salva o valor original para o label
+      }))
+    : [{ nome: "Sem dados", valor: 1, valorReal: 0 }];
 
   const COLORS = ["#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6"];
 
@@ -1309,7 +1361,7 @@ export const Products: React.FC = () => {
         {/* === Top 5 em estoque === */}
         <ProtectedCard title="Top 5 Produtos em Estoque">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={topProdutosEstoque}>
+            <BarChart data={safeTopProdutosEstoque}>
               <XAxis dataKey="nome" />
               <YAxis />
               <RechartTooltip />
@@ -1321,7 +1373,7 @@ export const Products: React.FC = () => {
         {/* === Relação Custo x Venda === */}
         <ProtectedCard title="Relação Custo x Venda">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={custoVendaData}>
+            <BarChart data={safeCustoVendaData}>
               <XAxis dataKey="nome" />
               <YAxis />
               <Legend />
@@ -1337,13 +1389,13 @@ export const Products: React.FC = () => {
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
-                data={categoriaData}
-                dataKey="valor"
+                data={safeCategoriaData}
+                dataKey="valor" // usado só para desenhar
                 nameKey="nome"
                 outerRadius={90}
-                label
+                label={({ name, payload }) => `${name}: ${payload.valorReal}`}
               >
-                {categoriaData.map((_, index) => (
+                {safeCategoriaData.map((_, index) => (
                   <Cell
                     key={`cell-${index}`}
                     fill={COLORS[index % COLORS.length]}

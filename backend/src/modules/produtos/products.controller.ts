@@ -102,6 +102,7 @@ export const updateProductController = async (
 ) => {
   const { id } = req.params;
   const { empresaId } = req.user!;
+
   const validation = updateProductSchema.safeParse(req.body);
 
   if (!validation.success) {
@@ -111,17 +112,23 @@ export const updateProductController = async (
     });
   }
 
-  const imagePath = req.file
-    ? `uploads/produtos/${req.file.filename}`
-    : undefined;
+  // Monta objeto para atualização
+  const dataToUpdate: any = { ...validation.data };
+
+  // Se houver nova imagem, inclui o novo caminho
+  if (req.file) {
+    dataToUpdate.urlImage = `uploads/produtos/${req.file.filename}`;
+  }
 
   const product = await updateProductService(
     id as string,
-    { ...validation.data, urlImage: imagePath },
+    dataToUpdate,
     empresaId
   );
+
   return res.status(200).json(product);
 };
+
 
 export const deleteProductController = async (
   req: AuthenticatedRequest,

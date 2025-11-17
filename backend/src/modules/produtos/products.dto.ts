@@ -1,3 +1,4 @@
+import { url } from "inspector";
 import { z } from "zod";
 
 export const createProductSchema = z.object({
@@ -17,7 +18,13 @@ export const updateProductSchema = z.object({
   precoVenda: z.coerce.number().optional(),
   codigoBarras: z.string().optional().nullable(),
   estoqueMinimo: z.coerce.number().nonnegative().optional(),
-  categoriaId: z.string().uuid().optional(),
+  categoriaId: z
+  .string()
+  .uuid()
+  .or(z.literal(""))    // aceita ""
+  .optional()
+  .nullable(),
+  urlImage: z.any().optional(),
   marcaId: z.string().uuid().optional(),
 });
 

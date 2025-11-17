@@ -179,48 +179,45 @@ const createProduto = useCallback(
 );
 
 
-  const updateProduto = useCallback(
-    async (id: string, produtoAtualizado: Omit<Produto, "id">) => {
-      console.log("🧾 Produto recebido:", produtoAtualizado);
-      console.log("🆔 ID recebido:", id);
+const updateProduto = useCallback(
+  async (id: string, produtoAtualizado: Omit<Produto, "id">) => {
+    try {
+      const formData = new FormData();
 
-      try {
-        const produtoParaEnviar = {
-          nome: produtoAtualizado.nome,
-          descricao: produtoAtualizado.descricao,
-          precoVenda: produtoAtualizado.precoVenda,
-          estoqueMinimo: Number(produtoAtualizado.estoqueMinimo),
-          categoriaId: produtoAtualizado.categoria?.id, // ⚠️ pode estar dando erro aqui
-          urlImage: produtoAtualizado.urlImage,
-          codigoBarras: produtoAtualizado.codigoBarras,
-        };
+      formData.append("nome", produtoAtualizado.nome);
+      formData.append("descricao", produtoAtualizado.descricao || "");
+      formData.append("precoVenda", String(produtoAtualizado.precoVenda));
+      formData.append("estoqueMinimo", String(produtoAtualizado.estoqueMinimo));
+      formData.append("categoriaId", produtoAtualizado.categoria?.id || "");
+      formData.append("codigoBarras", produtoAtualizado.codigoBarras || "");
 
-        console.log("📦 Produto para enviar:", produtoParaEnviar);
-
-        const { data } = await api.put<Produto>(
-          `/produtos/${id}`,
-          produtoParaEnviar
-        );
-
-        return data;
-      } catch (error: any) {
-        console.error("❌ Erro capturado no updateProduto:", error);
-
-        if (isAxiosError(error)) {
-          const mensagem =
-            error.response?.data?.message || "Erro ao atualizar produto.";
-          toast.error(mensagem);
-          console.error("📨 Erro Axios:", mensagem);
-        } else {
-          toast.error("Erro inesperado. Tente novamente.");
-          console.error("⚠️ Erro não Axios:", error);
-        }
-
-        return null;
+      // 🔥 IMPORTANTE: só envia arquivo se for realmente um File
+      if (produtoAtualizado.urlImage && typeof produtoAtualizado.urlImage !== 'string') {
+        formData.append("urlImage", produtoAtualizado.urlImage);
       }
-    },
-    []
-  );
+
+      const { data } = await api.put(`/produtos/${id}`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      return data;
+    } catch (error: any) {
+      console.error("❌ Erro capturado no updateProduto:", error);
+
+      if (isAxiosError(error)) {
+        const mensagem =
+          error.response?.data?.message || "Erro ao atualizar produto.";
+        toast.error(mensagem);
+      } else {
+        toast.error("Erro inesperado. Tente novamente.");
+      }
+
+      return null;
+    }
+  },
+  []
+);
+
 
   const deleteProduto = useCallback(async (id: string) => {
     try {

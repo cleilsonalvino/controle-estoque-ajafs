@@ -184,18 +184,22 @@ export const updateProductService = async (
 ) => {
   const oldProduct = await getProductByIdService(id, empresaId);
 
-  // Se uma nova imagem foi enviada, deleta a antiga
+  // Se enviou nova imagem, deleta a antiga
   if (data.urlImage && oldProduct.urlImage) {
-    const oldImagePath = path.resolve(
-      __dirname,
-      "..",
-      "..",
-      "..",
-      oldProduct.urlImage
-    );
-    fs.unlink(oldImagePath, (err) => {
-      if (err) console.error("Erro ao deletar imagem antiga:", err);
-    });
+    const oldImagePath = path.join(process.cwd(), oldProduct.urlImage);
+
+    if (fs.existsSync(oldImagePath)) {
+      fs.unlinkSync(oldImagePath);
+    }
+  }
+
+  // 🔥 EVITAR ERRO P2003
+  if (data.categoriaId === "" || data.categoriaId === null) {
+    delete data.categoriaId;
+  }
+
+  if (data.marcaId === "" || data.marcaId === null) {
+    delete data.marcaId;
   }
 
   const product = await prisma.produto.update({
@@ -205,6 +209,8 @@ export const updateProductService = async (
 
   return product;
 };
+
+
 
 export const deleteProductService = async (id: string, empresaId: string) => {
   const product = await getProductByIdService(id, empresaId);
