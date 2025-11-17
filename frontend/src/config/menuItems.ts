@@ -170,4 +170,5 @@ export const allMenuItems = [
     icon: Settings,
     description: "Ajustes gerais do sistema, empresa e dados de acesso.", // Adicionado
   },
+  
 ];

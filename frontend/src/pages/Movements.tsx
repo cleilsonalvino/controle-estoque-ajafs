@@ -387,7 +387,8 @@ const Movements = () => {
 
   return (
     <TooltipProvider>
-      <div className="p-4 sm:p-6 space-y-6">
+      <div className="relative min-h-svh flex flex-col">
+
         {/* Cabeçalho, estatísticas, gráficos, filtros e lista (sem alterações) */}
         <div className="flex justify-between flex-wrap items-center gap-3">
           <div>

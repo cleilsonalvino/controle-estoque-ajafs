@@ -6,7 +6,7 @@ import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 export const Layout = () => {
   return (
     <SidebarProvider>
-      <div className="min-h-screen bg-background flex">
+      <div className="min-h-screen bg-background flex w-full">
         <AppSidebar />
         <SidebarInset>
           <TitleBar />

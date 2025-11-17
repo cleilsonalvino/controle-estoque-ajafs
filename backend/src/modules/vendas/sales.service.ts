@@ -8,11 +8,11 @@ const prisma = new PrismaClient();
  * CREATE VENDA (FIFO + única tabela de movimentações)
  * ======================================================
  */
-export const createVendaService = async (data: any, empresaId: string) => {
+export const createVendaService = async (data: any, empresaId: string, usuarioId: string) => {
   if (!data.itens || data.itens.length === 0)
     throw new CustomError("A venda precisa ter pelo menos um item", 400);
 
-  // Verifica estoque de cada item
+  // Verifica estoque
   for (const item of data.itens) {
     const produto = await prisma.produto.findFirst({
       where: { id: item.produtoId, empresaId },
@@ -32,7 +32,6 @@ export const createVendaService = async (data: any, empresaId: string) => {
       );
   }
 
-  // Transação
   return prisma.$transaction(async (tx) => {
     const total = data.itens.reduce(
       (sum: number, item: any) =>
@@ -53,7 +52,6 @@ export const createVendaService = async (data: any, empresaId: string) => {
       },
     });
 
-    // Cria itens
     await tx.itemVenda.createMany({
       data: data.itens.map((i: any) => ({
         vendaId: venda.id,
@@ -64,7 +62,7 @@ export const createVendaService = async (data: any, empresaId: string) => {
       })),
     });
 
-    // Atualiza estoque e cria movimentações (FIFO)
+    // FIFO + movimentação
     for (const item of data.itens) {
       let restante = Number(item.quantidade);
       const lotes = await tx.lote.findMany({
@@ -83,12 +81,14 @@ export const createVendaService = async (data: any, empresaId: string) => {
 
         await tx.movimentacao.create({
           data: {
-            produtoId: item.produtoId,
-            loteId: lote.id,
             tipo: TipoMovimentacao.SAIDA,
             quantidade: retirar,
             observacao: `Venda ${venda.numero}`,
-            empresaId,
+
+            produto: { connect: { id: item.produtoId } },
+            lote: { connect: { id: lote.id } },
+            empresa: { connect: { id: empresaId } },
+            usuario: { connect: { id: usuarioId } },
           },
         });
 
@@ -96,7 +96,6 @@ export const createVendaService = async (data: any, empresaId: string) => {
       }
     }
 
-    // Cria o registro de Pós-venda
     await tx.posVenda.create({
       data: {
         vendaId: venda.id,
@@ -110,10 +109,17 @@ export const createVendaService = async (data: any, empresaId: string) => {
   });
 };
 
-export const createSaleServicesService = async (data: any, empresaId: string) => {
+export const createSaleServicesService = async (
+  data: any,
+  empresaId: string,
+  usuarioId: string
+) => {
   if (!data.vendedorId) throw new CustomError("O vendedor é obrigatório.", 400);
   if (!data.itens || data.itens.length === 0)
-    throw new CustomError("A venda de serviço precisa conter ao menos um item.", 400);
+    throw new CustomError(
+      "A venda de serviço precisa conter ao menos um item.",
+      400
+    );
 
   // Verifica se os serviços existem e pertencem à empresa
   for (const item of data.itens) {
@@ -122,7 +128,10 @@ export const createSaleServicesService = async (data: any, empresaId: string) =>
       select: { nome: true },
     });
     if (!servico) {
-      throw new CustomError(`Serviço não encontrado para o item informado.`, 404);
+      throw new CustomError(
+        `Serviço não encontrado para o item informado.`,
+        404
+      );
     }
   }
 
@@ -160,12 +169,12 @@ export const createSaleServicesService = async (data: any, empresaId: string) =>
 
     // Cria o registro de Pós-venda
     await tx.posVenda.create({
-        data: {
-            vendaId: venda.id,
-            clienteId: venda.clienteId,
-            empresaId: venda.empresaId,
-            status: "PENDENTE",
-        },
+      data: {
+        vendaId: venda.id,
+        clienteId: venda.clienteId,
+        empresaId: venda.empresaId,
+        status: "PENDENTE",
+      },
     });
 
     return venda;
@@ -174,7 +183,7 @@ export const createSaleServicesService = async (data: any, empresaId: string) =>
 
 export const getVendasTopProdutosService = async (empresaId: string) => {
   const topProducts = await prisma.itemVenda.groupBy({
-    by: ['produtoId'],
+    by: ["produtoId"],
     _sum: {
       quantidade: true,
     },
@@ -183,36 +192,37 @@ export const getVendasTopProdutosService = async (empresaId: string) => {
     },
     orderBy: {
       _sum: {
-        quantidade: 'desc',
+        quantidade: "desc",
       },
     },
     take: 10,
   });
 
-  const resultados = await Promise.all(topProducts.map(async (item) => {
-    const produto = await prisma.produto.findUnique({
-      where: { id: item.produtoId },
-      include: { categoria: true },
-    });
+  const resultados = await Promise.all(
+    topProducts.map(async (item) => {
+      const produto = await prisma.produto.findUnique({
+        where: { id: item.produtoId },
+        include: { categoria: true },
+      });
 
-    return {
-      produto,
-      totalVendido: item._sum.quantidade || 0,
-    };
-  }));
+      return {
+        produto,
+        totalVendido: item._sum.quantidade || 0,
+      };
+    })
+  );
 
   console.log(resultados);
 
   return resultados;
 };
-  
 
 /**
  * ======================================================
  * UPDATE VENDA
  * ======================================================
  */
-export const updateVendaService = async (id: string, data: any, empresaId: string) => {
+export const updateVendaService = async (id: string, data: any, empresaId: string, usuarioId: string) => {
   const venda = await prisma.venda.findFirst({
     where: { id, empresaId },
     include: { itens: true },
@@ -230,57 +240,69 @@ export const updateVendaService = async (id: string, data: any, empresaId: strin
       const antigo = antigosMap.get(item.produtoId);
       const diff = Number(item.quantidade) - (antigo ? Number(antigo.quantidade) : 0);
 
-      // 🔹 Se a nova quantidade for maior → baixa estoque
+      // aumento da quantidade → saída
       if (diff > 0) {
         let restante = diff;
         const lotes = await tx.lote.findMany({
           where: { produtoId: item.produtoId, empresaId, quantidadeAtual: { gt: 0 } },
           orderBy: { dataCompra: "asc" },
         });
+
         for (const lote of lotes) {
           if (restante <= 0) break;
           const retirar = Math.min(Number(lote.quantidadeAtual), restante);
+
           await tx.lote.update({
             where: { id: lote.id },
             data: { quantidadeAtual: Number(lote.quantidadeAtual) - retirar },
           });
+
           await tx.movimentacao.create({
             data: {
-              produtoId: item.produtoId,
-              loteId: lote.id,
               tipo: TipoMovimentacao.SAIDA,
               quantidade: retirar,
               observacao: `Ajuste +${diff} na venda ${venda.numero}`,
-              empresaId,
+
+              produto: { connect: { id: item.produtoId } },
+              lote: { connect: { id: lote.id } },
+              empresa: { connect: { id: empresaId } },
+              usuario: { connect: { id: usuarioId } },
             },
           });
+
           restante -= retirar;
         }
       }
 
-      // 🔹 Se for menor → devolve ao estoque (LIFO)
+      // diminuição da quantidade → entrada
       if (diff < 0) {
         let devolver = Math.abs(diff);
         const lotes = await tx.lote.findMany({
           where: { produtoId: item.produtoId, empresaId },
           orderBy: { dataCompra: "desc" },
         });
+
         for (const lote of lotes) {
           if (devolver <= 0) break;
+
           await tx.lote.update({
             where: { id: lote.id },
             data: { quantidadeAtual: Number(lote.quantidadeAtual) + devolver },
           });
+
           await tx.movimentacao.create({
             data: {
-              produtoId: item.produtoId,
-              loteId: lote.id,
               tipo: TipoMovimentacao.ENTRADA,
               quantidade: devolver,
               observacao: `Ajuste -${Math.abs(diff)} na venda ${venda.numero}`,
-              empresaId,
+
+              produto: { connect: { id: item.produtoId } },
+              lote: { connect: { id: lote.id } },
+              empresa: { connect: { id: empresaId } },
+              usuario: { connect: { id: usuarioId } },
             },
           });
+
           devolver = 0;
         }
       }
@@ -288,33 +310,41 @@ export const updateVendaService = async (id: string, data: any, empresaId: strin
       antigosMap.delete(item.produtoId);
     }
 
-    // 🔹 Remove itens antigos não mais presentes
+    // Remoção de itens
     for (const [, itemRemovido] of antigosMap) {
       const lotes = await tx.lote.findMany({
         where: { produtoId: itemRemovido.produtoId, empresaId },
         orderBy: { dataCompra: "desc" },
       });
+
       const quantidade = Number(itemRemovido.quantidade);
+
       for (const lote of lotes) {
         await tx.lote.update({
           where: { id: lote.id },
           data: { quantidadeAtual: Number(lote.quantidadeAtual) + quantidade },
         });
+
         await tx.movimentacao.create({
           data: {
-            produtoId: itemRemovido.produtoId,
-            loteId: lote.id,
             tipo: TipoMovimentacao.ENTRADA,
             quantidade,
+
             observacao: `Remoção de item da venda ${venda.numero}`,
-            empresaId,
+
+            produto: { connect: { id: itemRemovido.produtoId } },
+            lote: { connect: { id: lote.id } },
+            empresa: { connect: { id: empresaId } },
+            usuario: { connect: { id: usuarioId } },
           },
         });
+
         break;
       }
     }
 
     await tx.itemVenda.deleteMany({ where: { vendaId: id } });
+
     await tx.itemVenda.createMany({
       data: novosItens.map((i: any) => ({
         vendaId: id,
@@ -326,7 +356,8 @@ export const updateVendaService = async (id: string, data: any, empresaId: strin
     });
 
     const total = novosItens.reduce(
-      (sum: number, i: any) => sum + Number(i.precoUnitario) * Number(i.quantidade),
+      (sum: number, i: any) =>
+        sum + Number(i.precoUnitario) * Number(i.quantidade),
       0
     );
 
@@ -342,11 +373,12 @@ export const updateVendaService = async (id: string, data: any, empresaId: strin
  * CANCELA VENDA
  * ======================================================
  */
-export const cancelVendaService = async (id: string, empresaId: string) => {
+export const cancelVendaService = async (id: string, empresaId: string, usuarioId: string) => {
   const venda = await prisma.venda.findFirst({
     where: { id, empresaId },
     include: { itens: true },
   });
+
   if (!venda) throw new CustomError("Venda não encontrada", 404);
   if (venda.status === "Cancelada")
     throw new CustomError("Essa venda já foi cancelada.", 400);
@@ -357,22 +389,28 @@ export const cancelVendaService = async (id: string, empresaId: string) => {
         where: { produtoId: item.produtoId, empresaId },
         orderBy: { dataCompra: "desc" },
       });
+
       const qtd = Number(item.quantidade);
+
       for (const lote of lotes) {
         await tx.lote.update({
           where: { id: lote.id },
           data: { quantidadeAtual: Number(lote.quantidadeAtual) + qtd },
         });
+
         await tx.movimentacao.create({
           data: {
-            produtoId: item.produtoId,
-            loteId: lote.id,
             tipo: TipoMovimentacao.ENTRADA,
             quantidade: qtd,
             observacao: `Cancelamento da venda ${venda.numero}`,
-            empresaId,
+
+            produto: { connect: { id: item.produtoId } },
+            lote: { connect: { id: lote.id } },
+            empresa: { connect: { id: empresaId } },
+            usuario: { connect: { id: usuarioId } },
           },
         });
+
         break;
       }
     }
@@ -386,7 +424,6 @@ export const cancelVendaService = async (id: string, empresaId: string) => {
     });
   });
 };
-
 /**
  * ======================================================
  * CONSULTAS E UTILITÁRIOS
@@ -422,7 +459,10 @@ export const deleteVendaService = async (id: string, empresaId: string) => {
   return { message: "Venda excluída com sucesso." };
 };
 
-export const getVendasFiltrarService = async (filtros: any, empresaId: string) => {
+export const getVendasFiltrarService = async (
+  filtros: any,
+  empresaId: string
+) => {
   const where: any = { empresaId };
 
   if (filtros.clienteId && filtros.clienteId !== "todos")
@@ -433,15 +473,14 @@ export const getVendasFiltrarService = async (filtros: any, empresaId: string) =
     where.status = filtros.status;
   if (filtros.dataInicio || filtros.dataFim) {
     where.criadoEm = {};
-    if (filtros.dataInicio)
-      where.criadoEm.gte = new Date(filtros.dataInicio);
+    if (filtros.dataInicio) where.criadoEm.gte = new Date(filtros.dataInicio);
     if (filtros.dataFim) {
       const fim = new Date(filtros.dataFim);
       fim.setHours(23, 59, 59, 999);
       where.criadoEm.lte = fim;
     }
   }
-  if(filtros.tipoVenda && filtros.tipoVenda !== "todos"){
+  if (filtros.tipoVenda && filtros.tipoVenda !== "todos") {
     where.tipoVenda = filtros.tipoVenda;
   }
 

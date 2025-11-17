@@ -578,6 +578,26 @@ const PDV = ({ clientes, vendedores, onFinalizeSale, onExit }: PDVProps) => {
     }
   }, []);
 
+    const getImageUrl = (value: string | File | null) => {
+    if (!value) {
+      return "https://placehold.co/600x400?text=Sem+Imagem";
+    }
+
+    // Se for File (nova imagem escolhida)
+    if (value instanceof File) {
+      return URL.createObjectURL(value); // <- gera preview AUTOMÁTICO
+    }
+
+    // Se já for URL externa
+    if (value.startsWith("http")) {
+      return value;
+    }
+
+    // Se for caminho relativo salvo no banco
+    const cleanPath = value.startsWith("/") ? value.substring(1) : value;
+    return `${import.meta.env.VITE_API_URL}/${cleanPath}`;
+  };
+
   if (loadingProdutos) {
     return (
       <div className="flex h-screen w-screen flex-col items-center justify-center gap-4 bg-muted/40">
@@ -626,10 +646,10 @@ const PDV = ({ clientes, vendedores, onFinalizeSale, onExit }: PDVProps) => {
                       }`}
                     >
                       <img
-                        className="w-12 h-12 rounded-lg object-cover"
+                        className="w-24 h-24 rounded-lg object-cover"
                         src={
-                          item.produto.urlImage ||
-                          "https://placehold.co/100x100"
+                          getImageUrl(item.produto.urlImage) ||
+                          "https://placehold.co/300x300"
                         }
                         alt={item.produto.nome}
                       />

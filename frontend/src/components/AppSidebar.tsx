@@ -15,9 +15,10 @@ import {
   SidebarGroupContent,
 } from "@/components/ui/sidebar";
 import { Separator } from "./ui/separator";
+import { LogOut } from "lucide-react";
 
 export const AppSidebar = () => {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, logout } = useAuth(); // <= logout adicionado
   const location = useLocation();
   const email = user?.email?.toLowerCase();
 
@@ -86,11 +87,8 @@ export const AppSidebar = () => {
     return grupos;
   }, [visibleMenuItems, user]);
 
-  const isActive = (path: string) =>
-    location.pathname === path || location.pathname.startsWith(`${path}/`);
-
   return (
-    <Sidebar>
+    <Sidebar className="bg-slate-400">
       <SidebarHeader>
         <div
           className="p-2 w-28 cursor-pointer"
@@ -99,7 +97,9 @@ export const AppSidebar = () => {
           <img src="/logo-ajafs.png" alt="logo ajafs+ sistemas" />
         </div>
       </SidebarHeader>
+
       <Separator />
+
       <SidebarContent>
         <SidebarMenu>
           {Object.entries(groupedMenu).map(([categoria, itens]) =>
@@ -128,6 +128,24 @@ export const AppSidebar = () => {
               </SidebarGroup>
             ) : null
           )}
+
+          {/* ==================== */}
+          {/* ⭐ BOTÃO DE SAIR ⭐ */}
+          {/* ==================== */}
+
+          <Separator className="my-2" />
+
+          <SidebarMenuItem>
+            <button
+              onClick={logout}
+              className={cn(
+                "w-full flex items-center space-x-2 px-2 py-1 rounded-md transition hover:bg-red-100 hover:text-red-600"
+              )}
+            >
+              <LogOut className="h-4 w-4" />
+              <span>Sair</span>
+            </button>
+          </SidebarMenuItem>
         </SidebarMenu>
       </SidebarContent>
     </Sidebar>

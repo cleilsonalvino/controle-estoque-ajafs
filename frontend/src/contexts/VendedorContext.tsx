@@ -9,10 +9,11 @@ export interface Vendedor {
   nome: string;
   email: string;
   meta: number;
-  urlImage?: File | null;
+  urlImage?: string | File | null; // ✅ CORRETO
   criadoEm?: Date;
   atualizadoEm?: Date;
 }
+
 
 interface VendedorContextProps {
   vendedores: Vendedor[];

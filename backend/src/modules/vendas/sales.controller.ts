@@ -21,7 +21,7 @@ import type { AuthenticatedRequest } from "../../app/middlewares/auth.middleware
  */
 export const createVendaController = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const {empresaId} = req.user!;
+    const {empresaId, id} = req.user!;
     if (!empresaId) {
       return res.status(401).json({ message: "Usuário sem empresa associada" });
     }
@@ -34,7 +34,7 @@ export const createVendaController = async (req: AuthenticatedRequest, res: Resp
       });
     }
 
-    const venda = await createVendaService(req.body, empresaId);
+    const venda = await createVendaService(req.body, empresaId, id);
     res.status(201).json(venda);
   } catch (error: any) {
     console.error("Erro ao criar venda:", error);
@@ -45,13 +45,13 @@ export const createVendaController = async (req: AuthenticatedRequest, res: Resp
 
 export const createServiceSaleController = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const {empresaId} = req.user!;
+    const {empresaId, id} = req.user!;
     console.log("Empresa ID no createServiceSaleController:", empresaId);
     if (!empresaId) {
       return res.status(401).json({ message: "Usuário sem empresa associada" });
     }
     console.log("Requisição para criar venda de serviço:", req.body);
-    const venda = await createSaleServicesService(req.body, empresaId);
+    const venda = await createSaleServicesService(req.body, empresaId, id);
     res.status(201).json(venda);
   } catch (error: any) {
     res.status(error.statusCode || 500).json({ message: error.message });
@@ -116,9 +116,9 @@ export const getVendaByIdController = async (req: AuthenticatedRequest, res: Res
  */
 export const updateVendaController = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const {empresaId} = req.user!;
-    const { id } = req.params;
-    const venda = await updateVendaService(id as string, req.body, empresaId);
+    const {empresaId, id} = req.user!;
+    const { vendaId } = req.params;
+    const venda = await updateVendaService(vendaId as string, req.body, empresaId, id);
     res.status(200).json(venda);
   } catch (error: any) {
     res.status(error.status || 500).json({ message: error.message });
@@ -148,9 +148,9 @@ export const deleteVendaController = async (req: AuthenticatedRequest, res: Resp
  */
 export const cancelarVendaController = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const {empresaId} = req.user!;
-    const { id } = req.params;
-    const result = await cancelVendaService(id as string, empresaId);
+    const {empresaId, id} = req.user!;
+    const { vendaId } = req.params;
+    const result = await cancelVendaService(vendaId as string, empresaId, id);
     res.status(200).json(result);
   } catch (error: any) {
     res.status(error.status || 500).json({ message: error.message });
