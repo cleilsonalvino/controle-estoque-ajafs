@@ -102,6 +102,7 @@ export const createVendaService = async (data: any, empresaId: string, usuarioId
         clienteId: venda.clienteId,
         empresaId: venda.empresaId,
         status: "PENDENTE",
+        usuarioId: usuarioId,
       },
     });
 

@@ -1,189 +1,248 @@
+import React, { createContext, useContext, useState, ReactNode, useCallback } from "react";
+import { toast } from "sonner";
 
-import React, { createContext, useContext, useState, ReactNode, useCallback } from 'react';
-import { toast } from 'sonner';
-import { PosVenda, PosVendaContextType, PosVendaDashboardData, FollowUp } from '@/types/pos-venda';
-import { api } from '@/lib/api'; // Supondo que você tenha um arquivo de configuração da API
-import { useAuth } from './useAuth';
-import { useEmpresa } from './EmpresaContext';
+import {
+  PosVenda,
+  PosVendaContextType,
+  PosVendaDashboardData
+} from "@/types/pos-venda";
+
+import { api } from "@/lib/api";
+import { useAuth } from "./useAuth";
+import { useEmpresa } from "./EmpresaContext";
+
+import {
+  CreatePosVenda,
+  AgendarFollowUpData
+} from "@/types/pos-venda-dto";
 
 const PosVendaContext = createContext<PosVendaContextType | undefined>(undefined);
 
-export const PosVendaProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+export const PosVendaProvider = ({ children }: { children: ReactNode }) => {
+
   const [posVendas, setPosVendas] = useState<PosVenda[]>([]);
   const [dashboardData, setDashboardData] = useState<PosVendaDashboardData | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+
   const { user } = useAuth();
-  const { empresaSelecionada } = useEmpresa();
+  const { empresa } = useEmpresa();
 
-  const handleApiError = (err: any, message: string) => {
-    console.error(message, err);
-    setError(err);
-    toast.error(message, {
-      description: err.response?.data?.message || err.message,
-    });
-  };
-
+  // ---------------------------------------------------------
+  // GET HEADERS
+  // ---------------------------------------------------------
   const getAuthHeaders = useCallback(() => {
-    if (!empresaSelecionada) {
-        toast.error('Nenhuma empresa selecionada.');
-        throw new Error('Nenhuma empresa selecionada.');
+    if (!empresa) {
+      toast.error("Nenhuma empresa selecionada.");
+      throw new Error("Nenhuma empresa selecionada.");
     }
-    return {
-        'empresa-id': empresaSelecionada.id,
-    };
-  }, [empresaSelecionada]);
+    return { "empresa-id": empresa.id };
+  }, [empresa]);
 
+
+  // ---------------------------------------------------------
+  // UNIFICADOR DE ERROS
+  // ---------------------------------------------------------
+  const withApiHandling = useCallback(async <T,>(
+    apiCall: () => Promise<T>,
+    successMessage?: string,
+    errorMessage?: string
+  ): Promise<T | null> => {
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await apiCall();
+      if (successMessage) {
+        toast.success(successMessage);
+      }
+      return result;
+    } catch (err: any) {
+      console.error(errorMessage, err);
+      setError(err);
+      toast.error(errorMessage || "Erro inesperado", {
+        description: err.response?.data?.message || err.message,
+      });
+      return null;
+    } finally {
+      setLoading(false);
+    }
+
+  }, []);
+
+
+  // ---------------------------------------------------------
+  // GET POS-VENDA LIST
+  // ---------------------------------------------------------
   const fetchPosVendas = useCallback(async (filters: any = {}) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const headers = getAuthHeaders();
-      const response = await api.get('/pos-venda', { params: filters, headers });
-      setPosVendas(response.data);
-    } catch (err) {
-      handleApiError(err, 'Erro ao buscar acompanhamentos de pós-venda.');
-    } finally {
-      setLoading(false);
-    }
-  }, [getAuthHeaders]);
+    const res = await withApiHandling(
+      () => api.get("/pos-venda", { params: filters, headers: getAuthHeaders() }),
+      undefined,
+      "Erro ao buscar acompanhamentos."
+    );
 
+    if (res) setPosVendas(res.data);
+  }, [getAuthHeaders, withApiHandling]);
+
+
+  // ---------------------------------------------------------
+  // GET DASHBOARD
+  // ---------------------------------------------------------
   const fetchDashboard = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const headers = getAuthHeaders();
-      const response = await api.get('/pos-venda/dashboard', { headers });
-      setDashboardData(response.data);
-    } catch (err) {
-      handleApiError(err, 'Erro ao carregar dados do dashboard.');
-    } finally {
-      setLoading(false);
-    }
-  }, [getAuthHeaders]);
+    const res = await withApiHandling(
+      () => api.get("/pos-venda/dashboard", { headers: getAuthHeaders() }),
+      undefined,
+      "Erro ao carregar dados do dashboard."
+    );
 
+    if (res) setDashboardData(res.data);
+  }, [getAuthHeaders, withApiHandling]);
+
+
+  // ---------------------------------------------------------
+  // FIND UNIQUE
+  // ---------------------------------------------------------
   const findUniquePosVenda = useCallback(async (id: string) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const headers = getAuthHeaders();
-      const response = await api.get(`/pos-venda/${id}`, { headers });
-      return response.data;
-    } catch (err) {
-      handleApiError(err, 'Erro ao buscar detalhes do acompanhamento.');
-      return null;
-    } finally {
-      setLoading(false);
-    }
-  }, [getAuthHeaders]);
+    const res = await withApiHandling(
+      () => api.get(`/pos-venda/${id}`, { headers: getAuthHeaders() }),
+      undefined,
+      "Erro ao buscar detalhes."
+    );
 
-  const createPosVenda = useCallback(async (data: Partial<PosVenda>) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const headers = getAuthHeaders();
-      const response = await api.post('/pos-venda', data, { headers });
-      toast.success('Acompanhamento de pós-venda criado com sucesso!');
-      fetchPosVendas(); // Atualiza a lista
-      return response.data;
-    } catch (err) {
-      handleApiError(err, 'Erro ao criar acompanhamento.');
-      return null;
-    } finally {
-      setLoading(false);
-    }
-  }, [getAuthHeaders, fetchPosVendas]);
+    return res ? res.data : null;
+  }, [getAuthHeaders, withApiHandling]);
 
+
+  // ---------------------------------------------------------
+  // CREATE POS-VENDA
+  // ---------------------------------------------------------
+  const createPosVenda = useCallback(async (data: CreatePosVenda) => {
+    const payload = {
+      vendaId: data.vendaId,
+      clienteId: data.clienteId,
+      observacoes: data.observacoes,
+    };
+
+    const res = await withApiHandling(
+      () => api.post("/pos-venda", payload, { headers: getAuthHeaders() }),
+      "Acompanhamento criado com sucesso!",
+      "Erro ao criar acompanhamento."
+    );
+
+    if (res) fetchPosVendas();
+    return res ? res.data : null;
+
+  }, [getAuthHeaders, withApiHandling, fetchPosVendas]);
+
+
+  // ---------------------------------------------------------
+  // UPDATE POS-VENDA
+  // ---------------------------------------------------------
   const updatePosVenda = useCallback(async (id: string, data: Partial<PosVenda>) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const headers = getAuthHeaders();
-      const response = await api.put(`/pos-venda/${id}`, data, { headers });
-      toast.success('Acompanhamento atualizado com sucesso!');
-      // Atualiza o estado local para refletir a mudança imediatamente
-      setPosVendas(prev => prev.map(pv => pv.id === id ? { ...pv, ...response.data } : pv));
-      return response.data;
-    } catch (err) {
-      handleApiError(err, 'Erro ao atualizar acompanhamento.');
-      return null;
-    } finally {
-      setLoading(false);
-    }
-  }, [getAuthHeaders]);
 
-  const agendarFollowUp = useCallback(async (posVendaId: string, followUpData: Omit<FollowUp, "id" | "responsavel">) => {
-    setLoading(true);
-    setError(null);
-    try {
-        const headers = getAuthHeaders();
-        const response = await api.post(`/pos-venda/${posVendaId}/follow-up`, followUpData, { headers });
-        toast.success('Follow-up agendado com sucesso!');
-        // Idealmente, o backend retorna o acompanhamento atualizado
-        // ou você busca novamente os detalhes
-        return response.data;
-    } catch (err) {
-        handleApiError(err, 'Erro ao agendar follow-up.');
-        return null;
-    } finally {
-        setLoading(false);
-    }
-  }, [getAuthHeaders]);
+    const res = await withApiHandling(
+      () => api.put(`/pos-venda/${id}`, data, { headers: getAuthHeaders() }),
+      "Acompanhamento atualizado!",
+      "Erro ao atualizar acompanhamento."
+    );
 
+    if (res) {
+      setPosVendas(prev => prev.map(pv => pv.id === id ? { ...pv, ...res.data } : pv));
+    }
+
+    return res ? res.data : null;
+
+  }, [getAuthHeaders, withApiHandling]);
+
+
+  // ---------------------------------------------------------
+  // FOLLOW-UP
+  // ---------------------------------------------------------
+  const agendarFollowUp = useCallback(async (posVendaId: string, followUpData: AgendarFollowUpData) => {
+
+    const res = await withApiHandling(
+      () =>
+        api.post(`/pos-venda/${posVendaId}/follow-up`, followUpData, {
+          headers: getAuthHeaders(),
+        }),
+      "Follow-up agendado!",
+      "Erro ao agendar follow-up."
+    );
+
+    return res ? res.data : null;
+
+  }, [getAuthHeaders, withApiHandling]);
+
+
+  // ---------------------------------------------------------
+  // FINALIZAR POS-VENDA
+  // ---------------------------------------------------------
   const finalizarAtendimento = useCallback(async (posVendaId: string) => {
-    setLoading(true);
-    setError(null);
-    try {
-        const headers = getAuthHeaders();
-        await api.patch(`/pos-venda/${posVendaId}/finalizar`, {}, { headers });
-        toast.success('Atendimento finalizado com sucesso!');
-        setPosVendas(prev => prev.map(pv => pv.id === posVendaId ? { ...pv, status: 'finalizado' } : pv));
-    } catch (err) {
-        handleApiError(err, 'Erro ao finalizar atendimento.');
-    } finally {
-        setLoading(false);
-    }
-  }, [getAuthHeaders]);
 
+    const res = await withApiHandling(
+      () => api.patch(`/pos-venda/${posVendaId}/finalizar`, {}, { headers: getAuthHeaders() }),
+      "Atendimento finalizado!",
+      "Erro ao finalizar atendimento."
+    );
+
+    if (res) {
+      setPosVendas(prev =>
+        prev.map(pv =>
+          pv.id === posVendaId ? { ...pv, status: "FINALIZADO" } : pv
+        )
+      );
+    }
+
+  }, [getAuthHeaders, withApiHandling]);
+
+
+  // ---------------------------------------------------------
+  // ENVIAR PESQUISA
+  // ---------------------------------------------------------
   const enviarPesquisa = useCallback(async (posVendaId: string) => {
-    setLoading(true);
-    setError(null);
-    try {
-        const headers = getAuthHeaders();
-        await api.post(`/pos-venda/${posVendaId}/enviar-pesquisa`, {}, { headers });
-        toast.success('Pesquisa de satisfação enviada para o cliente!');
-    } catch (err) {
-        handleApiError(err, 'Erro ao enviar pesquisa.');
-    } finally {
-        setLoading(false);
-    }
-  }, [getAuthHeaders]);
+    await withApiHandling(
+      () =>
+        api.post(`/pos-venda/${posVendaId}/enviar-pesquisa`, {}, {
+          headers: getAuthHeaders(),
+        }),
+      "Pesquisa enviada!",
+      "Erro ao enviar pesquisa."
+    );
+  }, [getAuthHeaders, withApiHandling]);
 
 
+  // ---------------------------------------------------------
+  // PROVIDER
+  // ---------------------------------------------------------
   return (
-    <PosVendaContext.Provider value={{
-      posVendas,
-      dashboardData,
-      loading,
-      error,
-      fetchPosVendas,
-      fetchDashboard,
-      findUniquePosVenda,
-      createPosVenda,
-      updatePosVenda,
-      agendarFollowUp,
-      finalizarAtendimento,
-      enviarPesquisa
-    }}>
+    <PosVendaContext.Provider
+      value={{
+        posVendas,
+        dashboardData,
+        loading,
+        error,
+        fetchPosVendas,
+        fetchDashboard,
+        findUniquePosVenda,
+        createPosVenda,
+        updatePosVenda,
+        agendarFollowUp,
+        finalizarAtendimento,
+        enviarPesquisa,
+      }}
+    >
       {children}
     </PosVendaContext.Provider>
   );
 };
 
-export const usePosVenda = (): PosVendaContextType => {
-  const context = useContext(PosVendaContext);
-  if (context === undefined) {
-    throw new Error('usePosVenda must be used within a PosVendaProvider');
-  }
-  return context;
+
+// ---------------------------------------------------------
+// HOOK
+// ---------------------------------------------------------
+export const usePosVenda = () => {
+  const ctx = useContext(PosVendaContext);
+  if (!ctx) throw new Error("usePosVenda must be used within a PosVendaProvider");
+  return ctx;
 };

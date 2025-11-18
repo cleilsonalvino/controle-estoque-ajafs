@@ -15,7 +15,7 @@ clienteRouter.use(authMiddleware);
 clienteRouter.post('/create', createClienteController);
 clienteRouter.get('/', getClientesController);
 clienteRouter.get('/:id', getClienteByIdController);
-clienteRouter.patch('/:id', updateClienteController);
+clienteRouter.put('/:id', updateClienteController);
 clienteRouter.delete('/:id', deleteClienteController);
 
 export default clienteRouter;

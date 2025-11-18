@@ -1,162 +1,251 @@
+import { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
+import { usePosVenda } from "@/contexts/PosVendaContext";
+import { PosVenda as PosVendaType } from "@/types/pos-venda";
 
-import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
-import { usePosVenda } from '@/contexts/PosVendaContext';
-import { PosVenda as PosVendaType } from '@/types/pos-venda';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Calendar, Mail, Phone, User, ShoppingCart, DollarSign, Star, MessageSquare, PlusCircle, CheckCircle, Send } from 'lucide-react';
-import { Separator } from '@/components/ui/separator';
-import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
-
-// Placeholder for modal - to be created later
-import { AgendarFollowUpModal } from '@/components/pos-venda/AgendarFollowUpModal';
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Calendar,
+  Mail,
+  Phone,
+  User,
+  ShoppingCart,
+  DollarSign,
+  Star,
+  PlusCircle,
+  CheckCircle,
+  Send,
+} from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 
 export default function PosVendaDetalhes() {
   const { id } = useParams<{ id: string }>();
   const { findUniquePosVenda, loading, updatePosVenda } = usePosVenda();
-  const [posVenda, setPosVenda] = useState<PosVendaType | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [quickNote, setQuickNote] = useState('');
 
+  const [posVenda, setPosVenda] = useState<PosVendaType | null>(null);
+  const [quickNote, setQuickNote] = useState("");
+
+  // Buscar dados
   useEffect(() => {
-    if (id) {
-      findUniquePosVenda(id).then(data => {
-        setPosVenda(data);
-        setQuickNote(data?.anotacoes || '');
-      });
-    }
+    if (!id) return;
+
+    findUniquePosVenda(id).then((data) => {
+      setPosVenda(data);
+      setQuickNote(data?.observacoes || "");
+    });
   }, [id, findUniquePosVenda]);
 
-  // Auto-save quick note
+  // Auto-save observações → salvando em "observacoes"
   useEffect(() => {
-    const handler = setTimeout(() => {
-      if (id && quickNote !== posVenda?.anotacoes) {
-        updatePosVenda(id, { anotacoes: quickNote });
-      }
-    }, 1500); // Save after 1.5s of inactivity
+    if (!id || !posVenda) return;
 
-    return () => {
-      clearTimeout(handler);
-    };
+    const handler = setTimeout(() => {
+      if (quickNote !== posVenda.observacoes) {
+        updatePosVenda(id, { observacoes: quickNote });
+      }
+    }, 1500);
+
+    return () => clearTimeout(handler);
   }, [quickNote, id, posVenda, updatePosVenda]);
 
+  // Carregando
   if (loading || !posVenda) {
     return (
       <div className="p-8 space-y-4">
         <Skeleton className="h-10 w-1/2" />
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <Skeleton className="h-64 w-full" />
-          <Skeleton className="h-64 w-full" />
-          <Skeleton className="h-64 w-full" />
-          <Skeleton className="h-80 w-full lg:col-span-2" />
-          <Skeleton className="h-80 w-full" />
-        </div>
+        <Skeleton className="h-64 w-full" />
       </div>
     );
   }
 
-  const { cliente, venda, historicoContatos, feedback, status } = posVenda;
+  const { venda, cliente, usuario, followUps, feedbacks, status, satisfacao } =
+    posVenda;
+
+  const feedback = feedbacks.length > 0 ? feedbacks[0] : null;
 
   return (
     <div className="p-4 md:p-8 space-y-6">
+      {/* TÍTULO */}
       <div className="flex items-center justify-between">
         <div>
-            <h1 className="text-3xl font-bold">Detalhes do Pós-Venda</h1>
-            <p className="text-muted-foreground">Acompanhamento de {cliente.nome}</p>
+          <h1 className="text-3xl font-bold">Detalhes do Pós-Venda</h1>
+          <p className="text-muted-foreground">
+            Acompanhamento do cliente{" "}
+            {cliente?.nome ?? "(cliente não informado)"}
+          </p>
         </div>
+
         <div className="flex gap-2">
-            <Button onClick={() => setIsModalOpen(true)}><PlusCircle className="mr-2 h-4 w-4" /> Agendar Follow-Up</Button>
-            <Button variant="outline"><CheckCircle className="mr-2 h-4 w-4" /> Finalizar Atendimento</Button>
-            <Button variant="secondary"><Send className="mr-2 h-4 w-4" /> Enviar Pesquisa</Button>
+          <Button>
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Agendar Follow-Up
+          </Button>
+
+          <Button variant="outline">
+            <CheckCircle className="mr-2 h-4 w-4" /> Finalizar
+          </Button>
+
+          <Button variant="secondary">
+            <Send className="mr-2 h-4 w-4" />
+            Enviar Pesquisa
+          </Button>
         </div>
       </div>
 
+      {/* GRID PRINCIPAL */}
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* Card de Cliente */}
+        {/* CARD CLIENTE */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center"><User className="mr-2" /> Informações do Cliente</CardTitle>
+            <CardTitle className="flex items-center">
+              <User className="mr-2" /> Cliente
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            <p><strong>Nome:</strong> {cliente.nome}</p>
-            <p><strong><Phone className="inline mr-2 h-4 w-4" /></strong> {cliente.telefone}</p>
-            <p><strong><Mail className="inline mr-2 h-4 w-4" /></strong> {cliente.email}</p>
-            <p><strong>Cidade:</strong> {cliente.cidade}</p>
+            <p>
+              <strong>Nome:</strong> {cliente?.nome ?? "Não informado"}
+            </p>
+
+            <p>
+              <Phone className="inline mr-2 h-4 w-4" />
+              {cliente?.telefone ?? "Sem telefone"}
+            </p>
+
+            <p>
+              <Mail className="inline mr-2 h-4 w-4" />
+              {cliente?.email ?? "Sem e-mail"}
+            </p>
           </CardContent>
         </Card>
 
-        {/* Card da Venda */}
+        {/* CARD VENDA */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center"><ShoppingCart className="mr-2" /> Dados da Venda</CardTitle>
+            <CardTitle className="flex items-center">
+              <ShoppingCart className="mr-2" /> Venda
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            <p><strong>Data:</strong> {new Date(venda.dataVenda).toLocaleDateString()}</p>
-            <p><strong><DollarSign className="inline mr-2 h-4 w-4" /></strong> {venda.valorTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
-            <p className="font-semibold">Produtos:</p>
-            <ul className="list-disc pl-5 text-sm">
-              {venda.produtos.map(p => <li key={p.id}>{p.nome} (x{p.quantidade})</li>)}
-            </ul>
+            <p>
+              <strong>Número:</strong> {venda?.numero ?? "—"}
+            </p>
+
+            <p>
+              <DollarSign className="inline mr-2 h-4 w-4" />
+              Valor:{" "}
+              {venda?.total
+                ? Number(venda.total).toLocaleString("pt-BR", {
+                    style: "currency",
+                    currency: "BRL",
+                  })
+                : "—"}
+            </p>
+
+            <p>
+              <strong>Vendedor:</strong>{" "}
+              {venda?.vendedor?.nome ?? "Não informado"}
+            </p>
           </CardContent>
         </Card>
 
-        {/* Card de Satisfação */}
+        {/* CARD DE SATISFAÇÃO */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center"><Star className="mr-2" /> Satisfação do Cliente</CardTitle>
+            <CardTitle className="flex items-center">
+              <Star className="mr-2" /> Satisfação
+            </CardTitle>
           </CardHeader>
           <CardContent>
             {feedback ? (
-              <div className="space-y-2">
-                <div className="flex items-center">
-                  {[...Array(5)].map((_, i) => <Star key={i} className={`h-6 w-6 ${i < feedback.nota ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`} />)}
+              <>
+                <div className="flex items-center mb-2">
+                  {[...Array(5)].map((_, i) => (
+                    <Star
+                      key={i}
+                      className={`h-6 w-6 ${
+                        i < feedback.avaliacao
+                          ? "text-yellow-400 fill-yellow-400"
+                          : "text-gray-300"
+                      }`}
+                    />
+                  ))}
                 </div>
-                <p className="text-muted-foreground italic">"{feedback.comentario || 'Nenhum comentário fornecido.'}"</p>
-              </div>
+                <p className="italic text-muted-foreground">
+                  "{feedback.comentario ?? "Sem comentário"}"
+                </p>
+              </>
             ) : (
-              <p className="text-muted-foreground">Nenhum feedback recebido ainda.</p>
+              <p className="text-muted-foreground">
+                Nenhum feedback recebido ainda.
+              </p>
             )}
           </CardContent>
         </Card>
 
-        {/* Histórico e Anotações */}
+        {/* HISTÓRICO + ANOTAÇÕES */}
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>Histórico e Anotações</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+
+          <CardContent className="space-y-6">
+            {/* ANOTAÇÃO ➝ SALVA EM observacoes */}
             <div>
-                <h3 className="font-semibold mb-2">Anotação Rápida (salva automaticamente)</h3>
-                <Textarea 
-                    placeholder="Digite suas anotações aqui..."
-                    value={quickNote}
-                    onChange={(e) => setQuickNote(e.target.value)}
-                    className="h-24"
-                />
+              <h3 className="font-semibold mb-2">
+                Anotação Rápida (auto-save)
+              </h3>
+              <Textarea
+                value={quickNote}
+                onChange={(e) => setQuickNote(e.target.value)}
+                className="h-28"
+                placeholder="Escreva observações..."
+              />
             </div>
+
             <Separator />
+
+            {/* FOLLOW-UPS */}
             <div>
-                <h3 className="font-semibold">Histórico de Contatos</h3>
-                <div className="space-y-3 mt-2">
-                    {historicoContatos.length > 0 ? historicoContatos.map(h => (
-                        <div key={h.id} className="flex items-start gap-3">
-                            <div className="flex-shrink-0"><Calendar className="h-5 w-5 text-muted-foreground" /></div>
-                            <div>
-                                <p className="font-medium">{new Date(h.dataContato).toLocaleString()} - <Badge variant="secondary">{h.tipoContato}</Badge></p>
-                                <p className="text-sm text-muted-foreground">{h.observacao}</p>
-                                <p className="text-xs text-gray-500">por {h.responsavel.nome}</p>
-                            </div>
-                        </div>
-                    )) : <p className="text-sm text-muted-foreground">Nenhum contato registrado.</p>}
-                </div>
+              <h3 className="font-semibold">Histórico de Follow-Ups</h3>
+
+              <div className="space-y-3 mt-3">
+                {followUps.length > 0 ? (
+                  followUps.map((f) => (
+                    <div key={f.id} className="flex gap-3">
+                      <Calendar className="h-5 w-5 text-muted-foreground" />
+
+                      <div>
+                        <p className="font-medium">
+                          {new Date(f.dataAgendada).toLocaleString()} —
+                          <Badge variant="secondary" className="ml-2">
+                            {f.tipoAcao || "contato"}
+                          </Badge>
+                        </p>
+
+                        <p className="text-sm text-muted-foreground">
+                          {f.observacao || "Sem observação"}
+                        </p>
+
+                        <p className="text-xs text-gray-500">
+                          responsável: {f.responsavel?.nome ?? "—"}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-muted-foreground text-sm">
+                    Nenhum follow-up registrado ainda.
+                  </p>
+                )}
+              </div>
             </div>
           </CardContent>
         </Card>
       </div>
-      <AgendarFollowUpModal isOpen={isModalOpen} setIsOpen={setIsModalOpen} posVendaId={id!} />
     </div>
   );
 }

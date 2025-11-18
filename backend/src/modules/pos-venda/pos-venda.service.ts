@@ -1,21 +1,28 @@
 import { PrismaClient, Papel } from "@prisma/client";
 import { CustomError } from "../../shared/errors";
-import type { CreatePosVendaDto, UpdatePosVendaDto, CreateFeedbackDto, CreateFollowUpDto, UpdateFollowUpDto } from "./pos-venda.dto";
+import type {
+    CreatePosVendaDto,
+    UpdatePosVendaDto,
+    CreateFeedbackDto,
+    CreateFollowUpDto,
+    UpdateFollowUpDto
+} from "./pos-venda.dto";
 
 const prisma = new PrismaClient();
 
 // ================================================
-// FUNÇÕES DE PÓS-VENDA
+// LISTAR PÓS-VENDAS
 // ================================================
 
-export const getPosVendasService = async (empresaId: string, user: { id: string, papel: Papel, vendedorId?: string }) => {
+export const getPosVendasService = async (
+    empresaId: string,
+    user: { id: string; papel: Papel; vendedorId?: string }
+) => {
     const where: any = { empresaId };
 
-    if (user.papel === "VENDEDOR") {
-        // Um vendedor só pode ver pós-vendas associadas às suas próprias vendas.
-        // Assumindo que o ID do vendedor está no objeto user
+    if (user.papel === Papel.VENDEDOR) {
         where.venda = {
-            vendedorId: user.vendedorId,
+            vendedorId: user.id
         };
     }
 
@@ -23,46 +30,54 @@ export const getPosVendasService = async (empresaId: string, user: { id: string,
         where,
         include: {
             venda: {
-                include: {
-                    vendedor: true,
-                }
+                include: { vendedor: true }
             },
             cliente: true,
-            usuario: true, // Usuário que realizou o contato
+            usuario: true
         },
-        orderBy: {
-            criadoEm: "desc",
-        },
+        orderBy: { criadoEm: "desc" }
     });
 };
 
+// ================================================
+// BUSCAR POR ID
+// ================================================
+
 export const getPosVendaByIdService = async (id: string, empresaId: string) => {
-  const posVenda = await prisma.posVenda.findFirst({
-    where: { id, empresaId },
-    include: {
-        venda: {
-            include: {
-                vendedor: true,
-                cliente: true,
-            }
-        },
-        cliente: true,
-        usuario: true,
-        feedbacks: true,
-        followUps: true,
+    const posVenda = await prisma.posVenda.findFirst({
+        where: { id, empresaId },
+        include: {
+            venda: {
+                include: {
+                    vendedor: true,
+                    cliente: true
+                }
+            },
+            cliente: true,
+            usuario: true,
+            feedbacks: true,
+            followUps: true
+        }
+    });
+
+    if (!posVenda) {
+        throw new CustomError("Acompanhamento pós-venda não encontrado.", 404);
     }
-  });
 
-  if (!posVenda) {
-    throw new CustomError("Acompanhamento pós-venda não encontrado.", 404);
-  }
-
-  return posVenda;
+    return posVenda;
 };
 
-export const createPosVendaService = async (data: CreatePosVendaDto, empresaId: string, usuarioId: string) => {
+// ================================================
+// CRIAR PÓS-VENDA
+// ================================================
+
+export const createPosVendaService = async (
+    data: CreatePosVendaDto,
+    empresaId: string,
+    usuarioId: string
+) => {
     const venda = await prisma.venda.findFirst({
-        where: { id: data.vendaId, empresaId },
+        where: { id: data.vendaId, empresaId }
     });
 
     if (!venda) {
@@ -74,14 +89,22 @@ export const createPosVendaService = async (data: CreatePosVendaDto, empresaId: 
             ...data,
             empresaId,
             usuarioId,
-            clienteId: venda.clienteId,
+            clienteId: venda.clienteId
         }
     });
 };
 
-export const updatePosVendaService = async (id: string, data: UpdatePosVendaDto, empresaId: string) => {
+// ================================================
+// ATUALIZAR PÓS-VENDA
+// ================================================
+
+export const updatePosVendaService = async (
+    id: string,
+    data: UpdatePosVendaDto,
+    empresaId: string
+) => {
     const posVenda = await prisma.posVenda.findFirst({
-        where: { id, empresaId },
+        where: { id, empresaId }
     });
 
     if (!posVenda) {
@@ -90,28 +113,115 @@ export const updatePosVendaService = async (id: string, data: UpdatePosVendaDto,
 
     return prisma.posVenda.update({
         where: { id },
-        data,
+        data
     });
 };
 
+// ================================================
+// DELETAR PÓS-VENDA
+// ================================================
+
 export const deletePosVendaService = async (id: string, empresaId: string) => {
     const posVenda = await prisma.posVenda.findFirst({
-        where: { id, empresaId },
+        where: { id, empresaId }
     });
 
     if (!posVenda) {
         throw new CustomError("Acompanhamento pós-venda não encontrado.", 404);
     }
 
-    await prisma.posVenda.delete({
-        where: { id },
-    });
+    await prisma.posVenda.delete({ where: { id } });
 
-    return { message: "Acompanhamento pós-venda excluído com sucesso." };
+    return { message: "Acompanhamento excluído com sucesso." };
 };
 
 // ================================================
-// FUNÇÕES DE FEEDBACK PÚBLICO
+// FOLLOW-UP
+// ================================================
+
+export const createFollowUpService = async (
+    data: CreateFollowUpDto,
+    empresaId: string
+) => {
+    const posVenda = await prisma.posVenda.findFirst({
+        where: { id: data.posVendaId, empresaId }
+    });
+
+    if (!posVenda) {
+        throw new CustomError("Acompanhamento pós-venda não encontrado.", 404);
+    }
+
+    return prisma.followUp.create({
+        data: {
+            ...data,
+            empresaId
+        }
+    });
+};
+
+export const updateFollowUpService = async (
+    id: string,
+    data: UpdateFollowUpDto,
+    empresaId: string
+) => {
+    const followUp = await prisma.followUp.findFirst({
+        where: { id, empresaId }
+    });
+
+    if (!followUp) {
+        throw new CustomError("Follow-up não encontrado.", 404);
+    }
+
+    return prisma.followUp.update({
+        where: { id },
+        data
+    });
+};
+
+// ================================================
+// FINALIZAR ATENDIMENTO
+// ================================================
+
+export const finalizarPosVendaService = async (id: string, empresaId: string) => {
+    const posVenda = await prisma.posVenda.findFirst({
+        where: { id, empresaId }
+    });
+
+    if (!posVenda) {
+        throw new CustomError("Acompanhamento pós-venda não encontrado.", 404);
+    }
+
+    return prisma.posVenda.update({
+        where: { id },
+        data: { status: "FINALIZADO" }
+    });
+};
+
+// ================================================
+// ENVIAR PESQUISA
+// ================================================
+
+export const enviarPesquisaService = async (id: string, empresaId: string) => {
+    const posVenda = await prisma.posVenda.findFirst({
+        where: { id, empresaId },
+        include: {
+            cliente: true,
+            empresa: true
+        }
+    });
+
+    if (!posVenda) {
+        throw new CustomError("Acompanhamento pós-venda não encontrado.", 404);
+    }
+
+    // aqui você poderá integrar com whatsapp ou email
+    console.log(`Enviar pesquisa para cliente ID: ${posVenda.clienteId}`);
+
+    return true;
+};
+
+// ================================================
+// FORM PÚBLICO DE FEEDBACK
 // ================================================
 
 export const getFeedbackFormService = async (posVendaId: string) => {
@@ -122,95 +232,49 @@ export const getFeedbackFormService = async (posVendaId: string) => {
             venda: {
                 select: {
                     numero: true,
-                    cliente: {
-                        select: {
-                            nome: true,
-                        }
-                    }
+                    cliente: { select: { nome: true } }
                 }
             },
-            empresa: {
-                select: {
-                    nomeFantasia: true,
-                }
-            }
+            empresa: { select: { nomeFantasia: true } }
         }
     });
 
     if (!posVenda) {
-        throw new CustomError("Link de feedback inválido ou não encontrado.", 404);
+        throw new CustomError("Link inválido", 404);
     }
 
     return posVenda;
 };
 
-export const createFeedbackService = async (posVendaId: string, data: CreateFeedbackDto) => {
+export const createFeedbackService = async (
+    posVendaId: string,
+    data: CreateFeedbackDto
+) => {
     const posVenda = await prisma.posVenda.findUnique({
-        where: { id: posVendaId },
+        where: { id: posVendaId }
     });
 
-    if (!posVenda) {
-        throw new CustomError("Link de feedback inválido ou não encontrado.", 404);
-    }
+    if (!posVenda) throw new CustomError("Link inválido.", 404);
 
     const feedback = await prisma.feedbackCliente.create({
         data: {
             posVendaId,
             empresaId: posVenda.empresaId,
             avaliacao: data.avaliacao,
-            comentario: data.comentario,
+            comentario: data.comentario
         }
     });
 
-    // Atualiza a satisfação no pós-venda principal
     await prisma.posVenda.update({
         where: { id: posVendaId },
         data: {
             satisfacao: data.avaliacao,
-            status: "FINALIZADO", // Opcional: finalizar após feedback
+            status: "FINALIZADO"
         }
     });
 
     return feedback;
 };
-
-
-// ================================================
-// FUNÇÕES DE FOLLOW-UP
-// ================================================
-
-export const createFollowUpService = async (data: CreateFollowUpDto, empresaId: string) => {
-    const posVenda = await prisma.posVenda.findFirst({
-        where: { id: data.posVendaId, empresaId },
-    });
-
-    if (!posVenda) {
-        throw new CustomError("Acompanhamento pós-venda não encontrado para agendar o follow-up.", 404);
-    }
-
-    return prisma.followUp.create({
-        data: {
-            ...data,
-            empresaId,
-        }
-    });
-};
-
-export const updateFollowUpService = async (id: string, data: UpdateFollowUpDto, empresaId: string) => {
-    const followUp = await prisma.followUp.findFirst({
-        where: { id, empresaId },
-    });
-
-    if (!followUp) {
-        throw new CustomError("Follow-up não encontrado.", 404);
-    }
-
-    return prisma.followUp.update({
-        where: { id },
-        data,
-    });
-};
-
 
 // ================================================
 // DASHBOARD
@@ -219,71 +283,41 @@ export const updateFollowUpService = async (id: string, data: UpdateFollowUpDto,
 export const getDashboardDataService = async (empresaId: string) => {
     const agregados = await prisma.posVenda.aggregate({
         where: { empresaId },
-        _avg: {
-            satisfacao: true,
-        },
-        _count: {
-            status: true,
-        }
+        _avg: { satisfacao: true },
+        _count: { status: true }
     });
 
     const followUps = await prisma.followUp.groupBy({
         by: ["realizado"],
         where: { empresaId },
-        _count: true,
+        _count: true
     });
 
     const finalizados = await prisma.posVenda.count({
-        where: {
-            empresaId,
-            status: "FINALIZADO",
-        }
+        where: { empresaId, status: "FINALIZADO" }
     });
 
-    // Este é um exemplo. A lógica de recompra pode ser mais complexa.
     const clientesComRetorno = await prisma.posVenda.count({
-        where: {
-            empresaId,
-            retornoCliente: true,
-        }
+        where: { empresaId, retornoCliente: true }
     });
+
     const totalClientesContatados = await prisma.posVenda.count({
         where: {
             empresaId,
-            status: {
-                in: ["EM_ANDAMENTO", "FINALIZADO"]
-            }
+            status: { in: ["EM_ANDAMENTO", "FINALIZADO"] }
         }
     });
 
-
-    const rankingVendedores = await prisma.venda.groupBy({
-        by: ['vendedorId'],
-        where: {
-            empresaId,
-            vendedorId: { not: null },
-            posVenda: {
-                satisfacao: { not: null }
-            }
-        },
-        _avg: {
-            posVenda: {
-                fields: ['satisfacao'],
-                // Infelizmente o Prisma não suporta avg em nested relations diretamente no groupBy.
-                // Isso teria que ser calculado programaticamente ou com raw query.
-                // A linha abaixo é uma representação do que gostaríamos de fazer.
-                // satisfacao: true 
-            }
-        },
-    });
-
-
     return {
         mediaSatisfacao: agregados._avg.satisfacao || 0,
-        followUpsPendentes: followUps.find(f => f.realizado === false)?._count || 0,
-        followUpsRealizados: followUps.find(f => f.realizado === true)?._count || 0,
+        followUpsPendentes:
+            followUps.find((f) => f.realizado === false)?._count || 0,
+        followUpsRealizados:
+            followUps.find((f) => f.realizado === true)?._count || 0,
         posVendasFinalizadas: finalizados,
-        taxaRetorno: totalClientesContatados > 0 ? (clientesComRetorno / totalClientesContatados) * 100 : 0,
-        // rankingVendedores, // Precisa de implementação adicional
+        taxaRetorno:
+            totalClientesContatados > 0
+                ? (clientesComRetorno / totalClientesContatados) * 100
+                : 0
     };
 };

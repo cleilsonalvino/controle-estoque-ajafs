@@ -1,22 +1,27 @@
+import { AgendarFollowUpData, CreatePosVenda } from "./pos-venda-dto";
 
-// Interfaces para o módulo de Pós-Venda
+// ==========================================================
+// ENUMS ALINHADOS AO BACKEND
+// ==========================================================
 
-export type PosVendaStatus = "pendente" | "em_andamento" | "finalizado";
-export type TipoContato = "whatsapp" | "ligacao" | "email" | "visita";
+export type PosVendaStatus = "PENDENTE" | "EM_ANDAMENTO" | "FINALIZADO";
 
-export interface Venda {
-  id: string;
-  produtos: Array<{ id: string; nome: string; quantidade: number; preco: number }>;
-  valorTotal: number;
-  dataVenda: string;
-}
+export type TipoAcaoFollowUp =
+  | "whatsapp"
+  | "ligacao"
+  | "email"
+  | "visita"
+  | "outro";
+
+// ==========================================================
+// TIPOS DAS ENTIDADES
+// ==========================================================
 
 export interface Cliente {
   id: string;
   nome: string;
-  telefone: string;
-  email: string;
-  cidade: string;
+  telefone?: string;
+  email?: string;
 }
 
 export interface Usuario {
@@ -24,85 +29,94 @@ export interface Usuario {
   nome: string;
 }
 
+export interface Venda {
+  id: string;
+  numero?: string;
+  vendedor?: Usuario;
+  cliente?: Cliente;
+  criadoEm: string;
+  total?: number;
+}
+
+// ==========================================================
+// FOLLOW-UP (BACKEND OFICIAL)
+// ==========================================================
+
 export interface FollowUp {
   id: string;
-  dataContato: string;
-  tipoContato: TipoContato;
-  observacao: string;
-  concluido: boolean;
+  posVendaId: string;
+  dataAgendada: string;
+  tipoAcao?: string;
+  observacao?: string;
+  realizado: boolean;
+  empresaId: string;
   responsavel: Usuario;
 }
+
+// ==========================================================
+// FEEDBACK REAL DO BACKEND
+// ==========================================================
 
 export interface Feedback {
   id: string;
-  nota: number; // 1 a 5
+  avaliacao: number;
   comentario?: string;
-  dataFeedback: string;
+  createdAt: string;
 }
+
+// ==========================================================
+// POS-VENDA (BACKEND REAL)
+// ==========================================================
 
 export interface PosVenda {
   id: string;
-  cliente: Cliente;
   venda: Venda;
-  status: PosVendaStatus;
-  dataUltimoContato: string;
-  nivelSatisfacao?: number; // Média das notas de feedback
-  responsavel: Usuario;
-  historicoContatos: FollowUp[];
-  anotacoes: string;
-  feedback?: Feedback;
+  cliente: Cliente;
+  usuario: Usuario;   // responsável
   empresaId: string;
-  createdAt: string;
-  updatedAt: string;
+
+  status: PosVendaStatus;
+  satisfacao?: number;  // média das avaliações
+
+  retornoCliente?: boolean;
+  observacoes?: string;
+
+  followUps: FollowUp[];
+  feedbacks: Feedback[];
+
+  criadoEm: string;
+  atualizadoEm: string;
 }
 
-// --- Tipos para o Contexto ---
+// ==========================================================
+// DASHBOARD
+// ==========================================================
+
+export interface PosVendaDashboardData {
+  mediaSatisfacao: number;
+  followUpsPendentes: number;
+  followUpsRealizados: number;
+  posVendasFinalizadas: number;
+  taxaRetorno: number;
+}
+
 export interface PosVendaContextType {
   posVendas: PosVenda[];
   dashboardData: PosVendaDashboardData | null;
   loading: boolean;
   error: Error | null;
-  fetchPosVendas: (filters?: any) => Promise<void>;
+  fetchPosVendas: (filters?: Record<string, any>) => Promise<void>;
   fetchDashboard: () => Promise<void>;
   findUniquePosVenda: (id: string) => Promise<PosVenda | null>;
-  createPosVenda: (data: Partial<PosVenda>) => Promise<PosVenda | null>;
-  updatePosVenda: (id: string, data: Partial<PosVenda>) => Promise<PosVenda | null>;
-  agendarFollowUp: (posVendaId: string, followUpData: Omit<FollowUp, "id" | "responsavel">) => Promise<FollowUp | null>;
+  createPosVenda: (data: CreatePosVenda) => Promise<PosVenda | null>;
+  updatePosVenda: (
+    id: string,
+    data: Partial<PosVenda>
+  ) => Promise<PosVenda | null>;
+  agendarFollowUp: (
+    posVendaId: string,
+    followUpData: AgendarFollowUpData
+  ) => Promise<FollowUp | null>;
   finalizarAtendimento: (posVendaId: string) => Promise<void>;
   enviarPesquisa: (posVendaId: string) => Promise<void>;
-}
-
-
-// --- Tipos para o Dashboard ---
-
-export interface FollowUpsPorStatus {
-  realizados: number;
-  pendentes: number;
-}
-
-export interface DistribuicaoNotas {
-  nota: number;
-  quantidade: number;
-}
-
-export interface RankingVendedor {
-  vendedor: Usuario;
-  mediaSatisfacao: number;
-  totalAtendimentos: number;
-}
-
-export interface Reclamacao {
-  id: string;
-  cliente: Cliente;
-  dataReclamacao: string;
-  motivo: string;
-}
-
-export interface PosVendaDashboardData {
-  mediaGeralSatisfacao: number;
-  followUps: FollowUpsPorStatus;
-  distribuicaoNotas: DistribuicaoNotas[];
-  rankingVendedores: RankingVendedor[];
-  taxaFidelizacao: number;
-  reclamacoesAbertas: Reclamacao[];
 }

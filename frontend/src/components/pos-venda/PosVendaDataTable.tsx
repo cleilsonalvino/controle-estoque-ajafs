@@ -1,27 +1,45 @@
-
 import { DataTable } from "@/components/ui/data-table";
-import { columns } from "./pos-venda-columns";
+import { getColumns } from "./pos-venda-columns";
+import { PosVenda } from "@/types/pos-venda";
 import { usePosVenda } from "@/contexts/PosVendaContext";
-import { useEffect } from "react";
-import { Skeleton } from "@/components/ui/skeleton";
+import { useState } from "react";
+import { AgendarFollowUpModal } from "./AgendarFollowUpModal";
 
-export function PosVendaDataTable() {
-  const { posVendas, loading, fetchPosVendas } = usePosVenda();
+interface PosVendaDataTableProps {
+  data: PosVenda[];
+}
 
-  useEffect(() => {
-    fetchPosVendas();
-  }, [fetchPosVendas]);
+export function PosVendaDataTable({ data }: PosVendaDataTableProps) {
+  const { finalizarAtendimento } = usePosVenda();
+  const [selectedPosVendaId, setSelectedPosVendaId] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
-  if (loading && posVendas.length === 0) {
-    return (
-        <div className="space-y-4">
-            <Skeleton className="h-12 w-full" />
-            <Skeleton className="h-12 w-full" />
-            <Skeleton className="h-12 w-full" />
-            <Skeleton className="h-12 w-full" />
-        </div>
-    );
-  }
+  const handleAgendarFollowUp = (id: string) => {
+    setSelectedPosVendaId(id);
+    setIsModalOpen(true);
+  };
 
-  return <DataTable columns={columns} data={posVendas} />;
+  const columns = getColumns(finalizarAtendimento, handleAgendarFollowUp);
+
+  // 🔥 FILTRO: remove vendas SEM cliente
+  const filteredData = data.filter(
+    (pv) =>
+      pv.cliente &&
+      pv.cliente.nome &&
+      pv.cliente.nome.trim().length > 0
+  );
+
+  return (
+    <>
+      <DataTable columns={columns} data={filteredData} />
+
+      {selectedPosVendaId && (
+        <AgendarFollowUpModal
+          posVendaId={selectedPosVendaId}
+          open={isModalOpen}
+          onOpenChange={setIsModalOpen}
+        />
+      )}
+    </>
+  );
 }

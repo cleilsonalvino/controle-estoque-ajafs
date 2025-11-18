@@ -12,23 +12,32 @@ export const createPosVendaSchema = z.object({
 });
 
 export const updatePosVendaSchema = createPosVendaSchema.partial().extend({
-    retornoCliente: z.boolean().optional(),
+  retornoCliente: z.boolean().optional(),
 });
 
 export const createFollowUpSchema = z.object({
-    posVendaId: z.string(),
-    dataAgendada: z.string().datetime(),
-    tipoAcao: z.string().optional(),
-    observacao: z.string().optional(),
+  posVendaId: z.string(),
+  dataAgendada: z
+    .string()
+    .transform((v) => {
+      if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(v)) {
+        v = v + ":00"; // adiciona segundos
+      }
+      return new Date(v);
+    })
+    .refine((d) => !isNaN(d.getTime()), { message: "Data inválida" }),
+
+  tipoAcao: z.string().optional(),
+  observacao: z.string().optional(),
 });
 
 export const updateFollowUpSchema = createFollowUpSchema.partial().extend({
-    realizado: z.boolean().optional(),
+  realizado: z.boolean().optional(),
 });
 
 export const createFeedbackSchema = z.object({
-    avaliacao: z.number().int().min(1).max(5),
-    comentario: z.string().optional(),
+  avaliacao: z.number().int().min(1).max(5),
+  comentario: z.string().optional(),
 });
 
 export type CreatePosVendaDto = z.infer<typeof createPosVendaSchema>;

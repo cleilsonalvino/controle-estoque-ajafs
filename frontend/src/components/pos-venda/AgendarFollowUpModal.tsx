@@ -1,152 +1,145 @@
-
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { usePosVenda } from '@/contexts/PosVendaContext';
-import { TipoContato } from '@/types/pos-venda';
-
-const formSchema = z.object({
-  dataContato: z.string().min(1, 'A data e hora são obrigatórias.'),
-  tipoContato: z.enum(['whatsapp', 'ligacao', 'email', 'visita']),
-  observacao: z.string().min(1, 'A observação é obrigatória.'),
-  concluido: z.boolean().default(false),
-});
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { usePosVenda } from "@/contexts/PosVendaContext";
+import { useState } from "react";
+import { toast } from "sonner";
+import { AgendarFollowUpData } from "@/types/pos-venda-dto";
+import { TipoAcaoFollowUp } from "@/types/pos-venda";
 
 interface AgendarFollowUpModalProps {
-  isOpen: boolean;
-  setIsOpen: (isOpen: boolean) => void;
   posVendaId: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
-export function AgendarFollowUpModal({ isOpen, setIsOpen, posVendaId }: AgendarFollowUpModalProps) {
+export function AgendarFollowUpModal({
+  posVendaId,
+  open,
+  onOpenChange,
+}: AgendarFollowUpModalProps) {
   const { agendarFollowUp, loading } = usePosVenda();
-  
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      dataContato: '',
-      tipoContato: 'whatsapp',
-      observacao: '',
-      concluido: false,
-    },
+  const [formData, setFormData] = useState<{
+    dataAgendada: string;
+    tipoAcao: TipoAcaoFollowUp;
+    observacao: string;
+  }>({
+    dataAgendada: "",
+    tipoAcao: "whatsapp",
+    observacao: "",
   });
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
-    const result = await agendarFollowUp(posVendaId, {
-        ...values,
-        dataContato: new Date(values.dataContato).toISOString(),
-        tipoContato: values.tipoContato as TipoContato,
-        observacao: values.observacao,
-        concluido: values.concluido,
-    });
-    if (result) {
-      form.reset();
-      setIsOpen(false);
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSelectChange = (value: TipoAcaoFollowUp) => {
+    setFormData((prev) => ({ ...prev, tipoAcao: value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.dataAgendada) {
+      toast.error("Por favor, preencha a data do agendamento.");
+      return;
     }
-  }
+    const result = await agendarFollowUp(posVendaId, formData);
+
+    if (result) {
+      setFormData({
+        dataAgendada: "",
+        tipoAcao: "whatsapp",
+        observacao: "",
+      });
+      onOpenChange(false);
+    }
+  };
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Agendar Follow-Up</DialogTitle>
-          <DialogDescription>
-            Agende o próximo contato com o cliente.
-          </DialogDescription>
+          <DialogTitle>Agendar Follow-up</DialogTitle>
         </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="dataContato"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Data e Hora</FormLabel>
-                  <FormControl>
-                    <Input type="datetime-local" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="tipoContato"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Tipo de Contato</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o tipo" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="whatsapp">WhatsApp</SelectItem>
-                      <SelectItem value="ligacao">Ligação</SelectItem>
-                      <SelectItem value="email">E-mail</SelectItem>
-                      <SelectItem value="visita">Visita</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="observacao"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Observação</FormLabel>
-                  <FormControl>
-                    <Textarea placeholder="Detalhes do contato..." {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="concluido"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                  <FormControl>
-                    <Checkbox
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                  <div className="space-y-1 leading-none">
-                    <FormLabel>
-                      Marcar como concluído
-                    </FormLabel>
-                  </div>
-                </FormItem>
-              )}
-            />
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>Cancelar</Button>
-              <Button type="submit" disabled={loading}>
-                {loading ? 'Salvando...' : 'Salvar Agendamento'}
+        <form onSubmit={handleSubmit}>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="dataAgendada" className="text-right">
+                Data
+              </Label>
+              <Input
+                id="dataAgendada"
+                name="dataAgendada"
+                type="datetime-local"
+                value={formData.dataAgendada}
+                onChange={handleChange}
+                className="col-span-3"
+                required
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="tipoAcao" className="text-right">
+                Ação
+              </Label>
+              <Select
+                onValueChange={handleSelectChange}
+                defaultValue={formData.tipoAcao}
+              >
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Selecione o tipo de ação" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                  <SelectItem value="ligacao">Ligação</SelectItem>
+                  <SelectItem value="email">E-mail</SelectItem>
+                  <SelectItem value="visita">Visita</SelectItem>
+                  <SelectItem value="outro">Outro</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="observacao" className="text-right">
+                Observação
+              </Label>
+              <Textarea
+                id="observacao"
+                name="observacao"
+                value={formData.observacao}
+                onChange={handleChange}
+                className="col-span-3"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="outline">
+                Cancelar
               </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+            </DialogClose>
+            <Button type="submit" disabled={loading}>
+              {loading ? "Salvando..." : "Salvar"}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );
