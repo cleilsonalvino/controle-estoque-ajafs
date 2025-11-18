@@ -154,6 +154,7 @@ export const createSaleServicesService = async (
         formaPagamento: data.formaPagamento || "Dinheiro",
         desconto: data.desconto || 0,
         status: "Concluída",
+        tipoVenda: "Serviço",
         empresaId,
       },
     });
@@ -167,6 +168,20 @@ export const createSaleServicesService = async (
         empresaId,
       })),
     });
+
+    // Cria as Ordens de Serviço
+    for (const item of data.itens) {
+      await tx.ordemDeServico.create({
+        data: {
+          vendaId: venda.id,
+          servicoId: item.servicoId,
+          clienteId: venda.clienteId,
+          responsavelId: usuarioId,
+          empresaId: empresaId,
+          status: "PENDENTE",
+        },
+      });
+    }
 
     // Cria o registro de Pós-venda
     await tx.posVenda.create({

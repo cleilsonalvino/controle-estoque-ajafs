@@ -16,6 +16,7 @@ import { cobrancaRoutes } from "@modules/inter/routes/cobranca.routes";
 import { authRoutes } from "@modules/inter/routes/auth.routes";
 import { posVendaRouter, feedbackRouter } from "../modules/pos-venda/pos-venda.router";
 import financeiroRoutes from "../modules/financeiro/financeiro.routes";
+import { ordemDeServicoRoutes } from "../modules/ordem-de-servico/ordem-de-servico.routes";
 import express from "express";
 import path from "path";
 
@@ -37,6 +38,7 @@ router.use("/dashboard", Dashboardrouter);
 router.use("/pos-venda", posVendaRouter);
 router.use("/feedback", feedbackRouter);
 router.use("/financeiro", financeiroRoutes);
+router.use("/ordem-de-servico", ordemDeServicoRoutes);
 
 // Servir arquivos estáticos da pasta uploads
 router.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));

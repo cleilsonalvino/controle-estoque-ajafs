@@ -29,6 +29,7 @@ model Usuario {
   empresa       Empresa        @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   movimentacoes Movimentacao[]
   posVendas     PosVenda[]
+  ordensDeServico OrdemDeServico[]
 }
 
 enum Papel {
@@ -171,6 +172,7 @@ model Venda {
   itens       ItemVenda[]
   tipoServicos tipoServico[]
   posVenda    PosVenda?
+  ordensDeServico OrdemDeServico[]
 
   // Relações Financeiro
   movimentacoesFinanceiras MovimentacaoFinanceira[]
@@ -275,6 +277,7 @@ model Cliente {
   empresa   Empresa    @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   vendas    Venda[]
   posVendas PosVenda[]
+  ordensDeServico OrdemDeServico[]
 
   // Relações Financeiro
   movimentacoesFinanceiras MovimentacaoFinanceira[]
@@ -322,6 +325,7 @@ model Servico {
   empresa      Empresa           @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   categoria    CategoriaServico? @relation(fields: [categoriaId], references: [id], onDelete: Cascade)
   tiposServicos tipoServico[]
+  ordensDeServico OrdemDeServico[]
 }
 
 model CategoriaServico {
@@ -349,6 +353,35 @@ model tipoServico {
   venda   Venda   @relation(fields: [vendaId], references: [id], onDelete: Cascade)
   servico Servico @relation(fields: [servicoId], references: [id], onDelete: Cascade)
   empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+}
+
+// ================================
+// Ordens de Serviço
+// ================================
+model OrdemDeServico {
+  id            String   @id @default(uuid())
+  servicoId     String
+  vendaId       String
+  clienteId     String?
+  responsavelId String?
+  status        StatusOrdemDeServico @default(PENDENTE)
+  observacoes   String?
+  criadoEm      DateTime @default(now())
+  atualizadoEm  DateTime @updatedAt
+  empresaId     String
+
+  servico     Servico   @relation(fields: [servicoId], references: [id])
+  venda       Venda     @relation(fields: [vendaId], references: [id])
+  cliente     Cliente?  @relation(fields: [clienteId], references: [id])
+  responsavel Usuario?  @relation(fields: [responsavelId], references: [id])
+  empresa     Empresa   @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+}
+
+enum StatusOrdemDeServico {
+  PENDENTE
+  EM_ANDAMENTO
+  CONCLUIDO
+  CANCELADO
 }
 
 
@@ -418,6 +451,7 @@ model Empresa {
   posVendas          PosVenda[]
   feedbacksCliente   FeedbackCliente[]
   followUps          FollowUp[]
+  ordensDeServico    OrdemDeServico[]
 
   // Relações Financeiro
   categoriasFinanceiras CategoriaFinanceira[]

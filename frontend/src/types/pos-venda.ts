@@ -1,4 +1,5 @@
 import { AgendarFollowUpData, CreatePosVenda } from "./pos-venda-dto";
+import { OrdemDeServico } from "./ordem-de-servico";
 
 // ==========================================================
 // ENUMS ALINHADOS AO BACKEND
@@ -36,6 +37,14 @@ export interface Venda {
   cliente?: Cliente;
   criadoEm: string;
   total?: number;
+}
+
+export interface Servico {
+  id: string;
+  nome: string;
+  descricao?: string;
+  precoVenda?: number;
+  ordensDeServico: OrdemDeServico[];
 }
 
 // ==========================================================

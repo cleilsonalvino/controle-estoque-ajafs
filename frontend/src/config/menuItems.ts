@@ -52,6 +52,13 @@ export const allMenuItems = [
       "Permite iniciar e finalizar novas transações de serviços e acesso ao PDV.", // Adicionado
   },
   {
+    key: "ordens-de-servico",
+    title: "Ordens de Serviço",
+    url: "/ordens-de-servico",
+    icon: Wrench,
+    description: "Gerencia e acompanha o status das ordens de serviço.", // Adicionado
+  },
+  {
     key: "products",
     title: "Gestão de produtos",
     url: "/products",

@@ -1,0 +1,37 @@
+OrdemDeServico:
+  type: object
+  properties:
+    id:
+      type: string
+      format: uuid
+    servico:
+      $ref: './servico.yaml#/Servico'
+    venda:
+      $ref: './venda.yaml#/Venda'
+    cliente:
+      $ref: './cliente.yaml#/Cliente'
+    responsavel:
+      $ref: './usuario.yaml#/Usuario'
+    status:
+      type: string
+      enum: [PENDENTE, EM_ANDAMENTO, CONCLUIDO, CANCELADO]
+    observacoes:
+      type: string
+    criadoEm:
+      type: string
+      format: date-time
+    atualizadoEm:
+      type: string
+      format: date-time
+
+UpdateOrdemDeServico:
+  type: object
+  properties:
+    responsavelId:
+      type: string
+      format: uuid
+    status:
+      type: string
+      enum: [PENDENTE, EM_ANDAMENTO, CONCLUIDO, CANCELADO]
+    observacoes:
+      type: string

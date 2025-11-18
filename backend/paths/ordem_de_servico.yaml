@@ -1,0 +1,78 @@
+/ordem-de-servico:
+  get:
+    summary: Lista todas as ordens de serviço
+    tags:
+      - Ordem de Serviço
+    security:
+      - bearerAuth: []
+    parameters:
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum: [PENDENTE, EM_ANDAMENTO, CONCLUIDO, CANCELADO]
+      - in: query
+        name: clienteId
+        schema:
+          type: string
+      - in: query
+        name: responsavelId
+        schema:
+          type: string
+    responses:
+      '200':
+        description: Lista de ordens de serviço
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '../schemas/index.yaml#/OrdemDeServico'
+/ordem-de-servico/{id}:
+  get:
+    summary: Busca uma ordem de serviço pelo ID
+    tags:
+      - Ordem de Serviço
+    security:
+      - bearerAuth: []
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+    responses:
+      '200':
+        description: Ordem de serviço encontrada
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/index.yaml#/OrdemDeServico'
+      '404':
+        description: Ordem de serviço não encontrada
+  put:
+    summary: Atualiza uma ordem de serviço
+    tags:
+      - Ordem de Serviço
+    security:
+      - bearerAuth: []
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+    requestBody:
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/index.yaml#/UpdateOrdemDeServico'
+    responses:
+      '200':
+        description: Ordem de serviço atualizada
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/index.yaml#/OrdemDeServico'
+      '404':
+        description: Ordem de serviço não encontrada
