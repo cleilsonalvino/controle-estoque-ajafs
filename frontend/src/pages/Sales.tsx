@@ -49,11 +49,8 @@ const Sales = () => {
 
   const { createOrdemDeServico } = useOrdemDeServico();
 
-  const {
-    tiposServicos,
-    fetchTiposServicos,
-    createTipoServico,
-  } = useTiposServicos();
+  const { tiposServicos, fetchTiposServicos, createTipoServico } =
+    useTiposServicos();
 
   const { serviceCategories, fetchServiceCategories } = useServiceCategories();
 
@@ -260,6 +257,30 @@ const Sales = () => {
     );
   }
 
+  // Formata CPF em tempo real
+  const formatCPF = (value: string) => {
+    value = value.replace(/\D/g, "");
+    if (value.length <= 3) return value;
+    if (value.length <= 6) return `${value.slice(0, 3)}.${value.slice(3)}`;
+    if (value.length <= 9)
+      return `${value.slice(0, 3)}.${value.slice(3, 6)}.${value.slice(6)}`;
+    return `${value.slice(0, 3)}.${value.slice(3, 6)}.${value.slice(
+      6,
+      9
+    )}-${value.slice(9, 11)}`;
+  };
+
+  // Formata telefone (fixo e celular)
+  const formatTelefone = (value: string) => {
+    value = value.replace(/\D/g, "");
+
+    if (value.length <= 2) return `(${value}`;
+    if (value.length <= 6) return `(${value.slice(0, 2)}) ${value.slice(2)}`;
+    if (value.length <= 10)
+      return `(${value.slice(0, 2)}) ${value.slice(2, 6)}-${value.slice(6)}`;
+    return `(${value.slice(0, 2)}) ${value.slice(2, 7)}-${value.slice(7, 11)}`;
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <h1 className="text-3xl font-bold mb-8 text-gray-800">
@@ -311,9 +332,7 @@ const Sales = () => {
               <div className="flex gap-2 items-center">
                 <Select
                   value={osData.clienteId}
-                  onValueChange={(v) =>
-                    setOsData({ ...osData, clienteId: v })
-                  }
+                  onValueChange={(v) => setOsData({ ...osData, clienteId: v })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o cliente" />
@@ -346,7 +365,6 @@ const Sales = () => {
 
             {/* TIPO SERVIÇO */}
             <div>
-              
               <Label>Tipo de Serviço *</Label>
               <div className="flex gap-2">
                 <Select
@@ -432,98 +450,191 @@ const Sales = () => {
       </Dialog>
 
       {/* MODAL DE NOVO CLIENTE */}
-<Dialog open={isNewClientDialogOpen} onOpenChange={setIsNewClientDialogOpen}>
-  <DialogContent className="sm:max-w-lg">
-    <DialogHeader>
-      <DialogTitle>Novo Cliente</DialogTitle>
-      <DialogDescription>
-        Cadastre um novo cliente para continuar o atendimento.
-      </DialogDescription>
-    </DialogHeader>
-
-    <div className="space-y-4">
-      {/* Nome */}
-      <div>
-        <Label>Nome *</Label>
-        <Input
-          value={newClientName}
-          onChange={(e) => setNewClientName(e.target.value)}
-        />
-      </div>
-
-      {/* CPF */}
-      <div>
-        <Label>CPF</Label>
-        <Input
-          value={osData.cpf}
-          onChange={(e) => setOsData({ ...osData, cpf: e.target.value })}
-          placeholder="000.000.000-00"
-        />
-      </div>
-
-      {/* Telefone */}
-      <div>
-        <Label>Telefone</Label>
-        <Input
-          value={osData.telefone}
-          onChange={(e) => setOsData({ ...osData, telefone: e.target.value })}
-          placeholder="(79) 99999-9999"
-        />
-      </div>
-
-      {/* Endereço */}
-      <div>
-        <Label>Endereço</Label>
-        <Input
-          value={osData.endereco}
-          onChange={(e) => setOsData({ ...osData, endereco: e.target.value })}
-          placeholder="Rua, número e bairro"
-        />
-      </div>
-    </div>
-
-    <DialogFooter>
-      <Button variant="outline" onClick={() => setIsNewClientDialogOpen(false)}>
-        Cancelar
-      </Button>
-
-      <Button
-        onClick={async () => {
-          if (!newClientName.trim()) {
-            toast.error("Informe o nome do cliente.");
-            return;
-          }
-
-          try {
-            const novoCliente = await createCliente({
-              nome: newClientName,
-              cpf: osData.cpf || undefined,
-              telefone: osData.telefone || undefined,
-              endereco: osData.endereco || undefined,
-            });
-
-            if (novoCliente) {
-              toast.success("Cliente criado!");
-
-              setOsData((prev) => ({
-                ...prev,
-                clienteId: novoCliente.id,
-              }));
-
-              setNewClientName("");
-              setIsNewClientDialogOpen(false);
-            }
-          } catch (err) {
-            toast.error("Erro ao criar cliente.");
-          }
-        }}
+      <Dialog
+        open={isNewClientDialogOpen}
+        onOpenChange={setIsNewClientDialogOpen}
       >
-        Salvar Cliente
-      </Button>
-    </DialogFooter>
-  </DialogContent>
-</Dialog>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Novo Cliente</DialogTitle>
+            <DialogDescription>
+              Cadastre um novo cliente para continuar o atendimento.
+            </DialogDescription>
+          </DialogHeader>
 
+          <div className="space-y-4">
+            {/* Nome */}
+            <div>
+              <Label>Nome *</Label>
+              <Input
+                value={newClientName}
+                onChange={(e) => setNewClientName(e.target.value)}
+              />
+            </div>
+
+            {/* CPF */}
+            <div>
+              <Label>CPF</Label>
+              <Input
+                value={osData.cpf}
+                onChange={(e) =>
+                  setOsData({
+                    ...osData,
+                    cpf: formatCPF(e.target.value),
+                  })
+                }
+                maxLength={14}
+                placeholder="000.000.000-00"
+              />
+            </div>
+
+            {/* Telefone */}
+            <div>
+              <Label>Telefone</Label>
+              <Input
+                value={osData.telefone}
+                onChange={(e) =>
+                  setOsData({
+                    ...osData,
+                    telefone: formatTelefone(e.target.value),
+                  })
+                }
+                maxLength={15}
+                placeholder="(79) 99999-9999"
+              />
+            </div>
+
+            {/* Endereço */}
+            <div>
+              <Label>Endereço</Label>
+              <Input
+                value={osData.endereco}
+                onChange={(e) =>
+                  setOsData({ ...osData, endereco: e.target.value })
+                }
+                placeholder="Rua, número e bairro"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsNewClientDialogOpen(false)}
+            >
+              Cancelar
+            </Button>
+
+            <Button
+              onClick={async () => {
+                // ===============================
+                // 🔒 VALIDAÇÕES
+                // ===============================
+
+                if (!newClientName.trim()) {
+                  toast.error("Informe o nome do cliente.");
+                  return;
+                }
+
+                // ----- TELEFONE -----
+                if (osData.telefone) {
+                  const tel = osData.telefone.replace(/\D/g, "");
+                  if (tel.length < 10 || tel.length > 11) {
+                    toast.error("Telefone inválido. Use DDD + número.");
+                    return;
+                  }
+                }
+
+                // ----- CPF -----
+                if (osData.cpf) {
+                  const cpf = osData.cpf.replace(/\D/g, "");
+
+                  if (cpf.length !== 11) {
+                    toast.error("CPF deve ter 11 dígitos.");
+                    return;
+                  }
+
+                  // CPF inválidos conhecidos
+                  const invalids = [
+                    "00000000000",
+                    "11111111111",
+                    "22222222222",
+                    "33333333333",
+                    "44444444444",
+                    "55555555555",
+                    "66666666666",
+                    "77777777777",
+                    "88888888888",
+                    "99999999999",
+                  ];
+                  if (invalids.includes(cpf)) {
+                    toast.error("CPF inválido.");
+                    return;
+                  }
+
+                  // ----- Cálculo oficial dos dígitos -----
+                  const validateCPF = (cpf: string) => {
+                    let sum = 0;
+                    let remainder;
+
+                    for (let i = 1; i <= 9; i++)
+                      sum += parseInt(cpf.substring(i - 1, i)) * (11 - i);
+
+                    remainder = (sum * 10) % 11;
+                    if (remainder === 10 || remainder === 11) remainder = 0;
+                    if (remainder !== parseInt(cpf.substring(9, 10)))
+                      return false;
+
+                    sum = 0;
+                    for (let i = 1; i <= 10; i++)
+                      sum += parseInt(cpf.substring(i - 1, i)) * (12 - i);
+
+                    remainder = (sum * 10) % 11;
+                    if (remainder === 10 || remainder === 11) remainder = 0;
+                    if (remainder !== parseInt(cpf.substring(10, 11)))
+                      return false;
+
+                    return true;
+                  };
+
+                  if (!validateCPF(cpf)) {
+                    toast.error("CPF inválido.");
+                    return;
+                  }
+                }
+
+                // ===============================
+                // SALVAR CLIENTE
+                // ===============================
+                try {
+                  const novoCliente = await createCliente({
+                    nome: newClientName,
+                    cpf: osData.cpf || undefined,
+                    telefone: osData.telefone || undefined,
+                    endereco: osData.endereco || undefined,
+                  });
+
+                  if (novoCliente) {
+                    toast.success("Cliente criado!");
+
+                    setOsData((prev) => ({
+                      ...prev,
+                      clienteId: novoCliente.id,
+                    }));
+
+                    setNewClientName("");
+                    setIsNewClientDialogOpen(false);
+                  }
+                } catch (err) {
+                  toast.error("Erro ao criar cliente.");
+                }
+              }}
+            >
+              Salvar Cliente
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* MODAL DE NOVO TIPO DE SERVIÇO — MODELO COMPLETO */}
       <Dialog open={isNewTipoDialogOpen} onOpenChange={setIsNewTipoDialogOpen}>
@@ -628,7 +739,10 @@ const Sales = () => {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsNewTipoDialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsNewTipoDialogOpen(false)}
+            >
               Cancelar
             </Button>
 
