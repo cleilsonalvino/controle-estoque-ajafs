@@ -8,6 +8,7 @@ const clienteService = new ClienteService();
 
 export const createClienteController = async (req: AuthenticatedRequest, res: Response) => {
   try {
+    console.log("Requisição de criação de cliente recebida:", req.body);
     const { empresaId } = req.user!;
     const data = CreateClienteSchema.parse(req.body);
     const cliente = await clienteService.create(data, empresaId);
