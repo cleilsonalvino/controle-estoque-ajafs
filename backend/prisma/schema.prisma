@@ -26,9 +26,9 @@ model Usuario {
   atualizadoEm    DateTime @updatedAt
   empresaId       String
 
-  empresa       Empresa        @relation(fields: [empresaId], references: [id], onDelete: Cascade)
-  movimentacoes Movimentacao[]
-  posVendas     PosVenda[]
+  empresa         Empresa          @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  movimentacoes   Movimentacao[]
+  posVendas       PosVenda[]
   ordensDeServico OrdemDeServico[]
 }
 
@@ -70,18 +70,16 @@ model Produto {
 }
 
 model Marca {
-  id       String     @id @default(uuid())
+  id       String    @id @default(uuid())
   nome     String
   produtos Produto[]
 
   empresaId String
 
-
-  empresa       Empresa           @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
 
   @@unique([empresaId, nome])
 }
-
 
 model CategoriaProduto {
   id           String   @id @default(uuid())
@@ -91,10 +89,10 @@ model CategoriaProduto {
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
 
-  @@unique([empresaId, nome])
-
-  empresa  Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  empresa  Empresa   @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   produtos Produto[]
+
+  @@unique([empresaId, nome])
 }
 
 // ================================
@@ -118,7 +116,7 @@ model Movimentacao {
   usuarioId  String
 
   produto Produto @relation(fields: [produtoId], references: [id], onDelete: Cascade)
-  lote    Lote?    @relation(fields: [loteId], references: [id], onDelete: Cascade)
+  lote    Lote?   @relation(fields: [loteId], references: [id], onDelete: Cascade)
   empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
 }
@@ -137,12 +135,12 @@ model Fornecedor {
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
 
-  @@unique([empresaId, email])
-  @@unique([empresaId, nome])
-
-  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  empresa  Empresa   @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   produtos Produto[]
   lote     Lote[]
+
+  @@unique([empresaId, email])
+  @@unique([empresaId, nome])
 }
 
 // ================================
@@ -164,19 +162,19 @@ model Venda {
   criadoEm       DateTime @default(now())
   atualizadoEm   DateTime @updatedAt
 
-  @@unique([empresaId, numero])
-
-  empresa     Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
-  cliente     Cliente? @relation(fields: [clienteId], references: [id])
-  vendedor    Vendedor? @relation(fields: [vendedorId], references: [id])
-  itens       ItemVenda[]
-  tipoServicos tipoServico[]
-  posVenda    PosVenda?
+  empresa         Empresa          @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  cliente         Cliente?         @relation(fields: [clienteId], references: [id])
+  vendedor        Vendedor?        @relation(fields: [vendedorId], references: [id])
+  itens           ItemVenda[]
+  tipoServicos    tipoServico[]
+  posVenda        PosVenda?
   ordensDeServico OrdemDeServico[]
 
   // Relações Financeiro
   movimentacoesFinanceiras MovimentacaoFinanceira[]
   contasReceber            ContaReceber[]
+
+  @@unique([empresaId, numero])
 }
 
 // ================================
@@ -205,26 +203,26 @@ enum StatusPosVenda {
 }
 
 model PosVenda {
-  id             String          @id @default(uuid())
-  vendaId        String          @unique
+  id             String         @id @default(uuid())
+  vendaId        String         @unique
   clienteId      String?
   empresaId      String
   usuarioId      String?
   dataContato    DateTime?
   tipoContato    String?
-  status         StatusPosVenda  @default(PENDENTE)
+  status         StatusPosVenda @default(PENDENTE)
   satisfacao     Int?
   observacoes    String?
-  retornoCliente Boolean         @default(false)
-  criadoEm       DateTime        @default(now())
-  atualizadoEm   DateTime        @updatedAt
+  retornoCliente Boolean        @default(false)
+  criadoEm       DateTime       @default(now())
+  atualizadoEm   DateTime       @updatedAt
 
-  venda            Venda             @relation(fields: [vendaId], references: [id], onDelete: Cascade)
-  cliente          Cliente?          @relation(fields: [clienteId], references: [id], onDelete: SetNull)
-  empresa          Empresa           @relation(fields: [empresaId], references: [id], onDelete: Cascade)
-  usuario          Usuario?          @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
-  feedbacks        FeedbackCliente[]
-  followUps        FollowUp[]
+  venda     Venda             @relation(fields: [vendaId], references: [id], onDelete: Cascade)
+  cliente   Cliente?          @relation(fields: [clienteId], references: [id], onDelete: SetNull)
+  empresa   Empresa           @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  usuario   Usuario?          @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+  feedbacks FeedbackCliente[]
+  followUps FollowUp[]
 }
 
 model FeedbackCliente {
@@ -255,7 +253,6 @@ model FollowUp {
   empresa  Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
 }
 
-
 // ================================
 // Clientes
 // ================================
@@ -271,17 +268,17 @@ model Cliente {
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
 
-  @@unique([empresaId, cpf])
-  @@unique([empresaId, email])
-
-  empresa   Empresa    @relation(fields: [empresaId], references: [id], onDelete: Cascade)
-  vendas    Venda[]
-  posVendas PosVenda[]
+  empresa         Empresa          @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  vendas          Venda[]
+  posVendas       PosVenda[]
   ordensDeServico OrdemDeServico[]
 
   // Relações Financeiro
   movimentacoesFinanceiras MovimentacaoFinanceira[]
   contasReceber            ContaReceber[]
+
+  @@unique([empresaId, cpf])
+  @@unique([empresaId, email])
 }
 
 // ================================
@@ -289,7 +286,7 @@ model Cliente {
 // ================================
 model Vendedor {
   id           String   @id @default(uuid())
-  codigo       String?   
+  codigo       String?
   nome         String
   email        String?
   meta         Decimal? @db.Decimal(14, 2)
@@ -298,11 +295,11 @@ model Vendedor {
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
 
-  @@unique([empresaId, email])
-  @@unique([empresaId, nome])
-
   empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   vendas  Venda[]
+
+  @@unique([empresaId, email])
+  @@unique([empresaId, nome])
 }
 
 // ================================
@@ -320,12 +317,12 @@ model Servico {
   criadoEm       DateTime @default(now())
   atualizadoEm   DateTime @updatedAt
 
-  @@unique([empresaId, nome])
-
-  empresa      Empresa           @relation(fields: [empresaId], references: [id], onDelete: Cascade)
-  categoria    CategoriaServico? @relation(fields: [categoriaId], references: [id], onDelete: Cascade)
-  tiposServicos tipoServico[]
+  empresa         Empresa           @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  categoria       CategoriaServico? @relation(fields: [categoriaId], references: [id], onDelete: Cascade)
+  tiposServicos   tipoServico[]
   ordensDeServico OrdemDeServico[]
+
+  @@unique([empresaId, nome])
 }
 
 model CategoriaServico {
@@ -336,10 +333,10 @@ model CategoriaServico {
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
 
-  @@unique([empresaId, nome])
-
-  empresa  Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  empresa  Empresa   @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   servicos Servico[]
+
+  @@unique([empresaId, nome])
 }
 
 model tipoServico {
@@ -359,22 +356,24 @@ model tipoServico {
 // Ordens de Serviço
 // ================================
 model OrdemDeServico {
-  id            String   @id @default(uuid())
-  servicoId     String
-  vendaId       String
-  clienteId     String?
-  responsavelId String?
-  status        StatusOrdemDeServico @default(PENDENTE)
-  observacoes   String?
-  criadoEm      DateTime @default(now())
-  atualizadoEm  DateTime @updatedAt
-  empresaId     String
+  id                String               @id @default(uuid())
+  clienteId         String
+  responsavelId     String?
+  identificacaoItem String?
+  problemaRelatado  String?
+  status            StatusOrdemDeServico @default(PENDENTE)
+  observacoes       String?
+  criadoEm          DateTime             @default(now())
+  atualizadoEm      DateTime             @updatedAt
+  empresaId         String
 
-  servico     Servico   @relation(fields: [servicoId], references: [id])
-  venda       Venda     @relation(fields: [vendaId], references: [id])
-  cliente     Cliente?  @relation(fields: [clienteId], references: [id])
-  responsavel Usuario?  @relation(fields: [responsavelId], references: [id])
-  empresa     Empresa   @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  cliente     Cliente  @relation(fields: [clienteId], references: [id])
+  responsavel Usuario? @relation(fields: [responsavelId], references: [id])
+  empresa     Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  Venda       Venda?   @relation(fields: [vendaId], references: [id])
+  vendaId     String?
+  servico     Servico? @relation(fields: [servicoId], references: [id])
+  servicoId   String?
 }
 
 enum StatusOrdemDeServico {
@@ -383,7 +382,6 @@ enum StatusOrdemDeServico {
   CONCLUIDO
   CANCELADO
 }
-
 
 // ================================
 // Lotes
@@ -400,9 +398,9 @@ model Lote {
   criadoEm        DateTime  @default(now())
   atualizadoEm    DateTime  @updatedAt
 
-  empresa       Empresa     @relation(fields: [empresaId], references: [id], onDelete: Cascade)
-  produto       Produto     @relation(fields: [produtoId], references: [id], onDelete: Cascade)
-  fornecedor    Fornecedor? @relation(fields: [fornecedorId], references: [id], onDelete: SetNull)
+  empresa       Empresa        @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  produto       Produto        @relation(fields: [produtoId], references: [id], onDelete: Cascade)
+  fornecedor    Fornecedor?    @relation(fields: [fornecedorId], references: [id], onDelete: SetNull)
   movimentacoes Movimentacao[]
 }
 
@@ -410,11 +408,11 @@ model Lote {
 // Empresa (matriz do sistema)
 // ================================
 model Empresa {
-  id            String   @id @default(uuid())
+  id            String  @id @default(uuid())
   nome          String
-  cnpj          String   @unique
+  cnpj          String  @unique
   telefone      String
-  email         String?  @unique
+  email         String? @unique
   razaoSocial   String
   nomeFantasia  String
   inscEstadual  String?
@@ -422,45 +420,44 @@ model Empresa {
   cnae          String?
   logoEmpresa   String?
 
-  cep           String
-  estado        String
-  cidade        String
-  endereco      String
-  numero        String
-  complemento   String?
-  bairro        String
+  cep         String
+  estado      String
+  cidade      String
+  endereco    String
+  numero      String
+  complemento String?
+  bairro      String
 
-  criadoEm      DateTime @default(now())
-  atualizadoEm  DateTime @updatedAt
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
 
   // Relações
-  usuarios           Usuario[]
-  produtos           Produto[]
-  fornecedores       Fornecedor[]
-  clientes           Cliente[]
-  vendedores         Vendedor[]
-  movimentacoes      Movimentacao[]
-  categoriasProduto  CategoriaProduto[]
-  categoriasServico  CategoriaServico[]
-  servicos           Servico[]
-  vendas             Venda[]
-  itensVendas        ItemVenda[]
+  usuarios          Usuario[]
+  produtos          Produto[]
+  fornecedores      Fornecedor[]
+  clientes          Cliente[]
+  vendedores        Vendedor[]
+  movimentacoes     Movimentacao[]
+  categoriasProduto CategoriaProduto[]
+  categoriasServico CategoriaServico[]
+  servicos          Servico[]
+  vendas            Venda[]
+  itensVendas       ItemVenda[]
   tipoServicos      tipoServico[]
-  lotes              Lote[]
-  marcas             Marca[]
-  posVendas          PosVenda[]
-  feedbacksCliente   FeedbackCliente[]
-  followUps          FollowUp[]
-  ordensDeServico    OrdemDeServico[]
+  lotes             Lote[]
+  marcas            Marca[]
+  posVendas         PosVenda[]
+  feedbacksCliente  FeedbackCliente[]
+  followUps         FollowUp[]
+  ordensDeServico   OrdemDeServico[]
 
   // Relações Financeiro
-  categoriasFinanceiras CategoriaFinanceira[]
-  contasBancarias       ContaBancaria[]
+  categoriasFinanceiras    CategoriaFinanceira[]
+  contasBancarias          ContaBancaria[]
   movimentacoesFinanceiras MovimentacaoFinanceira[]
-  contasPagar           ContaPagar[]
-  contasReceber         ContaReceber[]
+  contasPagar              ContaPagar[]
+  contasReceber            ContaReceber[]
 }
-
 
 // ==============================================================================
 // MÓDULO FINANCEIRO
@@ -506,24 +503,23 @@ enum FinanceiroPeriodicidadeRecorrencia {
   ANUAL
 }
 
-
 // --------------------------------
 // Models do Módulo Financeiro
 // --------------------------------
 
 model CategoriaFinanceira {
-  id        String                  @id @default(uuid())
-  nome      String
-  tipo      FinanceiroTipoCategoria
-  descricao String?
-  ativo     Boolean                 @default(true)
-  empresaId String
-  criadoEm  DateTime                @default(now())
-  atualizadoEm DateTime             @updatedAt
+  id           String                  @id @default(uuid())
+  nome         String
+  tipo         FinanceiroTipoCategoria
+  descricao    String?
+  ativo        Boolean                 @default(true)
+  empresaId    String
+  criadoEm     DateTime                @default(now())
+  atualizadoEm DateTime                @updatedAt
 
-  empresa      Empresa                @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  empresa       Empresa                  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   movimentacoes MovimentacaoFinanceira[]
-  contasPagar  ContaPagar[]
+  contasPagar   ContaPagar[]
   contasReceber ContaReceber[]
 
   @@unique([empresaId, nome])
@@ -541,9 +537,9 @@ model ContaBancaria {
   criadoEm     DateTime            @default(now())
   atualizadoEm DateTime            @updatedAt
 
-  empresa      Empresa                @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  empresa       Empresa                  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   movimentacoes MovimentacaoFinanceira[]
-  contasPagar  ContaPagar[]
+  contasPagar   ContaPagar[]
   contasReceber ContaReceber[]
 
   @@unique([empresaId, nome])
@@ -565,29 +561,29 @@ model MovimentacaoFinanceira {
   criadoEm        DateTime                     @default(now())
   atualizadoEm    DateTime                     @updatedAt
 
-  empresa       Empresa           @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  empresa       Empresa             @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   categoria     CategoriaFinanceira @relation(fields: [categoriaId], references: [id], onDelete: Restrict)
-  contaBancaria ContaBancaria     @relation(fields: [contaBancariaId], references: [id], onDelete: Restrict)
-  venda         Venda?            @relation(fields: [vendaId], references: [id], onDelete: SetNull)
-  cliente       Cliente?          @relation(fields: [clienteId], references: [id], onDelete: SetNull)
+  contaBancaria ContaBancaria       @relation(fields: [contaBancariaId], references: [id], onDelete: Restrict)
+  venda         Venda?              @relation(fields: [vendaId], references: [id], onDelete: SetNull)
+  cliente       Cliente?            @relation(fields: [clienteId], references: [id], onDelete: SetNull)
 }
 
 model ContaPagar {
-  id                       String                               @id @default(uuid())
+  id                       String                              @id @default(uuid())
   descricao                String
   fornecedor               String?
-  valorTotal               Decimal                              @db.Decimal(14, 2)
-  valorPago                Decimal                              @default(0) @db.Decimal(14, 2)
+  valorTotal               Decimal                             @db.Decimal(14, 2)
+  valorPago                Decimal                             @default(0) @db.Decimal(14, 2)
   dataVencimento           DateTime
   dataPagamento            DateTime?
-  status                   FinanceiroStatusConta                @default(PENDENTE)
-  recorrente               Boolean                              @default(false)
+  status                   FinanceiroStatusConta               @default(PENDENTE)
+  recorrente               Boolean                             @default(false)
   periodicidadeRecorrencia FinanceiroPeriodicidadeRecorrencia?
   empresaId                String
   categoriaId              String
   contaBancariaId          String?
-  criadoEm                 DateTime                             @default(now())
-  atualizadoEm             DateTime                             @updatedAt
+  criadoEm                 DateTime                            @default(now())
+  atualizadoEm             DateTime                            @updatedAt
 
   empresa       Empresa             @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   categoria     CategoriaFinanceira @relation(fields: [categoriaId], references: [id], onDelete: Restrict)
@@ -595,22 +591,22 @@ model ContaPagar {
 }
 
 model ContaReceber {
-  id                       String                               @id @default(uuid())
+  id                       String                              @id @default(uuid())
   descricao                String
-  valorTotal               Decimal                              @db.Decimal(14, 2)
-  valorRecebido            Decimal                              @default(0) @db.Decimal(14, 2)
+  valorTotal               Decimal                             @db.Decimal(14, 2)
+  valorRecebido            Decimal                             @default(0) @db.Decimal(14, 2)
   dataVencimento           DateTime
   dataRecebimento          DateTime?
-  status                   FinanceiroStatusConta                @default(PENDENTE)
-  recorrente               Boolean                              @default(false)
+  status                   FinanceiroStatusConta               @default(PENDENTE)
+  recorrente               Boolean                             @default(false)
   periodicidadeRecorrencia FinanceiroPeriodicidadeRecorrencia?
   empresaId                String
   categoriaId              String
   contaBancariaId          String?
   clienteId                String?
   vendaId                  String?
-  criadoEm                 DateTime                             @default(now())
-  atualizadoEm             DateTime                             @updatedAt
+  criadoEm                 DateTime                            @default(now())
+  atualizadoEm             DateTime                            @updatedAt
 
   empresa       Empresa             @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   categoria     CategoriaFinanceira @relation(fields: [categoriaId], references: [id], onDelete: Restrict)

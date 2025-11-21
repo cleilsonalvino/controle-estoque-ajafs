@@ -37,6 +37,7 @@ export interface Venda {
   cliente?: Cliente;
   criadoEm: string;
   total?: number;
+  observacoes?: string;
 }
 
 export interface Servico {

@@ -13,7 +13,7 @@ const vendedoresRouter = Router();
 
 vendedoresRouter.use(authMiddleware);
 
-vendedoresRouter.post('/create', upload.single('urlImagem'), createVendedorController);
+vendedoresRouter.post('/create', upload.single('urlImage'), createVendedorController);
 vendedoresRouter.get('/', getVendedoresController);
 vendedoresRouter.get('/:id', getVendedorByIdController);
 vendedoresRouter.patch('/:id', upload.single('urlImagem'), updateVendedorController);

@@ -108,6 +108,26 @@ export function HomePage() {
     );
   }, [isAdmin, isMaster, user]);
 
+    const getImageUrl = (value: string | File | null) => {
+    if (!value) {
+      return "https://placehold.co/600x400?text=Sem+Imagem";
+    }
+
+    // Se for File (nova imagem escolhida)
+    if (value instanceof File) {
+      return URL.createObjectURL(value); // <- gera preview AUTOMÁTICO
+    }
+
+    // Se já for URL externa
+    if (value.startsWith("http")) {
+      return value;
+    }
+
+    // Se for caminho relativo salvo no banco
+    const cleanPath = value.startsWith("/") ? value.substring(1) : value;
+    return `${import.meta.env.VITE_API_URL}/${cleanPath}`;
+  };
+
   return (
     <div className="container mx-auto p-6 space-y-8">
       <motion.div
@@ -128,7 +148,7 @@ export function HomePage() {
           </span>
         )}
         <img
-          src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR4PmLASrRCL1jyqcfM1e96WSV2H7cO63HMTQ&s"
+          src={getImageUrl(user.empresa?.logoEmpresa)}
           alt="logo da empresa"
           className="p-2 w-28 cursor-pointer"
         />

@@ -58,6 +58,7 @@ import {
   Edit,
   Calendar as CalendarIcon,
   TrendingUp,
+  Eye,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
@@ -127,11 +128,13 @@ const Vendedores = () => {
   // =========================================
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalType, setModalType] =
-    useState<"create" | "edit" | "delete" | null>(null);
+  const [modalType, setModalType] = useState<
+    "create" | "edit" | "delete" | null
+  >(null);
 
-  const [selectedVendedor, setSelectedVendedor] =
-    useState<Vendedor | null>(null);
+  const [selectedVendedor, setSelectedVendedor] = useState<Vendedor | null>(
+    null
+  );
 
   const [formData, setFormData] = useState<{
     nome: string;
@@ -151,6 +154,12 @@ const Vendedores = () => {
   const [page, setPage] = useState(1);
   const perPage = 5;
 
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [detailsVendedor, setDetailsVendedor] = useState<any | null>(null);
+
+  console.log(detailsVendedor);
+
+
   // DataRange
   const [date, setDate] = useState<DateRange | undefined>();
 
@@ -169,6 +178,20 @@ const Vendedores = () => {
     }
 
     setFormData((prev) => ({ ...prev, [e.target.id]: e.target.value }));
+  };
+
+  const handleOpenDetails = (vendedor: Vendedor) => {
+    const metricas = vendasPorVendedor.find((v) => v.id === vendedor.id);
+
+    setDetailsVendedor({
+      ...vendedor,
+      totalVendas: metricas?.totalVendas || 0,
+      totalValor: metricas?.totalValor || 0,
+      percentualMeta: metricas?.percentualMeta || 0,
+
+    });
+
+    setIsDetailsModalOpen(true);
   };
 
   const handleOpenModal = (
@@ -193,14 +216,12 @@ const Vendedores = () => {
         nome: vendedor.nome,
         email: vendedor.email,
         meta: String(vendedor.meta),
-        urlImage: vendedor.urlImage || null,
+        urlImage: vendedor.urlImagem || null,
       });
 
       // Se imagem é string do servidor
-      if (typeof vendedor.urlImage === "string") {
-        setPreviewUrl(
-          `${import.meta.env.VITE_API_URL}/${vendedor.urlImage}`
-        );
+      if (typeof vendedor.urlImagem === "string") {
+        setPreviewUrl(`${import.meta.env.VITE_API_URL}/${vendedor.urlImagem}`);
       }
     }
 
@@ -211,18 +232,22 @@ const Vendedores = () => {
     try {
       setIsLoadingAction(true);
 
-      const payload: Omit<Vendedor, "id"> = {
-        nome: formData.nome,
-        email: formData.email,
-        meta: Number(formData.meta),
-        urlImage: formData.urlImage,
-      };
+      // 🔥 Agora form-data correto para Multer
+      const form = new FormData();
+      form.append("nome", formData.nome);
+      form.append("email", formData.email);
+      form.append("meta", formData.meta);
+
+      // Se tiver imagem nova, envia como File
+      if (formData.urlImage instanceof File) {
+        form.append("urlImage", formData.urlImage);
+      }
 
       if (modalType === "create") {
-        await createVendedor(payload);
+        await createVendedor(form);
         toast.success("Vendedor criado com sucesso!");
       } else if (modalType === "edit" && selectedVendedor) {
-        await updateVendedor(selectedVendedor.id, payload);
+        await updateVendedor(selectedVendedor.id, form);
         toast.success("Vendedor atualizado com sucesso!");
       }
 
@@ -342,7 +367,10 @@ const Vendedores = () => {
   const vendasPorVendedor = useMemo(() => {
     return vendedores.map((v) => {
       const vendas = filteredSales.filter((s) => s.vendedor?.id === v.id);
-      const total = vendas.reduce((acc, cur) => acc + Number(cur.total || 0), 0);
+      const total = vendas.reduce(
+        (acc, cur) => acc + Number(cur.total || 0),
+        0
+      );
 
       const metaProrated = (v.meta || 0) * prorateFactor;
       const percentualMeta =
@@ -356,10 +384,34 @@ const Vendedores = () => {
         totalVendas: vendas.length,
         totalValor: total,
         meta: metaProrated,
+        urlImage: v.urlImagem,
+        criadoEm: v.criadoEm,
+
+
         percentualMeta,
       };
     });
   }, [vendedores, filteredSales, prorateFactor]);
+
+    const getImageUrl = (value: string | File | null) => {
+    if (!value) {
+      return "https://placehold.co/600x400?text=Sem+Imagem";
+    }
+
+    // Se for File (nova imagem escolhida)
+    if (value instanceof File) {
+      return URL.createObjectURL(value); // <- gera preview AUTOMÁTICO
+    }
+
+    // Se já for URL externa
+    if (value.startsWith("http")) {
+      return value;
+    }
+
+    // Se for caminho relativo salvo no banco
+    const cleanPath = value.startsWith("/") ? value.substring(1) : value;
+    return `${import.meta.env.VITE_API_URL}/${cleanPath}`;
+  };
 
   const filteredVendedores = useMemo(
     () =>
@@ -521,6 +573,14 @@ const Vendedores = () => {
                       <Button
                         variant="ghost"
                         size="icon"
+                        onClick={() => handleOpenDetails(v)}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={() => handleOpenModal("edit", v)}
                       >
                         <Edit className="h-4 w-4" />
@@ -602,6 +662,88 @@ const Vendedores = () => {
         </Pagination>
       )}
 
+      {/* -------- Modal de Detalhes -------- */}
+<Dialog open={isDetailsModalOpen} onOpenChange={setIsDetailsModalOpen}>
+  <DialogContent className="max-w-md">
+    <DialogHeader>
+      <DialogTitle>Detalhes do Vendedor</DialogTitle>
+    </DialogHeader>
+
+    {detailsVendedor && (
+      <div className="space-y-4 py-2">
+
+        {/* FOTO */}
+        <div className="flex justify-center">
+          <img
+            src={getImageUrl(detailsVendedor.urlImage)}
+            className="w-24 h-24 rounded-full object-cover border"
+          />
+        </div>
+
+        {/* NOME + EMAIL */}
+        <div className="text-center space-y-1">
+          <h2 className="text-xl font-semibold">{detailsVendedor.nome}</h2>
+          <p className="text-muted-foreground text-sm">
+            {detailsVendedor.email}
+          </p>
+        </div>
+
+        {/* CÓDIGO */}
+        <div className="text-center text-sm">
+          <span className="font-mono bg-muted px-2 py-1 rounded">
+            Código: {detailsVendedor.codigo || "N/A"}
+          </span>
+        </div>
+
+        {/* MÉTRICAS */}
+        <div className="grid grid-cols-2 gap-4 pt-4">
+          <div className="bg-muted/40 p-3 rounded-lg text-center">
+            <p className="text-xs text-muted-foreground">Total de Vendas</p>
+            <p className="text-lg font-bold">{detailsVendedor.totalVendas}</p>
+          </div>
+
+          <div className="bg-muted/40 p-3 rounded-lg text-center">
+            <p className="text-xs text-muted-foreground">Vendido (R$)</p>
+            <p className="text-lg font-bold">
+              {formatCurrency(detailsVendedor.totalValor)}
+            </p>
+          </div>
+
+          <div className="bg-muted/40 p-3 rounded-lg text-center col-span-2">
+            <p className="text-xs text-muted-foreground">% Meta</p>
+            <p className="text-lg font-bold">
+              {detailsVendedor.percentualMeta.toFixed(1)}%
+            </p>
+          </div>
+        </div>
+
+        {/* CRIADO EM */}
+        <div className="text-xs text-center text-muted-foreground">
+          Criado em:{" "}
+          {detailsVendedor.criadoEm
+            ? new Date(detailsVendedor.criadoEm).toLocaleDateString("pt-BR")
+            : "—"}
+        </div>
+
+        {/* BOTÕES */}
+        <div className="flex justify-between">
+          <Button
+            variant="outline"
+            onClick={() => handlePrintBarcode(detailsVendedor)}
+          >
+            Imprimir Código
+          </Button>
+
+          <DialogClose asChild>
+            <Button>Fechar</Button>
+          </DialogClose>
+        </div>
+      </div>
+    )}
+  </DialogContent>
+</Dialog>
+
+
       {/* -------- Modal -------- */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent>
@@ -637,9 +779,7 @@ const Vendedores = () => {
             <>
               <DialogHeader>
                 <DialogTitle>
-                  {modalType === "create"
-                    ? "Novo Vendedor"
-                    : "Editar Vendedor"}
+                  {modalType === "create" ? "Novo Vendedor" : "Editar Vendedor"}
                 </DialogTitle>
               </DialogHeader>
 

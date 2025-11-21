@@ -578,7 +578,7 @@ const PDV = ({ clientes, vendedores, onFinalizeSale, onExit }: PDVProps) => {
     }
   }, []);
 
-    const getImageUrl = (value: string | File | null) => {
+  const getImageUrl = (value: string | File | null) => {
     if (!value) {
       return "https://placehold.co/600x400?text=Sem+Imagem";
     }
@@ -981,6 +981,8 @@ const PDV = ({ clientes, vendedores, onFinalizeSale, onExit }: PDVProps) => {
         </Button>
       </div>
 
+      {/* Modal de  Finalizar Venda*/}
+
       <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
         {/* ... (Conteúdo do Dialog de Pagamento não modificado) ... */}
         <DialogContent className="sm:max-w-md">
@@ -1077,6 +1079,7 @@ const PDV = ({ clientes, vendedores, onFinalizeSale, onExit }: PDVProps) => {
         </DialogContent>
       </Dialog>
 
+      {/* Modal de Cadastrar Novo Cliente*/}
       <Dialog
         open={isNewCustomerDialogOpen}
         onOpenChange={setIsNewCustomerDialogOpen}
@@ -1129,6 +1132,7 @@ const PDV = ({ clientes, vendedores, onFinalizeSale, onExit }: PDVProps) => {
         </DialogContent>
       </Dialog>
 
+      {/* Modal de Produto Sem Estoque*/}
       <Dialog
         open={isZeroStockDialogOpen}
         onOpenChange={setIsZeroStockDialogOpen}

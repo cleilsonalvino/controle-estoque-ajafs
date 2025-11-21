@@ -1,14 +1,24 @@
+// =======================================
+// SALES COMPLETO COM MODAL DE TIPO DE SERVIÇO IGUAL AO ORIGINAL
+// =======================================
 import { useState, useEffect } from "react";
 import { useSales, SaleItem } from "@/contexts/SalesContext";
 import { useClientes } from "@/contexts/ClienteContext";
 import { useVendedores } from "@/contexts/VendedorContext";
 import { useProdutos } from "@/contexts/ProdutoContext";
+import { useAuth } from "@/contexts/useAuth";
+import { useOrdemDeServico } from "@/contexts/OrdemDeServicoContext";
+import { useTiposServicos } from "@/contexts/TiposServicosContext";
+import { useServiceCategories } from "@/contexts/ServiceCategoryContext";
+
 import CupomFiscal from "@/components/CupomFiscal";
 import PDV from "./PDV";
+
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectTrigger,
@@ -16,6 +26,7 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
+
 import {
   Dialog,
   DialogContent,
@@ -24,28 +35,31 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import {
-  ShoppingCart,
-  Briefcase,
-  ArrowLeft,
-  CheckCircle,
-  Trash2,
-} from "lucide-react";
+
+import { ShoppingCart, Briefcase, ArrowLeft, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Link, useLocation } from "react-router-dom";
-import { useTiposServicos } from "@/contexts/TiposServicosContext";
-import { useServiceSales } from "@/contexts/ServiceSalesContext";
 
 const Sales = () => {
   const { createSale, fetchSales } = useSales();
-  const { clientes, fetchClientes } = useClientes();
+  const { clientes, fetchClientes, createCliente } = useClientes();
   const { vendedores, fetchVendedores } = useVendedores();
   const { produtos, fetchProdutos } = useProdutos();
-  const { tiposServicos, fetchTiposServicos } = useTiposServicos();
+  const { user } = useAuth();
+
+  const { createOrdemDeServico } = useOrdemDeServico();
+
+  const {
+    tiposServicos,
+    fetchTiposServicos,
+    createTipoServico,
+  } = useTiposServicos();
+
+  const { serviceCategories, fetchServiceCategories } = useServiceCategories();
+
   const location = useLocation();
 
-  // === REFRESH AUTOMÁTICO ===
-  // 🔄 ALTERADO: Adicionadas todas as dependências de fetch no array
+  // Atualização automática ao retornar à aba
   useEffect(() => {
     const fetchAll = async () => {
       await Promise.all([
@@ -54,26 +68,20 @@ const Sales = () => {
         fetchVendedores(),
         fetchProdutos(),
         fetchTiposServicos(),
+        fetchServiceCategories(),
       ]);
     };
 
-    // Roda ao abrir a rota
     fetchAll();
-
-    // Atualiza ao voltar foco na aba
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
-        fetchAll().then(() => {
-          toast.info("Dados atualizados automaticamente");
-        });
+        fetchAll().then(() => toast.info("Dados atualizados automaticamente"));
       }
     };
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
-
-    return () => {
+    return () =>
       document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
   }, [
     location.pathname,
     fetchSales,
@@ -81,26 +89,47 @@ const Sales = () => {
     fetchVendedores,
     fetchProdutos,
     fetchTiposServicos,
+    fetchServiceCategories,
   ]);
 
   const [mode, setMode] = useState<"menu" | "pdv">("menu");
   const [showCupom, setShowCupom] = useState(false);
   const [lastSale, setLastSale] = useState<any>(null);
-  const [isServiceDialogOpen, setIsServiceDialogOpen] = useState(false);
-  const [loadingService, setLoadingService] = useState(false);
-  const { createServiceSale } = useServiceSales();
 
-  // Campos do formulário de serviço
-  const [serviceData, setServiceData] = useState({
+  // ORDEM DE SERVIÇO
+  const [isOSDialogOpen, setIsOSDialogOpen] = useState(false);
+  const [loadingOS, setLoadingOS] = useState(false);
+
+  const initialOsData = {
     clienteId: "",
-    vendedorId: "",
-    formaPagamento: "",
-    valor: "0.00",
+    cpf: "",
+    telefone: "",
+    endereco: "",
+    responsavelId: user?.id || "",
     tipoServicoId: "",
+    identificacaoItem: "",
+    problemaRelatado: "",
+    observacoes: "",
+  };
+
+  const [osData, setOsData] = useState(initialOsData);
+
+  // Novo cliente
+  const [isNewClientDialogOpen, setIsNewClientDialogOpen] = useState(false);
+  const [newClientName, setNewClientName] = useState("");
+
+  // Novo tipo de serviço
+  const [isNewTipoDialogOpen, setIsNewTipoDialogOpen] = useState(false);
+  const [formTipo, setFormTipo] = useState({
+    nome: "",
     descricao: "",
-    itens: [{ servicoId: "", quantidade: 1, precoUnitario: 0, descricao: "" }],
+    precoCusto: 0,
+    precoVenda: 0,
+    duracaoMinutos: 0,
+    categoriaId: "",
   });
 
+  // Finalizar venda
   const handleFinalizeSale = async (saleData: {
     saleItems: SaleItem[];
     clienteId?: string;
@@ -122,7 +151,6 @@ const Sales = () => {
 
     try {
       await createSale(salePayload);
-
       const vendedor = vendedores.find((v) => v.id === saleData.vendedorId);
 
       setLastSale({
@@ -140,124 +168,80 @@ const Sales = () => {
         }),
       });
 
-      // ✅ Só abre o cupom depois que o estado estiver definido
       setShowCupom(true);
-
       return true;
     } catch (err: any) {
-      console.error(err);
       toast.error(err.response?.data?.message || "Erro ao finalizar venda.");
       return false;
     }
   };
 
-  const handleRegisterService = async () => {
-    const { clienteId, vendedorId, formaPagamento, itens } = serviceData;
-
-    if (!vendedorId || !formaPagamento || itens.length === 0) {
-      toast.error("Preencha todos os campos obrigatórios.");
+  // Criar OS
+  const handleCriarOS = async () => {
+    if (
+      !osData.clienteId ||
+      !osData.responsavelId ||
+      !osData.tipoServicoId ||
+      !osData.problemaRelatado.trim()
+    ) {
+      toast.error("Preencha os campos obrigatórios da ordem de serviço.");
       return;
     }
 
-    // 🔹 Verifica se todos os serviços foram selecionados corretamente
-    for (const i of itens) {
-      if (!i.servicoId || i.precoUnitario <= 0 || i.quantidade <= 0) {
-        toast.error("Preencha corretamente os dados de todos os serviços.");
-        return;
-      }
-    }
+    setLoadingOS(true);
 
-    const total = itens.reduce(
-      (acc, i) => acc + Number(i.precoUnitario) * Number(i.quantidade),
-      0
-    );
-
-    setLoadingService(true);
     try {
-      await createServiceSale({
-        clienteId: clienteId || undefined,
-        vendedorId,
-        formaPagamento,
-        valor: total,
-        tipoServicoId: "",
-        descricao: "",
-        itens: itens.map((i) => ({
-          servicoId: i.servicoId,
-          quantidade: i.quantidade,
-          precoUnitario: i.precoUnitario,
-          descricao:
-            i.descricao ||
-            tiposServicos.find((t) => t.id === i.servicoId)?.nome ||
-            "Serviço",
-        })),
-      });
+      await createOrdemDeServico({
+        clienteId: osData.clienteId,
+        responsavelId: osData.responsavelId || user?.id,
+        servicoId: osData.tipoServicoId,
+        identificacaoItem: osData.identificacaoItem || undefined,
+        problemaRelatado: osData.problemaRelatado,
+        observacoes: osData.observacoes || undefined,
+      } as any);
 
-      const vendedor = vendedores.find((v) => v.id === vendedorId);
-      setLastSale({
-        saleItems: itens.map((i) => ({
-          nome:
-            tiposServicos.find((t) => t.id === i.servicoId)?.nome ||
-            i.descricao ||
-            "Serviço",
-          precoVenda: Number(i.precoUnitario),
-          quantidade: Number(i.quantidade),
-        })),
-        total,
-        discount: 0,
-        vendedor: vendedor ? vendedor.nome : "—",
-        paymentMethod: formaPagamento,
-        dataHora: new Date().toLocaleString("pt-BR", {
-          dateStyle: "short",
-          timeStyle: "short",
-        }),
-      });
-
-      setShowCupom(true);
-
-      toast.success("Serviços registrados com sucesso!");
-
-      // ✅ Limpa e fecha o modal
-      setServiceData({
-        clienteId: "",
-        vendedorId: "",
-        formaPagamento: "",
-        valor: "0.00",
-        tipoServicoId: "",
-        descricao: "",
-        itens: [
-          { servicoId: "", quantidade: 1, precoUnitario: 0, descricao: "" },
-        ],
-      });
-      setIsServiceDialogOpen(false);
+      toast.success("Ordem de serviço criada com sucesso.");
+      setOsData(initialOsData);
+      setIsOSDialogOpen(false);
     } catch (err) {
-      console.error(err);
-      toast.error("Erro ao registrar serviços.");
+      toast.error("Erro ao criar ordem de serviço.");
     } finally {
-      setLoadingService(false);
+      setLoadingOS(false);
     }
   };
 
-  const addServiceItem = () => {
-    setServiceData((prev) => ({
-      ...prev,
-      itens: [
-        ...prev.itens,
-        { servicoId: "", quantidade: 1, precoUnitario: 0, descricao: "" },
-      ],
-    }));
-  };
+  // Criar novo tipo de serviço
+  const handleCreateTipoServico = async () => {
+    if (!formTipo.nome.trim()) {
+      toast.error("Informe o nome do tipo de serviço.");
+      return;
+    }
 
-  const updateServiceItem = (index: number, field: string, value: any) => {
-    const newItems = [...serviceData.itens];
-    (newItems[index] as any)[field] = value;
-    setServiceData((prev) => ({ ...prev, itens: newItems }));
-  };
+    const novo = await createTipoServico({
+      nome: formTipo.nome,
+      descricao: formTipo.descricao,
+      precoCusto: Number(formTipo.precoCusto) || 0,
+      precoVenda: Number(formTipo.precoVenda) || 0,
+      duracaoMinutos: Number(formTipo.duracaoMinutos) || 0,
+      categoriaId: formTipo.categoriaId || null,
+    });
 
-  const removeServiceItem = (index: number) => {
-    setServiceData((prev) => ({
-      ...prev,
-      itens: prev.itens.filter((_, i) => i !== index),
-    }));
+    if (novo) {
+      toast.success("Tipo de serviço criado!");
+      setOsData((prev) => ({
+        ...prev,
+        tipoServicoId: novo.id,
+      }));
+      setIsNewTipoDialogOpen(false);
+      setFormTipo({
+        nome: "",
+        descricao: "",
+        precoCusto: 0,
+        precoVenda: 0,
+        duracaoMinutos: 0,
+        categoriaId: "",
+      });
+    }
   };
 
   if (mode === "pdv") {
@@ -282,73 +266,264 @@ const Sales = () => {
         Central de Vendas
       </h1>
 
+      {/* MENU */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-        {/* === PDV === */}
-        <Card className="hover:shadow-lg transition">
+        <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-xl">
               <ShoppingCart className="h-5 w-5 text-primary" />
               Venda de Produtos
             </CardTitle>
           </CardHeader>
-          <CardContent className="flex flex-col gap-4">
-            <p className="text-sm text-muted-foreground">
-              Registre vendas com controle de estoque e descontos.
-            </p>
+          <CardContent>
             <Button onClick={() => setMode("pdv")}>
-              Abrir PDV
-              <ArrowLeft className="ml-2 h-4 w-4 rotate-180" />
+              Abrir PDV <ArrowLeft className="ml-2 h-4 w-4 rotate-180" />
             </Button>
           </CardContent>
         </Card>
 
-        {/* === Serviço === */}
-        <Card className="hover:shadow-lg transition">
+        <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-xl">
               <Briefcase className="h-5 w-5 text-primary" />
-              Prestação de Serviços
+              Ordem de Serviço
             </CardTitle>
           </CardHeader>
-          <CardContent className="flex flex-col gap-4">
-            <p className="text-sm text-muted-foreground">
-              Registre serviços prestados sem vínculo com estoque.
-            </p>
-            <Button
-              onClick={() => setIsServiceDialogOpen(true)}
-              variant="secondary"
-            >
-              Registrar Serviço
-              <CheckCircle className="ml-2 h-4 w-4" />
+          <CardContent>
+            <Button variant="secondary" onClick={() => setIsOSDialogOpen(true)}>
+              Iniciar OS
             </Button>
           </CardContent>
         </Card>
       </div>
 
-      {/* === MODAL DE SERVIÇO === */}
-      <Dialog open={isServiceDialogOpen} onOpenChange={setIsServiceDialogOpen}>
+      {/* MODAL OS */}
+      <Dialog open={isOSDialogOpen} onOpenChange={setIsOSDialogOpen}>
         <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Registrar Serviço</DialogTitle>
-            <DialogDescription>
-              Preencha as informações para registrar a prestação de serviço.
-            </DialogDescription>
+            <DialogTitle>Nova Ordem de Serviço</DialogTitle>
           </DialogHeader>
 
           <div className="grid gap-4 py-4">
+            {/* CLIENTE */}
             <div>
-              <Label>Cliente</Label>
+              <Label>Cliente *</Label>
+              <div className="flex gap-2 items-center">
+                <Select
+                  value={osData.clienteId}
+                  onValueChange={(v) =>
+                    setOsData({ ...osData, clienteId: v })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o cliente" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {clientes.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setIsNewClientDialogOpen(true)}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            {/* RESPONSÁVEL */}
+            <div>
+              <Label>Responsável</Label>
+              <Input disabled value={user?.nome || ""} />
+            </div>
+
+            {/* TIPO SERVIÇO */}
+            <div>
+              
+              <Label>Tipo de Serviço *</Label>
+              <div className="flex gap-2">
+                <Select
+                  value={osData.tipoServicoId}
+                  onValueChange={(v) =>
+                    setOsData({ ...osData, tipoServicoId: v })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {tiposServicos.map((t) => (
+                      <SelectItem key={t.id} value={t.id}>
+                        {t.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setIsNewTipoDialogOpen(true)}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            {/* ITEM */}
+            <div>
+              <Label>Identificação do Item</Label>
+              <Input
+                placeholder="Modelo, IMEI, placa..."
+                value={osData.identificacaoItem}
+                onChange={(e) =>
+                  setOsData({
+                    ...osData,
+                    identificacaoItem: e.target.value,
+                  })
+                }
+              />
+            </div>
+
+            {/* PROBLEMA */}
+            <div>
+              <Label>Problema *</Label>
+              <Textarea
+                placeholder="Descreva o problema"
+                value={osData.problemaRelatado}
+                onChange={(e) =>
+                  setOsData({
+                    ...osData,
+                    problemaRelatado: e.target.value,
+                  })
+                }
+              />
+            </div>
+
+            {/* OBSERVAÇÕES */}
+            <div>
+              <Label>Observações</Label>
+              <Textarea
+                value={osData.observacoes}
+                onChange={(e) =>
+                  setOsData({ ...osData, observacoes: e.target.value })
+                }
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsOSDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleCriarOS} disabled={loadingOS}>
+              {loadingOS ? "Salvando..." : "Criar OS"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* MODAL DE NOVO TIPO DE SERVIÇO — MODELO COMPLETO */}
+      <Dialog open={isNewTipoDialogOpen} onOpenChange={setIsNewTipoDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Novo Tipo de Serviço</DialogTitle>
+            <DialogDescription>
+              Preencha todos os detalhes do tipo de serviço.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* NOME */}
+            <div>
+              <Label>Nome *</Label>
+              <Input
+                value={formTipo.nome}
+                onChange={(e) =>
+                  setFormTipo({ ...formTipo, nome: e.target.value })
+                }
+              />
+            </div>
+
+            {/* DESCRIÇÃO */}
+            <div>
+              <Label>Descrição</Label>
+              <Textarea
+                value={formTipo.descricao}
+                onChange={(e) =>
+                  setFormTipo({ ...formTipo, descricao: e.target.value })
+                }
+              />
+            </div>
+
+            {/* PREÇOS */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Preço de Custo</Label>
+                <Input
+                  type="number"
+                  value={formTipo.precoCusto}
+                  onChange={(e) =>
+                    setFormTipo({
+                      ...formTipo,
+                      precoCusto: Number(e.target.value),
+                    })
+                  }
+                />
+              </div>
+
+              <div>
+                <Label>Preço de Venda</Label>
+                <Input
+                  type="number"
+                  value={formTipo.precoVenda}
+                  onChange={(e) =>
+                    setFormTipo({
+                      ...formTipo,
+                      precoVenda: Number(e.target.value),
+                    })
+                  }
+                />
+              </div>
+            </div>
+
+            {/* DURAÇÃO */}
+            <div>
+              <Label>Duração (minutos)</Label>
+              <Input
+                type="number"
+                value={formTipo.duracaoMinutos}
+                onChange={(e) =>
+                  setFormTipo({
+                    ...formTipo,
+                    duracaoMinutos: Number(e.target.value),
+                  })
+                }
+              />
+            </div>
+
+            {/* CATEGORIA */}
+            <div>
+              <Label>Categoria</Label>
               <Select
-                value={serviceData.clienteId}
+                value={formTipo.categoriaId}
                 onValueChange={(v) =>
-                  setServiceData({ ...serviceData, clienteId: v })
+                  setFormTipo({ ...formTipo, categoriaId: v })
                 }
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione o cliente (opcional)" />
+                  <SelectValue placeholder="Selecione uma categoria" />
                 </SelectTrigger>
                 <SelectContent>
-                  {clientes.map((c) => (
+                  {serviceCategories.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
                       {c.nome}
                     </SelectItem>
@@ -356,167 +531,22 @@ const Sales = () => {
                 </SelectContent>
               </Select>
             </div>
-
-            <div>
-              <Label>Vendedor *</Label>
-              <Select
-                value={serviceData.vendedorId}
-                onValueChange={(v) =>
-                  setServiceData({ ...serviceData, vendedorId: v })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o vendedor" />
-                </SelectTrigger>
-                <SelectContent>
-                  {vendedores.map((v) => (
-                    <SelectItem key={v.id} value={v.id}>
-                      {v.nome}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-4">
-              {serviceData.itens.map((item, index) => (
-                <Card key={index} className="p-4 relative">
-                  <div className="absolute top-2 right-2">
-                    {serviceData.itens.length > 1 && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => removeServiceItem(index)}
-                      >
-                        <Trash2 className="h-4 w-4 text-red-500" />
-                      </Button>
-                    )}
-                  </div>
-
-                  <div className="grid gap-3">
-                    <div>
-                      <Label>Serviço</Label>
-                      <Select
-                        value={item.servicoId}
-                        onValueChange={(v) =>
-                          updateServiceItem(index, "servicoId", v)
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione o tipo de serviço" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {tiposServicos.map((tipo) => (
-                            <SelectItem key={tipo.id} value={tipo.id}>
-                              {tipo.nome}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>Valor (R$)</Label>
-                        <Input
-                          type="number"
-                          value={item.precoUnitario}
-                          onChange={(e) =>
-                            updateServiceItem(
-                              index,
-                              "precoUnitario",
-                              Number(e.target.value)
-                            )
-                          }
-                        />
-                      </div>
-
-                      <div>
-                        <Label>Quantidade</Label>
-                        <Input
-                          type="number"
-                          value={item.quantidade}
-                          onChange={(e) =>
-                            updateServiceItem(
-                              index,
-                              "quantidade",
-                              Number(e.target.value)
-                            )
-                          }
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <Label>Descrição</Label>
-                      <Input
-                        placeholder="Ex: manutenção, instalação..."
-                        value={item.descricao}
-                        onChange={(e) =>
-                          updateServiceItem(index, "descricao", e.target.value)
-                        }
-                      />
-                    </div>
-                  </div>
-                </Card>
-              ))}
-
-              <Button
-                variant="outline"
-                className="mt-2 w-full"
-                onClick={addServiceItem}
-              >
-                + Adicionar outro serviço
-              </Button>
-            </div>
-
-            <div>
-              <Label>Valor (R$) *</Label>
-              <Input
-                type="number"
-                placeholder="Ex: 150.00"
-                value={serviceData.valor}
-                onChange={(e) =>
-                  setServiceData({ ...serviceData, valor: e.target.value })
-                }
-              />
-            </div>
-
-            <div>
-              <Label>Forma de Pagamento *</Label>
-              <Select
-                value={serviceData.formaPagamento}
-                onValueChange={(v) =>
-                  setServiceData({ ...serviceData, formaPagamento: v })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="dinheiro">Dinheiro</SelectItem>
-                  <SelectItem value="pix">Pix</SelectItem>
-                  <SelectItem value="debito">Cartão de Débito</SelectItem>
-                  <SelectItem value="credito">Cartão de Crédito</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
           </div>
 
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsServiceDialogOpen(false)}
-            >
+            <Button variant="outline" onClick={() => setIsNewTipoDialogOpen(false)}>
               Cancelar
             </Button>
-            <Button onClick={handleRegisterService} disabled={loadingService}>
-              {loadingService ? "Salvando..." : "Registrar Serviço"}
+
+            <Button onClick={handleCreateTipoServico}>
+              Salvar Tipo de Serviço
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <Link to={"/"} className="text-primary">
-        Voltar para o inicio
+
+      <Link to="/" className="text-primary block mt-6">
+        Voltar ao início
       </Link>
     </div>
   );

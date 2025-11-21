@@ -1,8 +1,11 @@
 import { PrismaClient } from "@prisma/client";
 import { CustomError } from "../../shared/errors";
-import { type CreateVendedorDto, type UpdateVendedorDto } from "./vendedores.dto";
-import fs from 'fs';
-import path from 'path';
+import {
+  type CreateVendedorDto,
+  type UpdateVendedorDto,
+} from "./vendedores.dto";
+import fs from "fs";
+import path from "path";
 
 const prisma = new PrismaClient();
 
@@ -21,7 +24,19 @@ export class VendedorService {
   }
 
   async findAll(empresaId: string) {
-    return await prisma.vendedor.findMany({ where: { empresaId } });
+    return await prisma.vendedor.findMany({
+      where: { empresaId },
+      select:{
+        atualizadoEm: true,
+        criadoEm: true,
+        email: true,
+        id: true,
+        meta: true,
+        nome: true,
+        urlImagem: true,
+        codigo: true,
+      }
+    });
   }
 
   async findOne(id: string, empresaId: string) {
@@ -38,9 +53,16 @@ export class VendedorService {
     const oldVendedor = await this.findOne(id, empresaId);
 
     if ((data as any).urlImagem && oldVendedor.urlImagem) {
-      const oldImagePath = path.resolve(__dirname, '..', '..', '..', oldVendedor.urlImagem);
+      const oldImagePath = path.resolve(
+        __dirname,
+        "..",
+        "..",
+        "..",
+        oldVendedor.urlImagem
+      );
       fs.unlink(oldImagePath, (err) => {
-        if (err) console.error("Erro ao deletar imagem antiga do vendedor:", err);
+        if (err)
+          console.error("Erro ao deletar imagem antiga do vendedor:", err);
       });
     }
 
@@ -52,15 +74,20 @@ export class VendedorService {
 
   async remove(id: string, empresaId: string) {
     const vendedor = await this.findOne(id, empresaId);
-    
+
     await prisma.vendedor.delete({ where: { id, empresaId } });
 
     if (vendedor.urlImagem) {
-      const imagePath = path.resolve(__dirname, '..', '..', '..', vendedor.urlImagem);
+      const imagePath = path.resolve(
+        __dirname,
+        "..",
+        "..",
+        "..",
+        vendedor.urlImagem
+      );
       fs.unlink(imagePath, (err) => {
         if (err) console.error("Erro ao deletar imagem do vendedor:", err);
       });
     }
   }
 }
-

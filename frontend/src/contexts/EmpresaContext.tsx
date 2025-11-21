@@ -16,7 +16,7 @@ export interface Empresa {
   cnpj: string;
   telefone: string;
   email?: string | null;
-  urlImage?: string | null;
+  logoEmpresa?: string | null;
   razaoSocial: string;
   nomeFantasia: string;
   inscEstadual: string;
@@ -165,7 +165,7 @@ export const EmpresaProvider = ({ children }: { children: ReactNode }) => {
 
       Object.keys(newEmpresa).forEach(key => {
         const value = (newEmpresa as any)[key];
-        if (key === 'urlImage' && value instanceof File) {
+        if (key === 'logoEmpresa' && value instanceof File) {
           formData.append(key, value);
         } else if (value !== null && value !== undefined) {
           formData.append(key, value);
@@ -202,7 +202,7 @@ export const EmpresaProvider = ({ children }: { children: ReactNode }) => {
 
       Object.keys(updatedData).forEach(key => {
         const value = (updatedData as any)[key];
-        if (key === 'urlImage' && value instanceof File) {
+        if (key === 'logoEmpresa' && value instanceof File) {
           formData.append(key, value);
         } else if (value !== null && value !== undefined) {
           formData.append(key, value);

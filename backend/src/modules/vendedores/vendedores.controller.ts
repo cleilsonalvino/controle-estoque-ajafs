@@ -10,6 +10,7 @@ const vendedorService = new VendedorService();
 
 export const createVendedorController = async (req: AuthenticatedRequest, res: Response) => {
   try {
+    console.log("Requisição de criação de vendedor recebida:", req.body);
     const { empresaId } = req.user!;
     const data = CreateVendedorSchema.parse(req.body);
 

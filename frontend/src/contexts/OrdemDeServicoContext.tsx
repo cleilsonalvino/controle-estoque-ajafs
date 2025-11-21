@@ -1,4 +1,3 @@
-
 import React, {
   createContext,
   useContext,
@@ -11,6 +10,8 @@ import {
   OrdemDeServico,
   OrdemDeServicoContextType,
   UpdateOrdemDeServico,
+  CreateOrdemDeServico, // adicione isso no seu types
+  deleteOrdemDeServico,
 } from "@/types/ordem-de-servico";
 import { api } from "@/lib/api";
 import { useEmpresa } from "./EmpresaContext";
@@ -27,6 +28,7 @@ export const OrdemDeServicoProvider: React.FC<{ children: ReactNode }> = ({
   const [error, setError] = useState<Error | null>(null);
   const { empresa } = useEmpresa();
 
+  // headers de autenticacao da empresa
   const getAuthHeaders = useCallback(() => {
     if (!empresa) {
       toast.error("Nenhuma empresa selecionada.");
@@ -35,6 +37,7 @@ export const OrdemDeServicoProvider: React.FC<{ children: ReactNode }> = ({
     return { "empresa-id": empresa.id };
   }, [empresa]);
 
+  // tratamento padrao das chamadas da API
   const withApiHandling = useCallback(
     async <T,>(
       apiCall: () => Promise<T>,
@@ -63,6 +66,7 @@ export const OrdemDeServicoProvider: React.FC<{ children: ReactNode }> = ({
     []
   );
 
+  // buscar todas as ordens
   const fetchOrdensDeServico = useCallback(
     async (filters: any = {}) => {
       const result = await withApiHandling(
@@ -81,6 +85,7 @@ export const OrdemDeServicoProvider: React.FC<{ children: ReactNode }> = ({
     [getAuthHeaders, withApiHandling]
   );
 
+  // buscar uma ordem pelo id
   const findOrdemDeServico = useCallback(
     async (id: string) => {
       const result = await withApiHandling(
@@ -93,6 +98,29 @@ export const OrdemDeServicoProvider: React.FC<{ children: ReactNode }> = ({
     [getAuthHeaders, withApiHandling]
   );
 
+  // criar ordem de serviço  💥 IMPORTANTE
+  const createOrdemDeServico = useCallback(
+    async (data: CreateOrdemDeServico) => {
+      const result = await withApiHandling(
+        () =>
+          api.post("/ordem-de-servico", data, {
+            headers: getAuthHeaders(),
+          }),
+        "Ordem de serviço criada com sucesso!",
+        "Erro ao criar ordem de serviço."
+      );
+
+      if (result) {
+        setOrdensDeServico((prev) => [result.data, ...prev]);
+        return result.data;
+      }
+
+      return null;
+    },
+    [getAuthHeaders, withApiHandling]
+  );
+
+  // atualizar ordem de servico
   const updateOrdemDeServico = useCallback(
     async (id: string, data: UpdateOrdemDeServico) => {
       const result = await withApiHandling(
@@ -103,15 +131,39 @@ export const OrdemDeServicoProvider: React.FC<{ children: ReactNode }> = ({
         "Ordem de serviço atualizada com sucesso!",
         "Erro ao atualizar ordem de serviço."
       );
+
       if (result) {
         setOrdensDeServico((prev) =>
           prev.map((os) => (os.id === id ? { ...os, ...result.data } : os))
         );
+        return result.data;
       }
-      return result ? result.data : null;
+
+      return null;
     },
     [getAuthHeaders, withApiHandling]
   );
+
+  const deleteOrdemDeServico = useCallback(
+    async (id: string) => {
+      const result = await withApiHandling(
+        () =>
+          api.delete(`/ordem-de-servico/${id}`, {
+            headers: getAuthHeaders(),
+          }),
+        "Ordem de serviço deletada com sucesso!",
+        "Erro ao deletar ordem de serviço."
+      );
+
+      if (result) {
+        setOrdensDeServico((prev) => prev.filter((os) => os.id !== id));
+        return true;
+      }
+
+      return false;
+    },
+    [getAuthHeaders, withApiHandling]
+  )
 
   return (
     <OrdemDeServicoContext.Provider
@@ -121,7 +173,9 @@ export const OrdemDeServicoProvider: React.FC<{ children: ReactNode }> = ({
         error,
         fetchOrdensDeServico,
         findOrdemDeServico,
+        createOrdemDeServico, // 🔥 AGORA EXISTE
         updateOrdemDeServico,
+        deleteOrdemDeServico
       }}
     >
       {children}

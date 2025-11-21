@@ -9,7 +9,7 @@ export interface Vendedor {
   nome: string;
   email: string;
   meta: number;
-  urlImage?: string | File | null; // ✅ CORRETO
+  urlImagem?: string | File | null; // ✅ CORRETO
   criadoEm?: Date;
   atualizadoEm?: Date;
 }
@@ -19,10 +19,11 @@ interface VendedorContextProps {
   vendedores: Vendedor[];
   loading: boolean;
   fetchVendedores: () => Promise<void>;
-  createVendedor: (vendedorData: Omit<Vendedor, 'id'>) => Promise<Vendedor>;
-  updateVendedor: (id: string, vendedorData: Omit<Vendedor, 'id'>) => Promise<Vendedor>;
+  createVendedor: (data: FormData) => Promise<Vendedor>;
+  updateVendedor: (id: string, data: FormData) => Promise<Vendedor>;
   deleteVendedor: (id: string) => Promise<void>;
 }
+
 
 const VendedorContext = createContext<VendedorContextProps | undefined>(undefined);
 
@@ -53,19 +54,8 @@ export const VendedorProvider = ({ children }: VendedorProviderProps) => {
     }
   }, []);
 
-const createVendedor = useCallback(async (vendedorData: Omit<Vendedor, 'id'>) => {
+const createVendedor = useCallback(async (formData: FormData) => {
   try {
-    const formData = new FormData();
-
-    formData.append("nome", vendedorData.nome);
-    formData.append("email", vendedorData.email);
-    formData.append("meta", String(vendedorData.meta));
-
-    // ⚠️ Importante: o nome deve ser o mesmo do multer.single("urlImage")
-    if (vendedorData.urlImage && typeof vendedorData.urlImage !== "string") {
-      formData.append("urlImage", vendedorData.urlImage);
-    }
-
     const response = await api.post("/vendedores/create", formData, {
       headers: {
         "Content-Type": "multipart/form-data",
@@ -76,36 +66,30 @@ const createVendedor = useCallback(async (vendedorData: Omit<Vendedor, 'id'>) =>
     return response.data;
   } catch (error) {
     console.error("Erro ao criar vendedor:", error);
+    throw error;
   }
 }, []);
 
-  const updateVendedor = useCallback(async (id: string, vendedorData: Omit<Vendedor, 'id'>) => {
-    try {
-        const formData = new FormData();
 
-        formData.append("nome", vendedorData.nome);
-        formData.append("email", vendedorData.email);
-        formData.append("meta", String(vendedorData.meta));
+const updateVendedor = useCallback(async (id: string, formData: FormData) => {
+  try {
+    const response = await api.put(`/vendedores/${id}`, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
 
-        if (vendedorData.urlImage && typeof vendedorData.urlImage !== "string") {
-            formData.append("urlImage", vendedorData.urlImage);
-        } else if (vendedorData.urlImage) {
-            formData.append("urlImage", vendedorData.urlImage);
-        }
+    setVendedores((prev) =>
+      prev.map((v) => (v.id === id ? response.data : v))
+    );
 
-        const response = await api.put(`/vendedores/${id}`, formData, {
-            headers: {
-                "Content-Type": "multipart/form-data",
-            },
-        });
+    return response.data;
+  } catch (error) {
+    console.error("Erro ao atualizar vendedor:", error);
+    throw error;
+  }
+}, []);
 
-        setVendedores((prev) => prev.map((v) => (v.id === id ? response.data : v)));
-        return response.data;
-    } catch (error) {
-        console.error("Erro ao atualizar vendedor:", error);
-        throw error;
-    }
-  }, []);
 
   const deleteVendedor = useCallback(async (id: string) => {
     await api.delete(`/vendedores/${id}`);

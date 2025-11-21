@@ -59,7 +59,7 @@ export const AppSidebar = () => {
           grupos["Financeiro"].push(item);
         }
       } else if (
-        ["home", "estoque", "dashboard-sales", "sales", "pos-venda"].includes(
+        ["home", "estoque", "dashboard-sales", "sales", "pos-venda", "ordens-de-servico"].includes(
           item.key
         )
       ) {
@@ -72,6 +72,8 @@ export const AppSidebar = () => {
           "categories",
           "clientes",
           "vendedores",
+          
+
         ].includes(item.key)
       ) {
         grupos["Cadastros"].push(item);
@@ -79,9 +81,7 @@ export const AppSidebar = () => {
         grupos["Serviços"].push(item);
       } else if (["settings", "super_admin"].includes(item.key)) {
         grupos["Outros"].push(item);
-      } else {
-        grupos["Relatórios"].push(item);
-      }
+      } 
     });
 
     return grupos;

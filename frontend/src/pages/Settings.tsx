@@ -68,7 +68,7 @@ const empresaSchema = z.object({
   endereco: z.string().optional(),
   numero: z.string().optional(),
   bairro: z.string().optional(),
-  urlImage: z.any().optional(),
+  logoEmpresa: z.any().optional(),
 });
 
 const userSchema = z
@@ -241,8 +241,8 @@ const Settings = () => {
 
   // ✅ Salvar empresa
   const onSaveEmpresa = async (data: EmpresaFormData) => {
-    const file = data.urlImage?.[0];
-    const dataToSend = { ...data, urlImage: file };
+    const file = data.logoEmpresa?.[0];
+    const dataToSend = { ...data, logoEmpresa: file };
 
     if (empresa?.id) {
       await updateEmpresa(dataToSend, empresa.id);
@@ -351,6 +351,26 @@ const Settings = () => {
     handleCloseUserModal();
   };
 
+    const getImageUrl = (value: string | File | null) => {
+    if (!value) {
+      return "https://placehold.co/600x400?text=Sem+Imagem";
+    }
+
+    // Se for File (nova imagem escolhida)
+    if (value instanceof File) {
+      return URL.createObjectURL(value); // <- gera preview AUTOMÁTICO
+    }
+
+    // Se já for URL externa
+    if (value.startsWith("http")) {
+      return value;
+    }
+
+    // Se for caminho relativo salvo no banco
+    const cleanPath = value.startsWith("/") ? value.substring(1) : value;
+    return `${import.meta.env.VITE_API_URL}/${cleanPath}`;
+  };
+
   if (loading) return <p className="p-8">Carregando configurações...</p>;
 
   // ===================================
@@ -443,20 +463,20 @@ const Settings = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="urlImage">Logo da Empresa</Label>
+                <Label htmlFor="logoEmpresa">Logo da Empresa</Label>
                 <Input
-                    id="urlImage"
+                    id="logoEmpresa"
                     type="file"
                     accept="image/*"
-                    {...registerEmpresa("urlImage")}
+                    {...registerEmpresa("logoEmpresa")}
                     disabled={!isEditing}
                 />
               </div>
               
-              {empresa?.urlImage && (
+              {empresa?.logoEmpresa && (
                 <div className="mt-2 flex justify-center">
                     <img
-                        src={empresa.urlImage}
+                        src={getImageUrl(empresa.logoEmpresa)}
                         alt="Logo da Empresa"
                         className="w-32 h-32 object-contain border rounded-md shadow-sm bg-white"
                     />
