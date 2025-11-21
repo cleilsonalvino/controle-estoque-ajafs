@@ -431,6 +431,100 @@ const Sales = () => {
         </DialogContent>
       </Dialog>
 
+      {/* MODAL DE NOVO CLIENTE */}
+<Dialog open={isNewClientDialogOpen} onOpenChange={setIsNewClientDialogOpen}>
+  <DialogContent className="sm:max-w-lg">
+    <DialogHeader>
+      <DialogTitle>Novo Cliente</DialogTitle>
+      <DialogDescription>
+        Cadastre um novo cliente para continuar o atendimento.
+      </DialogDescription>
+    </DialogHeader>
+
+    <div className="space-y-4">
+      {/* Nome */}
+      <div>
+        <Label>Nome *</Label>
+        <Input
+          value={newClientName}
+          onChange={(e) => setNewClientName(e.target.value)}
+        />
+      </div>
+
+      {/* CPF */}
+      <div>
+        <Label>CPF</Label>
+        <Input
+          value={osData.cpf}
+          onChange={(e) => setOsData({ ...osData, cpf: e.target.value })}
+          placeholder="000.000.000-00"
+        />
+      </div>
+
+      {/* Telefone */}
+      <div>
+        <Label>Telefone</Label>
+        <Input
+          value={osData.telefone}
+          onChange={(e) => setOsData({ ...osData, telefone: e.target.value })}
+          placeholder="(79) 99999-9999"
+        />
+      </div>
+
+      {/* Endereço */}
+      <div>
+        <Label>Endereço</Label>
+        <Input
+          value={osData.endereco}
+          onChange={(e) => setOsData({ ...osData, endereco: e.target.value })}
+          placeholder="Rua, número e bairro"
+        />
+      </div>
+    </div>
+
+    <DialogFooter>
+      <Button variant="outline" onClick={() => setIsNewClientDialogOpen(false)}>
+        Cancelar
+      </Button>
+
+      <Button
+        onClick={async () => {
+          if (!newClientName.trim()) {
+            toast.error("Informe o nome do cliente.");
+            return;
+          }
+
+          try {
+            const novoCliente = await createCliente({
+              nome: newClientName,
+              cpf: osData.cpf || undefined,
+              telefone: osData.telefone || undefined,
+              endereco: osData.endereco || undefined,
+            });
+
+            if (novoCliente) {
+              toast.success("Cliente criado!");
+
+              setOsData((prev) => ({
+                ...prev,
+                clienteId: novoCliente.id,
+              }));
+
+              setNewClientName("");
+              setIsNewClientDialogOpen(false);
+            }
+          } catch (err) {
+            toast.error("Erro ao criar cliente.");
+          }
+        }}
+      >
+        Salvar Cliente
+      </Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
+
+
       {/* MODAL DE NOVO TIPO DE SERVIÇO — MODELO COMPLETO */}
       <Dialog open={isNewTipoDialogOpen} onOpenChange={setIsNewTipoDialogOpen}>
         <DialogContent className="sm:max-w-lg">
