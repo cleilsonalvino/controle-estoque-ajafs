@@ -3,7 +3,7 @@
 "use client";
 
 import { ColumnDef } from "@tanstack/react-table";
-import { Produto } from "@/contexts/ProdutoContext"; // Ajuste o import
+import { Produto } from "@/contexts/ProdutoContext";
 import { ArrowUpDown, MoreHorizontal } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -16,80 +16,123 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-// Tipo para as ações (para passar as funções de edit/delete)
+// Tipagem das ações
 export type ProductActions = {
   onEdit: (produto: Produto) => void;
   onDelete: (id: string) => void;
   onView: (produto: Produto) => void;
 };
 
-// Esta função gera as colunas, recebendo as ações como parâmetro
 export const getProductColumns = (
   actions: ProductActions
 ): ColumnDef<Produto>[] => [
   {
     accessorKey: "nome",
-    // ✅ AQUI ESTÁ A "CETINHA" (SETINHA)
-    // Criamos um header customizado com um botão
     header: ({ column }) => {
       return (
         <Button
           variant="ghost"
+          className="px-0 text-left font-semibold hover:bg-transparent"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
           Produto
-          <ArrowUpDown className="ml-2 h-4 w-4" />
+          <ArrowUpDown className="ml-2 h-4 w-4 opacity-70" />
         </Button>
       );
     },
+    cell: ({ row }) => (
+      <span className="font-medium text-gray-800 dark:text-gray-200">
+        {row.original.nome}
+      </span>
+    ),
   },
+
+  {
+    accessorKey: "marca.nome",
+    header: "Marca",
+    cell: ({ row }) => {
+      return (
+        <span className="text-gray-700 dark:text-gray-300">
+          {row.original.marca?.nome || "Sem marca"}
+        </span>
+      );
+    },
+  },
+
+  {
+    accessorKey: "codigoBarras",
+    header: "Código de barras",
+    cell: ({ row }) =>
+      <span className="text-gray-700 dark:text-gray-300">
+        {row.original.codigoBarras || "Sem código de barras"}
+      </span>
+  },
+
   {
     accessorKey: "categoria.nome",
     header: "Categoria",
     cell: ({ row }) => {
-      return row.original.categoria?.nome || "Sem categoria";
+      return (
+        <span className="text-gray-700 dark:text-gray-300">
+          {row.original.categoria?.nome || "Sem categoria"}
+        </span>
+      );
     },
   },
+
   {
     accessorKey: "quantidadeTotal",
     header: ({ column }) => {
       return (
         <Button
           variant="ghost"
+          className="px-0 text-left font-semibold hover:bg-transparent"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
           Estoque
-          <ArrowUpDown className="ml-2 h-4 w-4" />
+          <ArrowUpDown className="ml-2 h-4 w-4 opacity-70" />
         </Button>
       );
     },
-    // Você pode formatar a célula
     cell: ({ row }) => {
       const qtd = row.original.quantidadeTotal || 0;
       const min = row.original.estoqueMinimo || 0;
       const isBaixo = Number(qtd) <= Number(min);
 
       return (
-        <span className={isBaixo ? "text-yellow-600 font-bold" : ""}>
+        <span
+          className={
+            isBaixo
+              ? "text-yellow-600 font-semibold dark:text-yellow-400"
+              : "text-gray-800 dark:text-gray-200"
+          }
+        >
           {qtd}
         </span>
       );
     },
   },
+
   {
     accessorKey: "precoVenda",
     header: "Preço Venda",
     cell: ({ row }) => {
       const valor = parseFloat(row.getValue("precoVenda") || "0");
-      return valor.toLocaleString("pt-BR", {
-        style: "currency",
-        currency: "BRL",
-      });
+      return (
+        <span className="text-gray-800 dark:text-gray-200 font-medium">
+          {valor.toLocaleString("pt-BR", {
+            style: "currency",
+            currency: "BRL",
+          })}
+        </span>
+      );
     },
   },
+
   {
     id: "actions",
     header: "Ações",
+    enableHiding: false,
     cell: ({ row }) => {
       const produto = row.original;
 
@@ -103,26 +146,28 @@ export const getProductColumns = (
         if (!printWindow) return;
 
         const doc = printWindow.document;
+
         doc.head.innerHTML = `
-    <title>Código de Barras</title>
-    <style>
-      body {
-        margin: 0;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 100vh;
-      }
-      svg {
-        max-width: 90%;
-        max-height: 90%;
-      }
-      @media print {
-        body { margin: 0; }
-        svg { page-break-inside: avoid; }
-      }
-    </style>
-  `;
+          <title>Código de Barras</title>
+          <style>
+            body {
+              margin: 0;
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              height: 100vh;
+              font-family: sans-serif;
+            }
+            svg {
+              max-width: 100%;
+              max-height: 80%;
+            }
+            @media print {
+              body { margin: 0; }
+              svg { page-break-inside: avoid; }
+            }
+          </style>
+        `;
 
         const container = doc.createElement("div");
         const svg = doc.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -133,6 +178,7 @@ export const getProductColumns = (
         const script = doc.createElement("script");
         script.src =
           "https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js";
+
         script.onload = () => {
           // @ts-ignore
           printWindow.JsBarcode("#barcode", codigo, {
@@ -143,47 +189,63 @@ export const getProductColumns = (
           printWindow.print();
           printWindow.close();
         };
+
         doc.body.appendChild(script);
       };
 
       return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <span className="sr-only">Abrir menu</span>
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Ações</DropdownMenuLabel>
-            <DropdownMenuItem onClick={() => actions.onView(produto)}>
-              Ver Detalhes
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => actions.onEdit(produto)}>
-              Editar
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className="text-green-500"
-              onClick={() => {
-                handlePrintBarcode(produto.codigoBarras);
-              }}
+        <div className="flex justify-end">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="h-8 w-8 p-0">
+                <MoreHorizontal className="h-4 w-4 text-gray-700 dark:text-gray-300" />
+              </Button>
+            </DropdownMenuTrigger>
+
+            <DropdownMenuContent
+              align="end"
+              className="w-48 shadow-md rounded-md"
             >
-              Imprimir código de barras
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className="text-red-500"
-              onClick={() => {
-                if (confirm("Tem certeza que deseja excluir?")) {
-                  actions.onDelete(produto.id);
-                }
-              }}
-            >
-              Excluir
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+              <DropdownMenuLabel>Ações</DropdownMenuLabel>
+
+              <DropdownMenuItem
+                onClick={() => actions.onView(produto)}
+                className="cursor-pointer"
+              >
+                Ver Detalhes
+              </DropdownMenuItem>
+
+              <DropdownMenuItem
+                onClick={() => actions.onEdit(produto)}
+                className="cursor-pointer"
+              >
+                Editar
+              </DropdownMenuItem>
+
+              <DropdownMenuSeparator />
+
+              <DropdownMenuItem
+                className="text-green-600 dark:text-green-400 cursor-pointer"
+                onClick={() => handlePrintBarcode(produto.codigoBarras)}
+              >
+                Imprimir código de barras
+              </DropdownMenuItem>
+
+              <DropdownMenuSeparator />
+
+              <DropdownMenuItem
+                className="text-red-600 dark:text-red-400 cursor-pointer"
+                onClick={() => {
+                  if (confirm("Tem certeza que deseja excluir?")) {
+                    actions.onDelete(produto.id);
+                  }
+                }}
+              >
+                Excluir
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       );
     },
   },

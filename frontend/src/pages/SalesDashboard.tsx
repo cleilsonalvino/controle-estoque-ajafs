@@ -1,4 +1,4 @@
-import {isAxiosError} from "axios";
+import { isAxiosError } from "axios";
 import { saveAs } from "file-saver";
 import {
   Card,
@@ -57,7 +57,7 @@ import GerarRelatorioNF from "@/components/GerarRelatorioNF";
 import SaleDetalhesModal from "@/components/SaleDetalhesModal";
 import ClienteDetalhesModal from "@/components/ClienteDetalhesModal";
 import { Sale } from "@/contexts/SalesContext"; // Removido SaleData se não for usado
-import {api} from "@/lib/api";
+import { api } from "@/lib/api";
 import { useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import TopSellingProducts from "@/components/TopSellingProducts";
@@ -177,8 +177,6 @@ const SalesLast6Months = () => {
     </Card>
   );
 };
-
-
 
 const SalesByCategory = () => {
   const { sales: allSalesRaw } = useSales();
@@ -517,7 +515,6 @@ const SalesDashboard = () => {
     doc.save("relatorio_vendas.pdf");
   };
 
-
   // Paginação (Atualizada para usar tableData)
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5; // quantidade de vendas por página
@@ -584,14 +581,13 @@ const SalesDashboard = () => {
   // Render
   // ========================
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 mt-6">
-
+    <div className="w-full flex flex-col gap-6 mt-6 px-2 sm:px-4">
       <h1 className="text-3xl font-bold text-gray-800 mb-6">
         Dashboard de Vendas
       </h1>
 
       {/* Cards resumo (Sem alterações, usam allSales) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-6 ">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 mb-6">
         <Card className="bg-gradient-to-r from-blue-50 to-blue-100 border-none shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 ">
             <CardTitle className="text-sm font-medium">
@@ -767,240 +763,214 @@ const SalesDashboard = () => {
         </CardHeader>
 
         <CardContent>
-          {/* Filtros (Modificados) */}
-          <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-            {/* Filtros de Seleção */}
-            <div className="flex flex-wrap items-center gap-2">
-              <Select
-                value={filterClienteId}
-                onValueChange={setFilterClienteId}
-              >
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder="Cliente" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todos">Todos os Clientes</SelectItem>
-                  {clientes?.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.nome}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          {/* 🔍 FILTROS – Responsivos */}
+          <div className="flex flex-col gap-4 mb-6">
+            {/* Seleções */}
+            <div className="flex flex-col md:flex-row md:flex-wrap gap-3">
+              <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
+                <Select
+                  value={filterClienteId}
+                  onValueChange={setFilterClienteId}
+                >
+                  <SelectTrigger className="w-full sm:w-48">
+                    <SelectValue placeholder="Cliente" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todos</SelectItem>
+                    {clientes?.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
 
-              <Select
-                value={filterVendedorId}
-                onValueChange={setFilterVendedorId}
-              >
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder="Vendedor" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todos">Todos os Vendedores</SelectItem>
-                  {vendedores?.map((v) => (
-                    <SelectItem key={v.id} value={v.id}>
-                      {v.nome}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                <Select
+                  value={filterVendedorId}
+                  onValueChange={setFilterVendedorId}
+                >
+                  <SelectTrigger className="w-full sm:w-48">
+                    <SelectValue placeholder="Vendedor" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todos</SelectItem>
+                    {vendedores?.map((v) => (
+                      <SelectItem key={v.id} value={v.id}>
+                        {v.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
 
-              <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todos">Todos os Status</SelectItem>
-                  <SelectItem value="Concluída">Concluída</SelectItem>
-                  <SelectItem value="Pendente">Pendente</SelectItem>
-                  <SelectItem value="Cancelada">Cancelada</SelectItem>
-                </SelectContent>
-              </Select>
+                <Select value={filterStatus} onValueChange={setFilterStatus}>
+                  <SelectTrigger className="w-full sm:w-48">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todos</SelectItem>
+                    <SelectItem value="Concluída">Concluída</SelectItem>
+                    <SelectItem value="Pendente">Pendente</SelectItem>
+                    <SelectItem value="Cancelada">Cancelada</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
 
-              <Select
-                value={filterFormaPagamento}
-                onValueChange={setFilterFormaPagamento}
-              >
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder="Forma de Pagamento" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todos">Todas as Formas</SelectItem>
-                  <SelectItem value="Pix">Pix</SelectItem>
-                  <SelectItem value="Cartão de Crédito">
-                    Cartão de Crédito
-                  </SelectItem>
-                  <SelectItem value="Cartão de Débito">
-                    Cartão de Débito
-                  </SelectItem>
-                  <SelectItem value="Dinheiro">Dinheiro</SelectItem>
-                  <SelectItem value="Boleto">Boleto</SelectItem>
-                </SelectContent>
-              </Select>
+            {/* Datas */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Input
+                type="date"
+                className="w-full sm:w-40"
+                value={filterDataInicio}
+                onChange={(e) => setFilterDataInicio(e.target.value)}
+              />
+              <Input
+                type="date"
+                className="w-full sm:w-40"
+                value={filterDataFim}
+                onChange={(e) => setFilterDataFim(e.target.value)}
+              />
+            </div>
+
+            {/* Botões */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button variant="secondary" onClick={handleClearFilters}>
+                Limpar filtros
+              </Button>
+
               <Button
-                className="ml-10"
-                onClick={() => {
-                  handleDeleteHistorySales();
-                }}
+                className="bg-red-500 hover:bg-red-600"
+                onClick={handleDeleteHistorySales}
               >
                 EXCLUIR DADOS
               </Button>
             </div>
-
-            {/* Filtros de Data */}
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="relative">
-                <label className="text-xs absolute -top-2 left-2 bg-white px-1 text-muted-foreground">
-                  Data Início
-                </label>
-                <Input
-                  type="date"
-                  className="w-40"
-                  value={filterDataInicio}
-                  onChange={(e) => setFilterDataInicio(e.target.value)}
-                />
-              </div>
-              <div className="relative">
-                <label className="text-xs absolute -top-2 left-2 bg-white px-1 text-muted-foreground">
-                  Data Fim
-                </label>
-                <Input
-                  type="date"
-                  className="w-40"
-                  value={filterDataFim}
-                  onChange={(e) => setFilterDataFim(e.target.value)}
-                />
-              </div>
-            </div>
-
-            {/* Botões de Exportação */}
-            <div className="flex items-center gap-2">
-              <Button
-                variant="secondary"
-                onClick={handleClearFilters}
-                disabled={isLoadingTable}
-              >
-                <X className="h-4 w-4 mr-2" />
-                Limpar Filtros
-              </Button>
-            </div>
           </div>
 
-          {/* Tabela (Modificada) */}
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Número</TableHead>
-                <TableHead>Data</TableHead>
-                <TableHead>Cliente</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Vendedor</TableHead>
-                <TableHead className="text-right">Forma de Pagamento</TableHead>
-                <TableHead className="text-right">Valor</TableHead>
-                <TableHead className="text-center">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoadingTable && (
+          {/* 🧾 TABELA – Responsiva */}
+          <div className="w-full overflow-x-auto rounded-lg border">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-10">
-                    <div className="flex justify-center items-center">
-                      <Loader2 className="h-6 w-6 animate-spin mr-2" />
-                      Carregando dados...
-                    </div>
-                  </TableCell>
+                  <TableHead>Número</TableHead>
+                  <TableHead>Data</TableHead>
+                  <TableHead>Cliente</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Vendedor</TableHead>
+                  <TableHead className="text-right">Pagamento</TableHead>
+                  <TableHead className="text-right">Total</TableHead>
+                  <TableHead className="text-center">Ações</TableHead>
                 </TableRow>
-              )}
-              {tableError && (
-                <TableRow>
-                  <TableCell
-                    colSpan={7}
-                    className="text-center text-red-500 py-10"
-                  >
-                    {tableError}
-                  </TableCell>
-                </TableRow>
-              )}
-              {!isLoadingTable && !tableError && currentItems.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-10">
-                    Nenhum resultado encontrado para os filtros aplicados.
-                  </TableCell>
-                </TableRow>
-              )}
-              {!isLoadingTable &&
-                !tableError &&
-                currentItems.map((s) => (
-                  <TableRow key={s.id}>
-                    <TableCell>{s.numero}</TableCell>
-                    <TableCell>
-                      {new Date(s.criadoEm).toLocaleDateString("pt-BR")}
-                    </TableCell>
-                    <TableCell>
-                      {s.cliente && (
-                        <ClienteDetalhesModal
-                          cliente={clientes.find((c) => c.id === s.cliente.id)}
-                        >
-                          <Button variant="link" className="p-0 h-auto">
-                            {getClienteDisplay(s)}
-                          </Button>
-                        </ClienteDetalhesModal>
-                      )}
-                      {!s.cliente && getClienteDisplay(s)}
-                    </TableCell>
-                    <TableCell
-                      className={
-                        s.status === "Cancelada"
-                          ? "text-red-500 font-semibold"
-                          : s.status === "Pendente"
-                          ? "text-yellow-500 font-medium"
-                          : "text-green-500"
-                      }
-                    >
-                      {s.status}
-                    </TableCell>
+              </TableHeader>
 
-                    <TableCell>{s.vendedor?.nome}</TableCell>
-                    <TableCell className="text-right">
-                      {s.formaPagamento}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {fmtBRL(toNumber(s.total))}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <SaleDetalhesModal sale={s}>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          title="Ver Detalhes"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </SaleDetalhesModal>
-                      {s.status !== "Cancelada" && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleCancelSale(s.id)}
-                          title="Cancelar Venda"
-                        >
-                          <XCircle className="h-4 w-4 text-red-500" />
-                        </Button>
-                      )}
+              <TableBody>
+                {isLoadingTable && (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-10">
+                      <div className="flex justify-center items-center gap-2">
+                        <Loader2 className="h-6 w-6 animate-spin" />
+                        Carregando...
+                      </div>
                     </TableCell>
                   </TableRow>
-                ))}
-            </TableBody>
-          </Table>
+                )}
 
-          {/* PAGINAÇÃO (Modificada) */}
-          <div className="flex justify-between items-center mt-4">
+                {tableError && (
+                  <TableRow>
+                    <TableCell
+                      colSpan={8}
+                      className="text-center text-red-500 py-10"
+                    >
+                      {tableError}
+                    </TableCell>
+                  </TableRow>
+                )}
+
+                {!isLoadingTable &&
+                  !tableError &&
+                  currentItems.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-10">
+                        Nenhum resultado encontrado.
+                      </TableCell>
+                    </TableRow>
+                  )}
+
+                {!isLoadingTable &&
+                  !tableError &&
+                  currentItems.map((s) => (
+                    <TableRow key={s.id}>
+                      <TableCell>{s.numero}</TableCell>
+                      <TableCell>
+                        {new Date(s.criadoEm).toLocaleDateString("pt-BR")}
+                      </TableCell>
+                      <TableCell>
+                        {s.cliente ? (
+                          <ClienteDetalhesModal
+                            cliente={clientes.find(
+                              (c) => c.id === s.cliente.id
+                            )}
+                          >
+                            <Button variant="link" className="p-0 h-auto">
+                              {getClienteDisplay(s)}
+                            </Button>
+                          </ClienteDetalhesModal>
+                        ) : (
+                          "Não informado"
+                        )}
+                      </TableCell>
+
+                      <TableCell
+                        className={
+                          s.status === "Cancelada"
+                            ? "text-red-500 font-semibold"
+                            : s.status === "Pendente"
+                            ? "text-yellow-500 font-medium"
+                            : "text-green-600 font-medium"
+                        }
+                      >
+                        {s.status}
+                      </TableCell>
+
+                      <TableCell>{s.vendedor?.nome ?? "-"}</TableCell>
+                      <TableCell className="text-right">
+                        {s.formaPagamento ?? "-"}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {fmtBRL(toNumber(s.total))}
+                      </TableCell>
+
+                      <TableCell className="text-center">
+                        <SaleDetalhesModal sale={s}>
+                          <Button variant="ghost" size="icon">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </SaleDetalhesModal>
+
+                        {s.status !== "Cancelada" && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleCancelSale(s.id)}
+                          >
+                            <XCircle className="h-4 w-4 text-red-500" />
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* 📌 Paginação responsiva */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4">
             <p className="text-sm text-muted-foreground">
-              {/* Página {currentPage} de {totalPages} (Total: {tableData.length}) */}
               Mostrando {Math.min(startIndex + 1, tableData.length)} a{" "}
               {Math.min(endIndex, tableData.length)} de {tableData.length}{" "}
-              resultados
+              registros
             </p>
+
             <div className="flex gap-2">
               <Button
                 variant="outline"
@@ -1008,17 +978,15 @@ const SalesDashboard = () => {
                 onClick={handlePrevPage}
                 disabled={currentPage === 1}
               >
-                <ChevronLeft className="h-4 w-4" />
-                Anterior
+                <ChevronLeft className="h-4 w-4" /> Anterior
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleNextPage}
-                disabled={currentPage === totalPages || tableData.length === 0}
+                disabled={currentPage === totalPages}
               >
-                Próxima
-                <ChevronRight className="h-4 w-4" />
+                Próxima <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
           </div>

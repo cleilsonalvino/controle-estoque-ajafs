@@ -1,4 +1,3 @@
-// src/pages/Financeiro/ContasReceber.tsx
 import React, { useState } from "react";
 import { useFinanceiro } from "@/contexts/FinanceiroContext";
 import { DataTable } from "@/components/ui/data-table";
@@ -22,6 +21,10 @@ import {
   Tooltip,
 } from "recharts";
 import { ContaReceberModal } from "@/components/financeiro/ContaReceberModal";
+import { AlertTriangle } from "lucide-react";
+
+// 🔧 Controle para ativar ou desativar o modo "em construção"
+const EM_CONSTRUCAO = true;
 
 const data = [
   { day: 1, value: 1200 },
@@ -38,22 +41,33 @@ const ContasReceber: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   return (
-    <div className="relative">
-      {/* CONTEÚDO COM BLUR */}
-      <div className="p-4 space-y-4 blur-sm pointer-events-none select-none">
+    <div className="relative min-h-[calc(100vh-80px)]">
+
+      {/* === CONTEÚDO REAL (com blur se estiver em construção) === */}
+      <div
+        className={
+          EM_CONSTRUCAO
+            ? "p-4 space-y-4 blur-md pointer-events-none select-none"
+            : "p-4 space-y-4"
+        }
+      >
         <h1 className="text-2xl font-bold">Contas a Receber</h1>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+
+          {/* Filtros + Tabela */}
           <div className="lg:col-span-3">
             <Card>
               <CardHeader>
                 <CardTitle>Filtros</CardTitle>
               </CardHeader>
-              <CardContent className="flex items-center space-x-2">
+
+              <CardContent className="flex items-center flex-wrap gap-2">
                 <Input
                   placeholder="Buscar por descrição..."
                   className="max-w-sm"
                 />
+
                 <Select>
                   <SelectTrigger className="w-[180px]">
                     <SelectValue placeholder="Status" />
@@ -64,8 +78,11 @@ const ContasReceber: React.FC = () => {
                     <SelectItem value="atrasado">Atrasado</SelectItem>
                   </SelectContent>
                 </Select>
+
                 <Button>Filtrar</Button>
+
                 <div className="flex-grow" />
+
                 <ContaReceberModal
                   open={isModalOpen}
                   onOpenChange={setIsModalOpen}
@@ -78,10 +95,14 @@ const ContasReceber: React.FC = () => {
             </Card>
 
             <div className="mt-4">
-              <DataTable columns={recebimentosColumns} data={contasReceber} />
+              <DataTable
+                columns={recebimentosColumns}
+                data={contasReceber}
+              />
             </div>
           </div>
 
+          {/* Gráfico */}
           <div className="lg:col-span-1">
             <Card>
               <CardHeader>
@@ -126,16 +147,33 @@ const ContasReceber: React.FC = () => {
               </CardContent>
             </Card>
           </div>
+
         </div>
       </div>
 
-      {/* OVERLAY */}
-      <div
-        className="absolute inset-0 flex items-center justify-center 
-      bg-black/20 backdrop-blur-sm text-white text-xl font-semibold"
-      >
-        🚧 Funcionalidade ainda não implementada
-      </div>
+      {/* === OVERLAY EM CONSTRUÇÃO — PREMIUM === */}
+      {EM_CONSTRUCAO && (
+        <div
+          className="
+            absolute inset-0 z-50
+            flex flex-col items-center justify-center
+            bg-white/60 backdrop-blur-md
+            animate-fadeIn
+          "
+        >
+          <AlertTriangle className="h-16 w-16 text-yellow-600 mb-4 animate-pulse" />
+
+          <h2 className="text-3xl font-bold text-gray-800">
+            Em Construção
+          </h2>
+
+          <p className="mt-2 text-gray-700 text-sm max-w-xs text-center">
+            Estamos preparando o módulo de contas a receber para entregar
+            uma experiência completa e profissional.
+          </p>
+        </div>
+      )}
+
     </div>
   );
 };

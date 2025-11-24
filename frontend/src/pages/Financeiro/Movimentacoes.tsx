@@ -1,4 +1,5 @@
 // src/pages/Financeiro/Movimentacoes.tsx
+
 import React, { useState } from "react";
 import { useFinanceiro } from "@/contexts/FinanceiroContext";
 import { DataTable } from "@/components/ui/data-table";
@@ -14,6 +15,10 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MovimentacaoModal } from "@/components/financeiro/MovimentacaoModal";
+import { AlertTriangle } from "lucide-react";
+
+// 🔧 Controle da feature (quando quiser liberar, troque para false)
+const EM_CONSTRUCAO = true;
 
 const Movimentacoes: React.FC = () => {
   const { movimentacoes, loading } = useFinanceiro();
@@ -22,16 +27,27 @@ const Movimentacoes: React.FC = () => {
   return (
     <div className="relative min-h-[calc(100vh-80px)]">
 
-      {/* CONTEÚDO COM BLUR */}
-      <div className="p-4 space-y-4 blur-sm pointer-events-none select-none">
+      {/* === CONTEÚDO REAL (escondido + blur quando em construção) === */}
+      <div
+        className={
+          EM_CONSTRUCAO
+            ? "p-4 space-y-4 blur-md pointer-events-none select-none"
+            : "p-4 space-y-4"
+        }
+      >
         <h1 className="text-2xl font-bold">Movimentações Financeiras</h1>
 
-        <Card >
+        <Card>
           <CardHeader>
             <CardTitle>Filtros</CardTitle>
           </CardHeader>
-          <CardContent className="flex items-center space-x-2">
-            <Input placeholder="Buscar por descrição..." className="max-w-sm" />
+
+          <CardContent className="flex items-center gap-2 flex-wrap">
+
+            <Input
+              placeholder="Buscar por descrição..."
+              className="max-w-sm"
+            />
 
             <Select>
               <SelectTrigger className="w-[180px]">
@@ -69,13 +85,28 @@ const Movimentacoes: React.FC = () => {
         <DataTable columns={movimentacoesColumns} data={movimentacoes} />
       </div>
 
-      {/* OVERLAY DE BLOQUEIO */}
-      <div
-        className="absolute inset-0 flex items-center justify-center 
-      bg-black/20 backdrop-blur-sm text-white text-xl font-semibold"
-      >
-        🚧 Funcionalidade ainda não implementada
-      </div>
+      {/* === OVERLAY EM CONSTRUÇÃO — VISUAL PREMIUM === */}
+      {EM_CONSTRUCAO && (
+        <div
+          className="
+            absolute inset-0 z-40
+            flex flex-col items-center justify-center
+            backdrop-blur-md bg-white/60
+            animate-fadeIn
+          "
+        >
+          <AlertTriangle className="h-16 w-16 text-yellow-600 mb-4 animate-pulse" />
+
+          <h2 className="text-3xl font-bold text-gray-800">
+            Em Construção
+          </h2>
+
+          <p className="mt-2 text-gray-700 text-sm max-w-xs text-center">
+            Estamos finalizando o módulo de movimentações financeiras para
+            garantir a melhor experiência de gestão para sua empresa.
+          </p>
+        </div>
+      )}
     </div>
   );
 };
