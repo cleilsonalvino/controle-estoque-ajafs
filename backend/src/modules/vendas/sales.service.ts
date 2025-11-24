@@ -8,7 +8,11 @@ const prisma = new PrismaClient();
  * CREATE VENDA (FIFO + única tabela de movimentações)
  * ======================================================
  */
-export const createVendaService = async (data: any, empresaId: string, usuarioId: string) => {
+export const createVendaService = async (
+  data: any,
+  empresaId: string,
+  usuarioId: string
+) => {
   if (!data.itens || data.itens.length === 0)
     throw new CustomError("A venda precisa ter pelo menos um item", 400);
 
@@ -21,10 +25,17 @@ export const createVendaService = async (data: any, empresaId: string, usuarioId
     if (!produto) throw new CustomError("Produto não encontrado", 404);
 
     const lotes = await prisma.lote.findMany({
-      where: { produtoId: item.produtoId, empresaId, quantidadeAtual: { gt: 0 } },
+      where: {
+        produtoId: item.produtoId,
+        empresaId,
+        quantidadeAtual: { gt: 0 },
+      },
     });
 
-    const estoqueTotal = lotes.reduce((acc, l) => acc + Number(l.quantidadeAtual), 0);
+    const estoqueTotal = lotes.reduce(
+      (acc, l) => acc + Number(l.quantidadeAtual),
+      0
+    );
     if (estoqueTotal < Number(item.quantidade))
       throw new CustomError(
         `Estoque insuficiente para "${produto.nome}". Disponível: ${estoqueTotal}.`,
@@ -66,7 +77,11 @@ export const createVendaService = async (data: any, empresaId: string, usuarioId
     for (const item of data.itens) {
       let restante = Number(item.quantidade);
       const lotes = await tx.lote.findMany({
-        where: { produtoId: item.produtoId, empresaId, quantidadeAtual: { gt: 0 } },
+        where: {
+          produtoId: item.produtoId,
+          empresaId,
+          quantidadeAtual: { gt: 0 },
+        },
         orderBy: { dataCompra: "asc" },
       });
 
@@ -169,6 +184,10 @@ export const createSaleServicesService = async (
       })),
     });
 
+    if (!venda.clienteId) {
+      throw new Error("clienteId não pode ser nulo");
+    }
+
     // Cria as Ordens de Serviço
     for (const item of data.itens) {
       await tx.ordemDeServico.create({
@@ -238,7 +257,12 @@ export const getVendasTopProdutosService = async (empresaId: string) => {
  * UPDATE VENDA
  * ======================================================
  */
-export const updateVendaService = async (id: string, data: any, empresaId: string, usuarioId: string) => {
+export const updateVendaService = async (
+  id: string,
+  data: any,
+  empresaId: string,
+  usuarioId: string
+) => {
   const venda = await prisma.venda.findFirst({
     where: { id, empresaId },
     include: { itens: true },
@@ -254,13 +278,18 @@ export const updateVendaService = async (id: string, data: any, empresaId: strin
 
     for (const item of novosItens) {
       const antigo = antigosMap.get(item.produtoId);
-      const diff = Number(item.quantidade) - (antigo ? Number(antigo.quantidade) : 0);
+      const diff =
+        Number(item.quantidade) - (antigo ? Number(antigo.quantidade) : 0);
 
       // aumento da quantidade → saída
       if (diff > 0) {
         let restante = diff;
         const lotes = await tx.lote.findMany({
-          where: { produtoId: item.produtoId, empresaId, quantidadeAtual: { gt: 0 } },
+          where: {
+            produtoId: item.produtoId,
+            empresaId,
+            quantidadeAtual: { gt: 0 },
+          },
           orderBy: { dataCompra: "asc" },
         });
 
@@ -389,7 +418,11 @@ export const updateVendaService = async (id: string, data: any, empresaId: strin
  * CANCELA VENDA
  * ======================================================
  */
-export const cancelVendaService = async (id: string, empresaId: string, usuarioId: string) => {
+export const cancelVendaService = async (
+  id: string,
+  empresaId: string,
+  usuarioId: string
+) => {
   const venda = await prisma.venda.findFirst({
     where: { id, empresaId },
     include: { itens: true },
@@ -435,7 +468,9 @@ export const cancelVendaService = async (id: string, empresaId: string, usuarioI
       where: { id },
       data: {
         status: "Cancelada",
-        observacoes: `${venda.observacoes || ""} | Cancelada em ${new Date().toLocaleString("pt-BR")}`,
+        observacoes: `${
+          venda.observacoes || ""
+        } | Cancelada em ${new Date().toLocaleString("pt-BR")}`,
       },
     });
   });
