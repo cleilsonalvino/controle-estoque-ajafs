@@ -37,27 +37,16 @@ export function LoginPage() {
   // ======================================================
   // ✅ Envio do formulário
   // ======================================================
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
+const handleSubmit = async (event: React.FormEvent) => {
+  event.preventDefault();
 
-    const { success, user } = await login(email, senha);
+  const { user } = await login(email, senha);
 
-    if (!success) {
-      toast.error("Usuário ou senha inválidos!");
-      return;
-    }
+  setUserRole(user); // Agora o useEffect redireciona sozinho
 
-    // ✅ Armazena papel para o redirecionamento via useEffect
-    setUserRole(user);
-    toast.success("Login realizado com sucesso!");
+  toast.success("Login realizado com sucesso!");
+};
 
-    // 🚀 Redirecionamento imediato (opcional)
-    if (user === "super_admin" || user === "SUPER_ADMIN") {
-      navigate("/super-admin");
-    } else {
-      navigate("/");
-    }
-  };
 
   // ======================================================
   // 🔹 Tela de carregamento

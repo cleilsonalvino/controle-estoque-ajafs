@@ -6,6 +6,7 @@ import {
   useCallback,
 } from "react";
 import {api} from "@/lib/api";
+import { toast } from "sonner";
 
 interface AuthUser {
   id: string;
@@ -114,6 +115,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const { data } = await api.post("/auth/login", { email, senha });
 
       if (!data.token) throw new Error("Token não retornado pela API.");
+
+      
       
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
