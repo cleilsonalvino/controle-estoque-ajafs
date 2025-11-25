@@ -11,7 +11,6 @@ export const createUserSchema = z.object({
 export const updateUserSchema = z.object({
   nome: z.string().optional(),
   email: z.string().email().optional(),
-  senha: z.string().min(6).optional(),
   papel: z.enum(["ADMINISTRADOR", "GERENTE", "USUARIO", "VISUALIZADOR"]).optional(),
   ativo: z.boolean().optional(),
   urlImagem: z.string().optional(),

@@ -1,6 +1,6 @@
 import AddSupplierModal from "@/components/AddSupplierModal";
 import { useEffect, useState, useMemo } from "react";
-import { api } from "@/lib/api"; // Assumindo que sua config do Axios/API está aqui
+import { api } from "@/lib/api";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -55,7 +55,7 @@ import {
   CirclePlus,
   ChevronsUpDown,
   Check,
-  History, // NOVO ÍCONE
+  History,
 } from "lucide-react";
 import {
   Bar,
@@ -85,7 +85,7 @@ import {
 import { useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Produto } from "@/contexts/ProdutoContext";
-import { useSuppliers } from "@/contexts/SupplierContext"; // IMPORTANTE
+import { useSuppliers } from "@/contexts/SupplierContext";
 
 interface Movement {
   id: string;
@@ -98,9 +98,9 @@ interface Movement {
     id: string;
     nome: string;
   };
-  notes?: string;
+  notes?: string | null;
   fornecedor?: string;
-  precoCusto?: string;
+  precoCusto?: number;
   validade?: string;
 }
 
@@ -134,10 +134,7 @@ const Movements = () => {
   const ITEMS_PER_PAGE = 10;
 
   const [products, setProducts] = useState<Produto[]>([]);
-
-  // Use o useSuppliers para obter a lista e o método de busca
-  const { suppliers, fetchSuppliers } = useSuppliers(); // ESTADO E FUNÇÃO DO CONTEXTO
-  // setSuppliers não é mais necessário, pois a lista é gerida pelo contexto
+  const { suppliers, fetchSuppliers } = useSuppliers();
 
   const location = useLocation();
 
@@ -148,7 +145,6 @@ const Movements = () => {
     try {
       setLoading(true);
 
-      // ✅ Usa fetchSuppliers do contexto
       await fetchSuppliers();
 
       const [movementsResponse, productsResponse] = await Promise.all([
@@ -156,28 +152,28 @@ const Movements = () => {
         api.get("/produtos"),
       ]);
 
-      console.log(movementsResponse.data)
+      const movementsData: Movement[] = movementsResponse.data
+        .map((item: any) => ({
+          id: item.id,
+          type: item.tipo,
+          product: item.produto?.nome || "Produto Deletado",
+          quantity: Number(item.quantidade),
+          reason: item.tipo,
+          date: item.criadoEm,
+          usuario: item.usuario
+            ? { id: item.usuario.id, nome: item.usuario.nome }
+            : { id: "", nome: "Usuário do Sistema" },
+          fornecedor: item.fornecedor?.nome || "-",
+          notes: item.observacao || null,
+          precoCusto: item.precoCusto ? Number(item.precoCusto) : undefined,
+          validade: item.validade,
+        }))
+        .sort(
+          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+        );
 
-      const movementsData = movementsResponse.data.map((item: any) => ({
-        id: item.id,
-        type: item.tipo,
-        product: item.produto?.nome || "Produto Deletado",
-        quantity: Number(item.quantidade),
-        reason: item.tipo,
-        date: item.criadoEm,
-        user: item.usuario?.nome || "Usuário do Sistema",
-        fornecedor: item.fornecedor?.nome || "-",
-        notes: item.observacao || null,
-        precoCusto: item.precoCusto ? Number(item.precoCusto) : undefined,
-        validade: item.validade,
-      }));
-      movementsData.sort(
-        (a: { date: string }, b: { date: string }) =>
-          new Date(b.date).getTime() - new Date(a.date).getTime()
-      );
       setMovements(movementsData);
       setProducts(productsResponse.data);
-      // setSuppliers(suppliersResponse.data); // REMOVIDO: Agora é gerido pelo contexto
     } catch (error) {
       toast.error("Falha ao carregar dados da página.");
     } finally {
@@ -185,28 +181,31 @@ const Movements = () => {
     }
   };
 
-  // ✅ FUNÇÃO CALLBACK PARA RECARREGAR APÓS CRIAÇÃO
   const handleSupplierCreated = () => {
-    // 1. Recarrega a lista de fornecedores do contexto
     fetchSuppliers();
-    // 2. Fecha o modal de criação
     setShowAddSupplierModal(false);
-    // 3. (Opcional) Mostra um toast de sucesso, se não for feito no modal filho
-    toast.success("Fornecedor criado e lista atualizada!");
+    toast.success("Fornecedor criado e lista atualizada.");
   };
 
   useEffect(() => {
     fetchAll();
+
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
-        fetchAll().then(() => toast.info("Dados atualizados automaticamente"));
+        fetchAll().then(() => toast.info("Dados atualizados automaticamente."));
       }
     };
+
     document.addEventListener("visibilitychange", handleVisibilityChange);
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [location.pathname, fetchSuppliers]); // ADICIONAR fetchSuppliers como dependência
+  }, [location.pathname, fetchSuppliers]);
+
+  // sempre volta para a página 1 ao mudar filtro
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterType, date]);
 
   const filteredMovements = useMemo(() => {
     return movements.filter((m) => {
@@ -214,8 +213,11 @@ const Movements = () => {
       const matchesSearch =
         m.product.toLowerCase().includes(searchTermLower) ||
         (m.notes && m.notes.toLowerCase().includes(searchTermLower)) ||
-        (m.usuario && m.usuario.nome.toLowerCase().includes(searchTermLower));
+        (m.usuario &&
+          m.usuario.nome.toLowerCase().includes(searchTermLower));
+
       const matchesType = filterType === "all" || m.type === filterType;
+
       const movementDate = new Date(m.date);
       const matchesDate =
         !date?.from ||
@@ -226,6 +228,7 @@ const Movements = () => {
           date.to &&
           startOfDay(movementDate) >= startOfDay(date.from) &&
           startOfDay(movementDate) <= startOfDay(date.to));
+
       return matchesSearch && matchesType && matchesDate;
     });
   }, [movements, searchTerm, filterType, date]);
@@ -246,28 +249,56 @@ const Movements = () => {
     currentPage * ITEMS_PER_PAGE
   );
 
-  const totalEntradas = filteredMovements
-    .filter((m) => m.type === "ENTRADA")
-    .reduce((acc, m) => acc + m.quantity, 0);
-  const totalSaidas = filteredMovements
-    .filter((m) => m.type === "SAIDA")
-    .reduce((acc, m) => acc + m.quantity, 0);
-  const totalAjustes = filteredMovements
-    .filter((m) => m.type === "AJUSTE")
-    .reduce((acc, m) => acc + m.quantity, 0);
-  const saldoLiquido = totalEntradas - totalSaidas;
+  const totalEntradas = useMemo(
+    () =>
+      filteredMovements
+        .filter((m) => m.type === "ENTRADA")
+        .reduce((acc, m) => acc + m.quantity, 0),
+    [filteredMovements]
+  );
 
-  const chartDataByType = Object.entries({
-    Entrada: totalEntradas,
-    Saída: totalSaidas,
-    Ajuste: totalAjustes,
-  }).map(([name, value]) => ({ name, value }));
+  const totalSaidas = useMemo(
+    () =>
+      filteredMovements
+        .filter((m) => m.type === "SAIDA")
+        .reduce((acc, m) => acc + m.quantity, 0),
+    [filteredMovements]
+  );
+
+  const totalAjustes = useMemo(
+    () =>
+      filteredMovements
+        .filter((m) => m.type === "AJUSTE")
+        .reduce((acc, m) => acc + m.quantity, 0),
+    [filteredMovements]
+  );
+
+  const saldoLiquido = useMemo(
+    () => totalEntradas - totalSaidas,
+    [totalEntradas, totalSaidas]
+  );
+
+  const totalMovimentacoes = useMemo(
+    () => filteredMovements.length,
+    [filteredMovements]
+  );
+
+  const chartDataByType = useMemo(
+    () =>
+      Object.entries({
+        Entrada: totalEntradas,
+        Saída: totalSaidas,
+        Ajuste: totalAjustes,
+      }).map(([name, value]) => ({ name, value })),
+    [totalEntradas, totalSaidas, totalAjustes]
+  );
 
   const topProductsData = useMemo(() => {
     const productCount = filteredMovements.reduce((acc, m) => {
       acc[m.product] = (acc[m.product] || 0) + m.quantity;
       return acc;
     }, {} as Record<string, number>);
+
     return Object.entries(productCount)
       .sort(([, a], [, b]) => b - a)
       .slice(0, 5)
@@ -279,17 +310,17 @@ const Movements = () => {
     setFilterType("all");
     setDate(undefined);
     setCurrentPage(1);
-    toast.info("Filtros limpos!");
+    toast.info("Filtros limpos.");
   };
 
   const handleSaveMovement = async () => {
     if (!form.produtoId || !form.quantidade || !form.tipo) {
-      toast.error("Preencha: Tipo, Produto e Quantidade.");
+      toast.error("Preencha tipo, produto e quantidade.");
       return;
     }
     if (form.tipo === "ENTRADA" && (!form.fornecedorId || !form.precoCusto)) {
       toast.error(
-        "Para Entradas, Fornecedor e Preço de Custo são obrigatórios."
+        "Para entradas, fornecedor e preço de custo são obrigatórios."
       );
       return;
     }
@@ -303,14 +334,17 @@ const Movements = () => {
         quantidade: Number(form.quantidade),
         observacao: form.observacao || null,
         fornecedorId: form.tipo === "ENTRADA" ? form.fornecedorId : null,
-        precoCusto: form.tipo === "ENTRADA" ? form.precoCusto : null,
+        precoCusto:
+          form.tipo === "ENTRADA"
+            ? form.precoCusto?.replace(/\./g, "").replace(",", ".")
+            : null,
         validade: form.tipo === "ENTRADA" ? form.validade || null : null,
         usuarioId: id,
       };
 
       await api.post("/estoque/movimentacao", payload);
 
-      toast.success("Movimentação registrada com sucesso!");
+      toast.success("Movimentação registrada com sucesso.");
       setShowAddDialog(false);
       setForm(initialFormState);
       fetchAll();
@@ -332,11 +366,11 @@ const Movements = () => {
         m.quantity,
         m.fornecedor,
         new Date(m.date).toLocaleString("pt-BR"),
-        m.usuario.nome,
+        m.usuario?.nome ?? "Usuário do Sistema",
       ]),
     });
     doc.save("movimentacoes_estoque.pdf");
-    toast.success("PDF gerado com sucesso!");
+    toast.success("PDF gerado com sucesso.");
   };
 
   const handlePriceInput = (value: string) => {
@@ -349,14 +383,12 @@ const Movements = () => {
     setForm((prev) => ({ ...prev, precoCusto: formatted }));
   };
 
-  // --- FUNÇÃO PARA PEGAR ÚLTIMO PREÇO DE CUSTO ---
   const handleSetLastCostPrice = (productId: string) => {
     if (!productId) return;
 
     const selectedProduct = products.find((p) => p.id === productId);
     if (!selectedProduct) return;
 
-    // Pega os lotes do produto, do mais novo pro mais antigo
     const sortedLotes = selectedProduct.lote
       ?.filter((l) => l.precoCusto != null)
       .sort(
@@ -366,17 +398,12 @@ const Movements = () => {
 
     const lastLote = sortedLotes?.[0];
 
-    
-      console.log("[handleSetLastCostPrice]", paginatedMovements)
-
     if (lastLote) {
       const lastPrice = Number(lastLote.precoCusto)
         .toFixed(2)
         .replace(".", ",")
         .replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-
-      toast.info(`Preço de custo anterior (R$ ${lastPrice}) preenchido.`);
-
+      toast.info(`Preço de custo anterior R$ ${lastPrice} preenchido.`);
       setForm((prev) => ({ ...prev, precoCusto: lastPrice }));
     } else {
       toast.info(
@@ -387,95 +414,142 @@ const Movements = () => {
 
   return (
     <TooltipProvider>
-      <div className="relative min-h-svh flex flex-col">
-
-        {/* Cabeçalho, estatísticas, gráficos, filtros e lista (sem alterações) */}
+      <div className="relative min-h-svh flex flex-col p-6 space-y-6 bg-gradient-to-b from-slate-50 to-white">
+        {/* cabeçalho e ações */}
         <div className="flex justify-between flex-wrap items-center gap-3">
           <div>
-            <h1 className="text-3xl font-bold">Movimentações de Estoque</h1>
-            <p className="text-muted-foreground">
-              Painel completo de controle, análise e exportação.
+            <h1 className="text-3xl font-bold tracking-tight">
+              Movimentações de Estoque
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Painel completo de controle, análise e exportação de entradas, saídas e ajustes.
             </p>
           </div>
           <div className="flex gap-2 flex-wrap">
-            <Button onClick={() => setShowAddDialog(true)}>
-              <Plus className="h-4 w-4 mr-2" /> Nova Movimentação
+            <Button
+              onClick={() => setShowAddDialog(true)}
+              className="gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:opacity-90"
+            >
+              <Plus className="h-4 w-4" /> Nova movimentação
             </Button>
             <Button
               variant="outline"
               onClick={exportPDF}
               disabled={!filteredMovements.length}
+              className="gap-2"
             >
-              <FileDown className="h-4 w-4 mr-2" /> PDF
+              <FileDown className="h-4 w-4" /> Exportar PDF
             </Button>
           </div>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card>
+
+        {/* KPIs */}
+        <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-5 gap-4">
+          <Card className="border-0 shadow-sm bg-gradient-to-r from-emerald-50 to-emerald-100">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-green-700">
+              <CardTitle className="text-sm font-medium text-emerald-800">
                 Entradas
               </CardTitle>
-              <ArrowUp className="h-4 w-4 text-green-600" />
+              <ArrowUp className="h-4 w-4 text-emerald-700" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{totalEntradas}</div>
+              <div className="text-2xl font-bold text-emerald-900">
+                {totalEntradas}
+              </div>
+              <p className="text-xs text-emerald-800 mt-1">
+                Itens adicionados no período filtrado.
+              </p>
             </CardContent>
           </Card>
-          <Card>
+
+          <Card className="border-0 shadow-sm bg-gradient-to-r from-rose-50 to-rose-100">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-red-700">
+              <CardTitle className="text-sm font-medium text-rose-800">
                 Saídas
               </CardTitle>
-              <ArrowDown className="h-4 w-4 text-red-600" />
+              <ArrowDown className="h-4 w-4 text-rose-700" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{totalSaidas}</div>
+              <div className="text-2xl font-bold text-rose-900">
+                {totalSaidas}
+              </div>
+              <p className="text-xs text-rose-800 mt-1">
+                Itens removidos por venda ou perda.
+              </p>
             </CardContent>
           </Card>
-          <Card>
+
+          <Card className="border-0 shadow-sm bg-gradient-to-r from-indigo-50 to-indigo-100">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-blue-700">
-                Saldo Líquido
-              </CardTitle>
-              <Activity className="h-4 w-4 text-blue-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-2">
-                <div
-                  className={`text-2xl font-bold ${
-                    saldoLiquido >= 0 ? "text-green-600" : "text-red-600"
-                  }`}
-                >
-                  {saldoLiquido}
-                </div>
+              <CardTitle className="text-sm font-medium text-indigo-800 flex items-center gap-1">
+                Saldo líquido
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Info className="w-4 h-4 text-muted-foreground cursor-pointer" />
+                    <Info className="w-4 h-4 text-indigo-500 cursor-pointer" />
                   </TooltipTrigger>
                   <TooltipContent side="top" className="max-w-xs text-sm">
-                    Diferença entre entradas e saídas.
+                    Diferença entre entradas e saídas no período filtrado.
                   </TooltipContent>
                 </Tooltip>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-yellow-700">
-                Ajustes
               </CardTitle>
-              <ArrowUpDown className="h-4 w-4 text-yellow-600" />
+              <Activity className="h-4 w-4 text-indigo-700" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{totalAjustes}</div>
+              <div
+                className={`text-2xl font-bold ${
+                  saldoLiquido >= 0 ? "text-emerald-700" : "text-rose-700"
+                }`}
+              >
+                {saldoLiquido}
+              </div>
+              <p className="text-xs text-indigo-800 mt-1">
+                Bom para acompanhar a tendência de estoque.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-sm bg-gradient-to-r from-amber-50 to-amber-100">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-amber-800">
+                Ajustes
+              </CardTitle>
+              <ArrowUpDown className="h-4 w-4 text-amber-700" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-amber-900">
+                {totalAjustes}
+              </div>
+              <p className="text-xs text-amber-800 mt-1">
+                Movimentos de inventário e correções.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-sm bg-gradient-to-r from-slate-50 to-slate-100 hidden xl:block">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-slate-800">
+                Movimentações
+              </CardTitle>
+              <History className="h-4 w-4 text-slate-700" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-slate-900">
+                {totalMovimentacoes}
+              </div>
+              <p className="text-xs text-slate-700 mt-1">
+                Registros encontrados com os filtros atuais.
+              </p>
             </CardContent>
           </Card>
         </div>
+
+        {/* gráficos */}
         <div className="grid lg:grid-cols-3 gap-6">
-          <Card className="lg:col-span-1">
+          <Card className="lg:col-span-1 shadow-md">
             <CardHeader>
-              <CardTitle>Distribuição por Tipo</CardTitle>
+              <CardTitle className="text-sm font-semibold">
+                Distribuição por tipo
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={250}>
@@ -508,9 +582,12 @@ const Movements = () => {
               </ResponsiveContainer>
             </CardContent>
           </Card>
-          <Card className="lg:col-span-2">
+
+          <Card className="lg:col-span-2 shadow-md">
             <CardHeader>
-              <CardTitle>Produtos Mais Movimentados</CardTitle>
+              <CardTitle className="text-sm font-semibold">
+                Produtos mais movimentados
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={250}>
@@ -524,7 +601,7 @@ const Movements = () => {
                   <YAxis
                     dataKey="name"
                     type="category"
-                    width={100}
+                    width={140}
                     tick={{ fontSize: 12 }}
                   />
                   <RechartTooltip />
@@ -534,10 +611,12 @@ const Movements = () => {
             </CardContent>
           </Card>
         </div>
-        <Card>
+
+        {/* filtros */}
+        <Card className="shadow-sm">
           <CardContent className="flex flex-wrap gap-4 pt-6 items-end">
             <Input
-              placeholder="Buscar produto, usuário ou observação..."
+              placeholder="Buscar por produto, usuário ou observação..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="flex-1 min-w-[200px]"
@@ -562,11 +641,11 @@ const Movements = () => {
                   <CalendarIcon className="mr-2 h-4 w-4" />
                   {date?.from
                     ? date.to
-                      ? `${format(date.from, "LLL dd, y")} - ${format(
+                      ? `${format(date.from, "dd/MM/yy")} a ${format(
                           date.to,
-                          "LLL dd, y"
+                          "dd/MM/yy"
                         )}`
-                      : format(date.from, "LLL dd, y")
+                      : format(date.from, "dd/MM/yy")
                     : "Período"}
                 </Button>
               </PopoverTrigger>
@@ -589,52 +668,65 @@ const Movements = () => {
             </Button>
           </CardContent>
         </Card>
-        <Card>
+
+        {/* histórico */}
+        <Card className="shadow-sm">
           <CardHeader>
-            <CardTitle>
-              Histórico de Movimentações ({filteredMovements.length})
+            <CardTitle className="flex items-center justify-between">
+              <span>
+                Histórico de movimentações ({filteredMovements.length})
+              </span>
             </CardTitle>
           </CardHeader>
           <CardContent>
             {loading ? (
-              <p className="text-center py-10">Carregando...</p>
+              <p className="text-center py-10 text-muted-foreground">
+                Carregando...
+              </p>
             ) : paginatedMovements.length > 0 ? (
               <div className="space-y-2">
                 {paginatedMovements.map((m) => (
                   <div
                     key={m.id}
-                    className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 border rounded-lg hover:bg-muted/30"
+                    className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 border rounded-lg bg-white hover:bg-slate-50 transition-colors"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-full bg-muted">
+                      <div className="p-2 rounded-full bg-slate-100">
                         {m.type === "ENTRADA" ? (
-                          <ArrowUp className="text-green-600" />
+                          <ArrowUp className="text-emerald-600" />
                         ) : m.type === "SAIDA" ? (
-                          <ArrowDown className="text-red-600" />
+                          <ArrowDown className="text-rose-600" />
                         ) : (
-                          <ArrowUpDown className="text-yellow-600" />
+                          <ArrowUpDown className="text-amber-600" />
                         )}
                       </div>
                       <div>
-                        <p className="font-semibold">{m.product}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {m.notes}
+                        <p className="font-semibold leading-tight">
+                          {m.product}
                         </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {m.notes || "Sem observação."}
+                        </p>
+                        {m.fornecedor && (
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            Fornecedor: {m.fornecedor}
+                          </p>
+                        )}
                       </div>
                     </div>
                     <div className="text-left sm:text-right mt-2 sm:mt-0">
                       <p
                         className={`font-bold text-lg ${
                           m.type === "SAIDA"
-                            ? "text-red-600"
+                            ? "text-rose-600"
                             : m.type === "ENTRADA"
-                            ? "text-green-600"
-                            : "text-yellow-600"
+                            ? "text-emerald-600"
+                            : "text-amber-600"
                         }`}
                       >
                         {m.type === "SAIDA" ? "-" : "+"} {m.quantity}
                       </p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-muted-foreground mt-1">
                         {format(new Date(m.date), "dd/MM/yy HH:mm")} ·{" "}
                         {m.usuario?.nome ?? "Usuário do Sistema"}
                       </p>
@@ -643,12 +735,13 @@ const Movements = () => {
                 ))}
               </div>
             ) : (
-              <p className="text-center py-8">
-                Nenhuma movimentação encontrada.
+              <p className="text-center py-8 text-muted-foreground">
+                Nenhuma movimentação encontrada com os filtros atuais.
               </p>
             )}
           </CardContent>
         </Card>
+
         {totalPages > 1 && (
           <Pagination>
             <PaginationContent>
@@ -665,7 +758,7 @@ const Movements = () => {
                 />
               </PaginationItem>
               <PaginationItem>
-                <span className="px-4 py-2 text-sm">
+                <span className="px-4 py-2 text-sm text-muted-foreground">
                   Página {currentPage} de {totalPages}
                 </span>
               </PaginationItem>
@@ -687,18 +780,18 @@ const Movements = () => {
           </Pagination>
         )}
 
-        {/* MODAL COM MELHORIAS */}
+        {/* modal nova movimentação */}
         <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
           <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Nova Movimentação de Estoque</DialogTitle>
+              <DialogTitle>Nova movimentação de estoque</DialogTitle>
               <DialogDescription>
                 Registre uma entrada, saída ou ajuste no estoque.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-2">
               <div className="space-y-2">
-                <Label>Tipo de Movimentação*</Label>
+                <Label>Tipo de movimentação*</Label>
                 <Select
                   value={form.tipo}
                   onValueChange={(v) =>
@@ -714,13 +807,18 @@ const Movements = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="ENTRADA">
-                      Entrada (Compra/Recebimento)
+                      Entrada (compra ou recebimento)
                     </SelectItem>
-                    <SelectItem value="SAIDA">Saída (Venda/Perda)</SelectItem>
-                    <SelectItem value="AJUSTE">Ajuste (Inventário)</SelectItem>
+                    <SelectItem value="SAIDA">
+                      Saída (venda ou perda)
+                    </SelectItem>
+                    <SelectItem value="AJUSTE">
+                      Ajuste (inventário)
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+
               <div className="space-y-2">
                 <Label>Produto*</Label>
                 <Popover
@@ -758,8 +856,8 @@ const Movements = () => {
                                   ...prev,
                                   produtoId: p.id,
                                   precoCusto: "",
-                                })); // Limpa o preço antigo antes de buscar o novo
-                                handleSetLastCostPrice(p.id); // ATUALIZADO
+                                }));
+                                handleSetLastCostPrice(p.id);
                                 setIsProductPopoverOpen(false);
                                 setProductSearchTerm("");
                               }}
@@ -788,6 +886,7 @@ const Movements = () => {
                   </PopoverContent>
                 </Popover>
               </div>
+
               <div className="space-y-2">
                 <Label>Quantidade*</Label>
                 <Input
@@ -796,10 +895,14 @@ const Movements = () => {
                   placeholder="Ex: 10"
                   value={form.quantidade}
                   onChange={(e) =>
-                    setForm((prev) => ({ ...prev, quantidade: e.target.value }))
+                    setForm((prev) => ({
+                      ...prev,
+                      quantidade: e.target.value,
+                    }))
                   }
                 />
               </div>
+
               {form.tipo === "ENTRADA" && (
                 <>
                   <div className="space-y-2">
@@ -815,7 +918,6 @@ const Movements = () => {
                           <SelectValue placeholder="Selecione o fornecedor" />
                         </SelectTrigger>
                         <SelectContent>
-                          {/* LISTA DE FORNECEDORES ATUALIZADA PELO CONTEXTO */}
                           {suppliers.map((f: any) => (
                             <SelectItem key={f.id} value={f.id}>
                               {f.nome}
@@ -840,9 +942,9 @@ const Movements = () => {
                       </Tooltip>
                     </div>
                   </div>
-                  {/* --- CAMPO DE PREÇO ATUALIZADO --- */}
+
                   <div className="space-y-2">
-                    <Label>Preço de Custo*</Label>
+                    <Label>Preço de custo*</Label>
                     <div className="relative">
                       <Input
                         value={form.precoCusto}
@@ -871,8 +973,9 @@ const Movements = () => {
                       </Tooltip>
                     </div>
                   </div>
+
                   <div className="space-y-2">
-                    <Label>Data de Validade (Opcional)</Label>
+                    <Label>Data de validade (opcional)</Label>
                     <Input
                       type="date"
                       value={form.validade}
@@ -886,19 +989,23 @@ const Movements = () => {
                   </div>
                 </>
               )}
+
               <div className="space-y-2">
-                <Label>Observação (Opcional)</Label>
+                <Label>Observação (opcional)</Label>
                 <Input
                   placeholder={
                     form.tipo === "ENTRADA"
                       ? "Ex: NF 12345"
                       : form.tipo === "SAIDA"
-                      ? "Ex: Venda balcão"
-                      : "Ex: Ajuste de inventário"
+                      ? "Ex: venda balcão"
+                      : "Ex: ajuste de inventário"
                   }
                   value={form.observacao}
                   onChange={(e) =>
-                    setForm((prev) => ({ ...prev, observacao: e.target.value }))
+                    setForm((prev) => ({
+                      ...prev,
+                      observacao: e.target.value,
+                    }))
                   }
                 />
               </div>
@@ -907,15 +1014,15 @@ const Movements = () => {
               <Button variant="outline" onClick={() => setShowAddDialog(false)}>
                 Cancelar
               </Button>
-              <Button onClick={handleSaveMovement}>Salvar Movimentação</Button>
+              <Button onClick={handleSaveMovement}>Salvar movimentação</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
-        {/* Adicionado a prop onSupplierCreated para atualizar a lista */}
+
         <AddSupplierModal
           isOpen={showAddSupplierModal}
           onClose={() => setShowAddSupplierModal(false)}
-          onSupplierCreated={handleSupplierCreated} // <--- NOVO CALLBACK
+          onSupplierCreated={handleSupplierCreated}
         />
       </div>
     </TooltipProvider>

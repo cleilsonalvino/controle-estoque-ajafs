@@ -4,7 +4,7 @@ export const VendedorSchema = z.object({
   id: z.string().optional(),
   nome: z.string().min(3, 'O nome deve ter no mínimo 3 caracteres'),
   email: z.string().email('Email inválido').optional().nullable(),
-  meta: z.coerce.number().positive('A meta deve ser um número positivo').optional().nullable(),
+  meta: z.coerce.number().min(0, 'A meta deve ser um número maior ou igual a zero'),
   urlImagem: z.string().optional(),
 });
 

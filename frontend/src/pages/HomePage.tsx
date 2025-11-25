@@ -118,6 +118,8 @@ export function HomePage() {
       return URL.createObjectURL(value); // <- gera preview AUTOMÁTICO
     }
 
+    console.log(user)
+
     // Se já for URL externa
     if (value.startsWith("http")) {
       return value;
@@ -186,7 +188,8 @@ export function HomePage() {
           <CardContent className="grid grid-cols-2 gap-4 text-sm">
             <div><strong>Nome:</strong><p>{user.nome}</p></div>
             <div><strong>Email:</strong><p>{user.email}</p></div>
-            <div><strong>Status:</strong><p>Ativo</p></div>
+            <div><strong>Status:</strong><p>{user.ativo ? "Ativo" : "Inativo"}</p></div>
+            <div><img className="w-20 h-20 rounded-full" src={getImageUrl(user.urlImagem)} alt="imagem do usuário" /></div>
           </CardContent>
         </Card>
       </div>

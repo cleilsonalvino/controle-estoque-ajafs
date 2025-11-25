@@ -42,6 +42,7 @@ import { SaleItem } from "@/contexts/SalesContext";
 import { Produto, useProdutos } from "@/contexts/ProdutoContext";
 import { Cliente, useClientes } from "@/contexts/ClienteContext";
 import { Vendedor } from "@/contexts/VendedorContext";
+import { useAuth } from "@/contexts/useAuth";
 
 type FinalizeSaleData = {
   saleItems: SaleItem[];
@@ -348,6 +349,7 @@ const PDV = ({ clientes, vendedores, onFinalizeSale, onExit }: PDVProps) => {
   const navigate = useNavigate();
   const [isFullscreen, setIsFullscreen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const { user } = useAuth();
 
   const [isZeroStockDialogOpen, setIsZeroStockDialogOpen] = useState(false);
   const [productWithZeroStock, setProductWithZeroStock] =
@@ -631,10 +633,24 @@ const PDV = ({ clientes, vendedores, onFinalizeSale, onExit }: PDVProps) => {
             <CardContent className="flex-1 p-0 overflow-hidden">
               <ScrollArea className="h-full">
                 {saleItems.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-10">
-                    <p className="text-8xl">CAIXA ABERTO</p>
-                    <p className="text-sm">Use a busca (F1) para começar.</p>
-                  </div>
+<div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-10">
+  <p className="text-8xl font-bold text-foreground">CAIXA ABERTO</p>
+  <p className="text-sm mb-6">Use a busca (F1) para começar.</p>
+
+  <img
+    src={
+      user?.empresa?.logoEmpresa
+        ? (user.empresa.logoEmpresa.startsWith("http")
+            ? user.empresa.logoEmpresa
+            : `${import.meta.env.VITE_API_URL}/${user.empresa.logoEmpresa.replace(/^\/+/, "")}`
+          )
+        : "https://placehold.co/300x300"
+    }
+    alt="Logo da Empresa"
+    className=" h-40 object-cover rounded-lg border shadow-md mt-4"
+  />
+</div>
+
                 ) : (
                   saleItems.map((item) => (
                     <div
@@ -717,7 +733,7 @@ const PDV = ({ clientes, vendedores, onFinalizeSale, onExit }: PDVProps) => {
                 <p className="font-semibold mb-2">{lastAddedProduct.nome}</p>
                 <img
                   src={
-                    lastAddedProduct.urlImage || "https://placehold.co/300x300"
+                    getImageUrl(lastAddedProduct.urlImage || "https://placehold.co/300x300")
                   }
                   alt={lastAddedProduct.nome}
                   className="w-24 h-24 object-cover rounded-md border"
@@ -1001,39 +1017,34 @@ const PDV = ({ clientes, vendedores, onFinalizeSale, onExit }: PDVProps) => {
                 R$ {total.toFixed(2)}
               </p>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Desconto (%)</Label>
-                <Input
-                  type="number"
-                  value={discount}
-                  onChange={(e) =>
-                    setDiscount(Math.max(0, parseFloat(e.target.value) || 0))
-                  }
-                />
-              </div>
-              <div>
-                <Label>Forma de Pagamento</Label>
-                <Select
-                  value={paymentMethod}
-                  onValueChange={(value) => {
-                    setPaymentMethod(value);
-                    if (value !== "Dinheiro") setAmountPaid(0);
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PAYMENT_METHODS.map((method) => (
-                      <SelectItem key={method.value} value={method.value}>
-                        {method.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            {/* DESCONTO ANTES DO PAGAMENTO */}
+            <div className="space-y-2 mt-4">
+              <Label htmlFor="discount">Desconto (%)</Label>
+              <Input
+                id="discount"
+                type="number"
+                min={0}
+                max={100}
+                value={discount}
+                onChange={(e) =>
+                  setDiscount(Math.max(0, parseFloat(e.target.value) || 0))
+                }
+                className="text-lg font-semibold"
+              />
+              <p className="text-sm text-muted-foreground">
+                O valor total será atualizado automaticamente.
+              </p>
+
+              <div className="bg-secondary p-3 rounded-md">
+                <p className="text-sm text-muted-foreground">
+                  Total Atualizado:
+                </p>
+                <p className="text-2xl font-bold text-primary">
+                  R$ {total.toFixed(2)}
+                </p>
               </div>
             </div>
+
             {paymentMethod === "Dinheiro" && (
               <div className="space-y-2 p-4 border rounded-lg">
                 <h3 className="font-semibold flex items-center">

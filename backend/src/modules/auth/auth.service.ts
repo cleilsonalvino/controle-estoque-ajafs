@@ -43,6 +43,12 @@ export const loginService = async (data: any) => {
       email: user.email,
       papel: user.papel,
       empresa: user.empresa,
+      empresaId: user.empresaId,
+      ativo: user.ativo,  
+      telasPermitidas: user.telasPermitidas,
+      criadoEm: user.criadoEm,
+      atualizadoEm: user.atualizadoEm,
+      urlImagem: user.urlImagem,
     },
     token,
   };
@@ -73,6 +79,7 @@ export const getUserDataFromToken = async (token: string) => {
       telasPermitidas: user.telasPermitidas,
       criadoEm: user.criadoEm,
       atualizadoEm: user.atualizadoEm,
+      urlImagem: user.urlImagem,
 
     };
   } catch {

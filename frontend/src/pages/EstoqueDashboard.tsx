@@ -1,9 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Package,
   TrendingUp,
-  AlertTriangle ,
+  AlertTriangle,
   DollarSign,
+  Layers,
+  Clock,
+  BarChart3,
+  PieChart as PieIcon,
   Info,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,10 +21,23 @@ import {
 } from "@/components/ui/tooltip";
 import { useProdutos } from "@/contexts/ProdutoContext";
 import { useSales } from "@/contexts/SalesContext";
-import {api} from "@/lib/api";
-import StockTurnoverChart from "@/components/GiroEstoque";
+import { api } from "@/lib/api";
 import { useLocation } from "react-router-dom";
 import { toast } from "sonner";
+import {
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  ResponsiveContainer,
+  XAxis,
+  YAxis,
+  LineChart,
+  Line,
+  Tooltip as RechartTooltip,
+  Legend,
+} from "recharts";
 
 interface ValorEstoqueResponse {
   valorEstoque: {
@@ -29,6 +46,8 @@ interface ValorEstoqueResponse {
     produtosDistintos: number;
   };
 }
+
+const COLORS = ["#3B82F6", "#10B981", "#F59E0B", "#8B5CF6", "#EF4444", "#0EA5E9"];
 
 const EstoqueDashboard = () => {
   const { produtos, loading, fetchProdutos } = useProdutos();
@@ -47,7 +66,7 @@ const EstoqueDashboard = () => {
         setQtdLotes(data.valorEstoque.quantidadeLotes);
         setProdutosDistintos(data.valorEstoque.produtosDistintos);
       } catch (error) {
-        console.error("Erro ao buscar valor de estoque:", error);
+        console.error("Erro:", error);
       }
     };
 
@@ -55,23 +74,16 @@ const EstoqueDashboard = () => {
       await Promise.all([fetchProdutos(), fetchSales(), fetchValorEstoque()]);
     };
 
-    // Roda ao abrir a rota
     fetchAll();
 
-    // Atualiza ao voltar foco na aba
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
-        fetchAll().then(() => {
-          toast.info("Dados atualizados automaticamente");
-        });
+        fetchAll().then(() => toast.info("Dados atualizados automaticamente"));
       }
     };
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
-
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, [location.pathname]);
 
   const lowStockProducts = produtos.filter(
@@ -80,126 +92,233 @@ const EstoqueDashboard = () => {
       p.lote?.[0]?.quantidadeAtual <= Number(p.estoqueMinimo)
   );
 
-  if (loading) {
-    return (
-      <div className="p-6 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {[...Array(4)].map((_, i) => (
-          <Skeleton key={i} className="h-28 rounded-md" />
-        ))}
-      </div>
+  const produtosSemGiro = useMemo(() => {
+    const vendidosIds = new Set(
+      sales.flatMap((v) => v.itens?.map((i) => i.produtoId))
     );
-  }
+    return produtos.filter((p) => !vendidosIds.has(p.id));
+  }, [produtos, sales]);
+
+  const produtosPorCategoria = useMemo(() => {
+    const map: Record<string, number> = {};
+    produtos.forEach((p) => {
+      const categoria = p.categoria?.nome || "Sem categoria";
+      const estoque =
+        p.lote?.reduce((s, l) => s + Number(l.quantidadeAtual), 0) || 0;
+      map[categoria] = (map[categoria] || 0) + estoque;
+    });
+    return Object.entries(map).map(([nome, qtd]) => ({ nome, qtd }));
+  }, [produtos]);
+
+  const curvaABC = useMemo(() => {
+    const lista = produtos
+      .map((p) => {
+        const valor = p.lote?.reduce(
+          (s, l) => s + Number(l.precoCusto) * Number(l.quantidadeAtual),
+          0
+        );
+        return { nome: p.nome, valor: valor ?? 0 };
+      })
+      .sort((a, b) => b.valor - a.valor)
+      .slice(0, 10);
+
+    return lista;
+  }, [produtos]);
+
+  const giroProdutos = useMemo(() => {
+    return produtos.map((p) => {
+      const vendasProduto = sales.flatMap((v) =>
+        v.itens?.filter((i) => i.produtoId === p.id)
+      );
+      const qtdVendida = vendasProduto.reduce((s, i) => s + Number(i?.quantidade || 0), 0);
+      const estoque =
+        p.lote?.reduce((s, l) => s + Number(l.quantidadeAtual), 0) || 0;
+
+      const giro = qtdVendida > 0 ? qtdVendida / (estoque || 1) : 0;
+
+      return { nome: p.nome, giro };
+    });
+  }, [produtos, sales]);
 
   const stats = [
     {
       title: "Produtos Cadastrados",
-      tooltip:
-        "Número total de produtos registrados no sistema, incluindo aqueles sem estoque ativo.",
       value: produtos.length,
-      description: "Produtos registrados",
+      tooltip: "Quantidade total de produtos no sistema.",
       icon: Package,
       color: "bg-gradient-primary",
     },
     {
       title: "Valor Total em Estoque",
-      tooltip:
-        "Soma total (em reais) do valor de custo de todos os lotes ativos no estoque. Produtos distintos são contabilizados apenas uma vez.",
-      value: valorEstoque.toLocaleString("pt-BR", {
-        style: "currency",
-        currency: "BRL",
-      }),
-      description: `${qtdLotes} lotes • ${produtosDistintos} produtos distintos`,
+      value: valorEstoque.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }),
+      tooltip: "Valor total considerando o custo de todos os lotes.",
       icon: DollarSign,
       color: "bg-gradient-success",
     },
     {
-      title: "Total de Vendas",
-      tooltip:
-        "Número de vendas registradas no sistema. Cada venda pode conter um ou mais produtos.",
-      value: sales.length,
-      description: "Vendas registradas",
-      icon: TrendingUp,
-      color: "bg-primary",
+      title: "Produtos Sem Giro",
+      value: produtosSemGiro.length,
+      tooltip: "Produtos que nunca foram vendidos.",
+      icon: Layers,
+      color: "bg-indigo-500",
     },
     {
       title: "Alertas de Estoque",
-      tooltip:
-        "Produtos com quantidade atual igual ou inferior ao estoque mínimo definido.",
       value: lowStockProducts.length,
-      description: "Abaixo do estoque mínimo",
+      tooltip: "Produtos abaixo do estoque mínimo.",
       icon: AlertTriangle,
-      color: lowStockProducts.length > 0 ? "bg-destructive" : "bg-muted",
+      color: "bg-destructive",
     },
   ];
 
+  if (loading)
+    return (
+      <div className="grid gap-4 p-6 md:grid-cols-2 lg:grid-cols-4">
+        {[...Array(4)].map((_, i) => (
+          <Skeleton key={i} className="h-28 rounded-md" />
+        ))}
+      </div>
+    );
+
   return (
-    <div>
-          <TooltipProvider delayDuration={100}>
-      <div className="p-6 space-y-10">
-        {/* Cabeçalho */}
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground mb-1">Dashboard de Estoque</h1>
-            <p className="text-muted-foreground">
-              Visão geral do estoque, lotes e desempenho de vendas
-            </p>
-          </div>
+    <TooltipProvider delayDuration={100}>
+      <div className="p-8 space-y-10">
+        <div>
+          <h1 className="text-3xl font-bold">Dashboard de Estoque</h1>
+          <p className="text-muted-foreground">
+            Análise completa do estoque, lotes, giros e desempenho.
+          </p>
         </div>
 
-        {/* Indicadores */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {stats.map((stat) => (
+        {/* KPIs */}
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          {stats.map((stat, i) => (
             <Card
-              key={stat.title}
-              className="relative overflow-hidden bg-gradient-card border-0 shadow-md hover:shadow-lg transition-all duration-300"
+              key={i}
+              className="relative overflow-hidden border-0 shadow-md hover:shadow-lg transition-all duration-300"
             >
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <div className="flex items-center gap-1">
-                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1">
-                    {stat.title}
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Info className="w-3.5 h-3.5 text-muted-foreground cursor-pointer" />
-                      </TooltipTrigger>
-                      <TooltipContent side="top" className="max-w-xs text-sm leading-relaxed">
-                        {stat.tooltip}
-                      </TooltipContent>
-                    </Tooltip>
-                  </CardTitle>
-                </div>
-
-                <div className={`p-2 rounded-lg ${stat.color}`}>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+                  {stat.title}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="w-3.5 h-3.5 cursor-pointer" />
+                    </TooltipTrigger>
+                    <TooltipContent>{stat.tooltip}</TooltipContent>
+                  </Tooltip>
+                </CardTitle>
+                <div className={`p-2 rounded-md ${stat.color}`}>
                   <stat.icon className="h-4 w-4 text-white" />
                 </div>
               </CardHeader>
-
               <CardContent>
-                <div className="text-2xl font-bold text-foreground">{stat.value}</div>
-                <p className="text-xs text-muted-foreground mt-1">{stat.description}</p>
-
-                {stat.title === "Alertas de Estoque" && lowStockProducts.length > 0 && (
-                  <div className="mt-3 space-y-1">
-                    {lowStockProducts.slice(0, 2).map((product) => (
-                      <Badge key={product.id} variant="destructive" className="text-xs">
-                        {product.nome} ({product.lote?.[0]?.quantidadeAtual ?? 0} unid.)
-                      </Badge>
-                    ))}
-                    {lowStockProducts.length > 2 && (
-                      <Badge variant="outline" className="text-xs">
-                        +{lowStockProducts.length - 2} outros
-                      </Badge>
-                    )}
-                  </div>
-                )}
+                <div className="text-2xl font-bold">{stat.value}</div>
               </CardContent>
             </Card>
           ))}
         </div>
+
+        {/* Gráficos */}
+        <div className="grid gap-8 md:grid-cols-2">
+          {/* Curva ABC */}
+          <Card className="shadow-lg">
+            <CardHeader>
+              <CardTitle>Curva ABC — Produtos por Valor</CardTitle>
+            </CardHeader>
+            <CardContent className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={curvaABC}>
+                  <XAxis dataKey="nome" tick={{ fontSize: 10 }} />
+                  <YAxis />
+                  <RechartTooltip />
+                  <Bar dataKey="valor" fill="#3B82F6" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          {/* Giro */}
+          <Card className="shadow-lg">
+            <CardHeader>
+              <CardTitle>Giro de Estoque por Produto</CardTitle>
+            </CardHeader>
+            <CardContent className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={giroProdutos.slice(0, 10)}>
+                  <XAxis dataKey="nome" tick={{ fontSize: 10 }} />
+                  <YAxis />
+                  <RechartTooltip />
+                  <Bar dataKey="giro" fill="#10B981" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          {/* Categorias */}
+          <Card className="shadow-lg">
+            <CardHeader>
+              <CardTitle>Distribuição por Categoria</CardTitle>
+            </CardHeader>
+            <CardContent className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={produtosPorCategoria} dataKey="qtd" nameKey="nome" outerRadius={90}>
+                    {produtosPorCategoria.map((_, i) => (
+                      <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          {/* Valor parado */}
+          <Card className="shadow-lg">
+            <CardHeader>
+              <CardTitle>Valor Parado (Produtos Sem Giro)</CardTitle>
+            </CardHeader>
+            <CardContent className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={produtosSemGiro.map((p) => ({
+                    nome: p.nome,
+                    valor:
+                      p.lote?.reduce(
+                        (s, l) => s + Number(l.precoCusto) * Number(l.quantidadeAtual),
+                        0
+                      ) ?? 0,
+                  }))}
+                >
+                  <XAxis dataKey="nome" tick={{ fontSize: 10 }} />
+                  <YAxis />
+                  <RechartTooltip />
+                  <Bar dataKey="valor" fill="#EF4444" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Produtos críticos */}
+        <Card className="shadow-lg">
+          <CardHeader>
+            <CardTitle>Produtos Críticos</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {lowStockProducts.length === 0 ? (
+              <p className="text-muted-foreground text-sm">Nenhum produto crítico.</p>
+            ) : (
+              lowStockProducts.map((p) => (
+                <Badge key={p.id} variant="destructive" className="text-xs">
+                  {p.nome} — {p.lote?.[0]?.quantidadeAtual} unid.
+                </Badge>
+              ))
+            )}
+          </CardContent>
+        </Card>
       </div>
     </TooltipProvider>
-    <StockTurnoverChart />
-    </div>
-
   );
 };
 

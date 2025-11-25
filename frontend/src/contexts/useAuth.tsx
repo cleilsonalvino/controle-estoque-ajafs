@@ -16,6 +16,7 @@ interface AuthUser {
   telasPermitidas: string[];
   ativo: boolean;
   criadoEm: string;
+  urlImagem?: string;
   empresa: {
     id: string;
     nome: string;

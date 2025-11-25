@@ -9,7 +9,7 @@ export interface Vendedor {
   nome: string;
   email: string;
   meta: number;
-  urlImagem?: string | File | null; // ✅ CORRETO
+  urlImage?: string | File | null; // ✅ CORRETO
   criadoEm?: Date;
   atualizadoEm?: Date;
 }

@@ -54,6 +54,7 @@ export const getVendedorByIdController = async (req: AuthenticatedRequest, res: 
 export const updateVendedorController = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { empresaId } = req.user!;
+    console.log("Requisição de atualização de vendedor recebida:", req.body);
     const data = UpdateVendedorSchema.parse(req.body);
     
     if (req.file) {

@@ -16,7 +16,7 @@ vendedoresRouter.use(authMiddleware);
 vendedoresRouter.post('/create', upload.single('urlImage'), createVendedorController);
 vendedoresRouter.get('/', getVendedoresController);
 vendedoresRouter.get('/:id', getVendedorByIdController);
-vendedoresRouter.patch('/:id', upload.single('urlImagem'), updateVendedorController);
+vendedoresRouter.put('/:id', upload.single('urlImage'), updateVendedorController);
 vendedoresRouter.delete('/:id', deleteVendedorController);
 
 export default vendedoresRouter;

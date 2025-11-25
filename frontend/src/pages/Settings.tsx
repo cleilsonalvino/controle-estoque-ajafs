@@ -80,6 +80,7 @@ const userSchema = z
     confirmarSenha: z.string().optional(),
     telasPermitidas: z.array(z.string()).default([]),
     papel: z.enum(["ADMINISTRADOR", "USUARIO"]),
+    urlImagem: z.any().optional(),
   })
   .refine((data) => data.senha === data.confirmarSenha, {
     message: "As senhas não coincidem",
@@ -124,6 +125,7 @@ type UserAPI = {
   email: string;
   papel: "ADMINISTRADOR" | "USUARIO";
   telasPermitidas: string[];
+  urlImagem: string;
 };
 
 const Settings = () => {
@@ -304,17 +306,26 @@ const Settings = () => {
     const { confirmarSenha, ...payload } = data;
 
     try {
-      if (editingUser?.id) {
-        // Remove senha se estiver vazia para não alterar
-        if (!payload.senha) {
-          delete payload.senha;
+      const formData = new FormData();
+      Object.entries(payload).forEach(([key, value]) => {
+        if (key === "urlImagem") {
+          if (value && value[0]) formData.append("urlImagem", value[0]);
+        } else {
+          formData.append(
+            key,
+            Array.isArray(value) ? JSON.stringify(value) : value
+          );
         }
+      });
 
-        await api.put(`/usuarios/${editingUser.id}`, payload);
-        sonnerToast.success("Usuário atualizado com sucesso!");
+      if (editingUser?.id) {
+        await api.put(`/usuarios/${editingUser.id}`, formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
       } else {
-        await api.post("/usuarios", payload);
-        sonnerToast.success("Usuário criado com sucesso!");
+        await api.post("/usuarios", formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
       }
 
       // AÇÕES DE SUCESSO
@@ -351,7 +362,7 @@ const Settings = () => {
     handleCloseUserModal();
   };
 
-    const getImageUrl = (value: string | File | null) => {
+  const getImageUrl = (value: string | File | null) => {
     if (!value) {
       return "https://placehold.co/600x400?text=Sem+Imagem";
     }
@@ -465,24 +476,23 @@ const Settings = () => {
               <div className="space-y-2">
                 <Label htmlFor="logoEmpresa">Logo da Empresa</Label>
                 <Input
-                    id="logoEmpresa"
-                    type="file"
-                    accept="image/*"
-                    {...registerEmpresa("logoEmpresa")}
-                    disabled={!isEditing}
+                  id="logoEmpresa"
+                  type="file"
+                  accept="image/*"
+                  {...registerEmpresa("logoEmpresa")}
+                  disabled={!isEditing}
                 />
               </div>
-              
+
               {empresa?.logoEmpresa && (
                 <div className="mt-2 flex justify-center">
-                    <img
-                        src={getImageUrl(empresa.logoEmpresa)}
-                        alt="Logo da Empresa"
-                        className="w-32 h-32 object-contain border rounded-md shadow-sm bg-white"
-                    />
+                  <img
+                    src={getImageUrl(empresa.logoEmpresa)}
+                    alt="Logo da Empresa"
+                    className="w-32 h-32 object-contain border rounded-md shadow-sm bg-white"
+                  />
                 </div>
               )}
-
 
               {/* Contato e endereço */}
               <Separator />
@@ -851,6 +861,26 @@ const Settings = () => {
                 )}
               </div>
 
+              <div>
+                <Label htmlFor="urlImagem">Foto do Usuário</Label>
+                <Input
+                  id="urlImagem"
+                  type="file"
+                  accept="image/*"
+                  {...registerUser("urlImagem")}
+                />
+              </div>
+
+              {editingUser?.urlImagem && (
+                <div className="mt-3 flex justify-center">
+                  <img
+                    src={getImageUrl(editingUser.urlImagem)}
+                    className="w-24 h-24 rounded-full border object-cover shadow"
+                    alt="Foto do usuário"
+                  />
+                </div>
+              )}
+
               <Separator />
               <h4 className="font-semibold">Permissões de Acesso</h4>
 
@@ -903,7 +933,7 @@ const Settings = () => {
                                   </TooltipTrigger>
 
                                   {/* TooltipContent: Exibe a descrição */}
-                                  <TooltipContent className="mt-2 absolute w-40" >
+                                  <TooltipContent className="mt-2 absolute w-40">
                                     <p className="max-w-xs text-sm ">
                                       {item.description ||
                                         `Permissão para acessar a tela de ${item.title}.`}
