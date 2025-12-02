@@ -24,7 +24,7 @@ import { ContaReceberModal } from "@/components/financeiro/ContaReceberModal";
 import { AlertTriangle } from "lucide-react";
 
 // 🔧 Controle para ativar ou desativar o modo "em construção"
-const EM_CONSTRUCAO = true;
+const EM_CONSTRUCAO = false;
 
 const data = [
   { day: 1, value: 1200 },

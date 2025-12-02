@@ -7,7 +7,7 @@ export const createVendaSchema = z.object({
   clienteId: z.string({invalid_type_error: "Cliente inválido ou faltando"}).optional().nullable(), // agora usamos clienteId
   vendedorId: z.string({invalid_type_error: "Vendedor inválido ou faltando"}).optional(), // adicionar vendedorId
   status: z.enum(["Pendente", "Concluída", "Cancelada"]).optional(),
-  formaPagamento: z.enum(["Pix", "Cartão de Crédito", "Dinheiro"]).optional(),
+  formaPagamento: z.string({invalid_type_error: "Forma de pagamento inválida"}).optional(),
   desconto: z.number({invalid_type_error: "Desconto inválido"}).nonnegative({message: "Desconto não pode ser negativo"}).optional(),
   lucroEstimado: z.number({invalid_type_error: "Lucro estimado inválido"}).nonnegative({message: "Lucro estimado não pode ser negativo"}).optional(),
   observacoes: z.string({invalid_type_error: "Observações inválidas"}).optional(),

@@ -536,6 +536,8 @@ model ContaBancaria {
   empresaId    String
   criadoEm     DateTime            @default(now())
   atualizadoEm DateTime            @updatedAt
+  observacoes  String?
+
 
   empresa       Empresa                  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   movimentacoes MovimentacaoFinanceira[]

@@ -28,6 +28,8 @@ export const CreateContaBancariaDTO = z.object({
   banco: z.string().optional(),
   tipoConta: z.nativeEnum(FinanceiroTipoConta),
   saldoInicial: z.number().positive(),
+  ativo: z.boolean().default(true),
+  descricao: z.string().optional(),
 });
 
 export const UpdateContaBancariaDTO = CreateContaBancariaDTO.omit({

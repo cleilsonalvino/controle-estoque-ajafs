@@ -34,18 +34,113 @@ export interface Empresa {
 }
 
 // 📊 Dados do dashboard
+// 📊 Dados do dashboard global multiempresa
 export interface DashboardStats {
+  // 1) Empresas e usuarios
   totalEmpresas: number;
   totalUsuarios: number;
-  totalProdutos: number;
-  totalVendas: number;
-  topEmpresas: any[];
-  vendasMensais: {
-    empresa: string;
-    mes: string;
+  usuariosPorPapel?: {
+    papel: "ADMINISTRADOR" | "USUARIO" | "SUPER_ADMIN" | "VENDEDOR";
     total: number;
   }[];
+
+  // 3) Produtos e estoque
+  totalProdutos: number;
+  estoqueCritico?: number;
+  lotesProximosVencimento?: number;
+  movimentacoesEstoqueHoje?: number;
+
+  // 4) Vendas
+  totalVendas: number;
+  vendasHoje?: number;
+  vendasUltimos7Dias?: number;
+  ticketMedioGeral?: number;
+  vendasMensais: {
+    mes: string;              // ex: "2025-01"
+    total: number;            // valor total
+  }[];
+  vendasPorEmpresaMesAtual?: {
+    empresaId: string;
+    empresaNome: string;
+    total: number;
+  }[];
+  vendasPorFormaPagamento?: {
+    forma: string;            // ex: "Pix", "Credito", "Dinheiro"
+    total: number;
+  }[];
+  topEmpresas: {
+    id: string;
+    nome: string;
+    cidade: string;
+    totalVendas: number;
+  }[];
+  topProdutos?: {
+    id: string;
+    nome: string;
+    totalVendido: number;
+  }[];
+  topVendedores?: {
+    id: string;
+    nome: string;
+    totalVendido: number;
+  }[];
+
+  // 5) Financeiro
+  saldoFinanceiroGlobal?: number;
+  totalContasPagarAbertas?: number;
+  totalContasReceberAbertas?: number;
+  valorContasPagarAtrasadas?: number;
+  valorContasReceberVencendo?: number;
+  fluxoCaixaMensal?: {
+    competencia: string;      // ex: "2025-01"
+    entradas: number;
+    saidas: number;
+  }[];
+
+  // 6) Clientes
+  totalClientes?: number;
+  clientesNovosUltimos30Dias?: number;
+  topClientes?: {
+    id: string;
+    nome: string;
+    totalComprado: number;
+  }[];
+
+  // 7) Ordens de servico
+  totalOrdensServico?: number;
+  ordensServicoPorStatus?: {
+    status: "PENDENTE" | "EM_ANDAMENTO" | "CONCLUIDO" | "CANCELADO";
+    quantidade: number;
+  }[];
+
+  // 8) Pos venda
+  totalPosVendas?: number;
+  posVendaPorStatus?: {
+    status: "PENDENTE" | "EM_ANDAMENTO" | "FINALIZADO";
+    quantidade: number;
+  }[];
+  satisfacaoMedia?: number; // 0 a 10
+
+  // 10) Fornecedores e lotes
+  totalFornecedores?: number;
+  totalLotes?: number;
+
+  // 11) Infraestrutura
+  apiStatus?: "OK" | "INSTAVEL" | "OFFLINE";
+  apiLatenciaMediaMs?: number;
+  apiRequests24h?: number;
+  apiErros24h?: number;
+
+  // 12) Atividades recentes
+  atividadesRecentes?: {
+    id: string;
+    tipo: string;            // "VENDA", "EMPRESA", "USUARIO", etc
+    descricao: string;
+    data: string;            // ISO string
+    empresaNome?: string;
+  }[];
 }
+
 
 interface EmpresaContextType {
   empresa: Empresa | null;

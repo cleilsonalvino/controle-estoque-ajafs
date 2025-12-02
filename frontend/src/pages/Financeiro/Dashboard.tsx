@@ -17,94 +17,117 @@ import { vencimentosColumns } from "@/components/financeiro/VencimentosColumns";
 import { recebimentosColumns } from "@/components/financeiro/RecebimentosColumns";
 import { movimentacoesColumns } from "@/components/financeiro/MovimentacoesColumns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useEffect } from "react";
 
-// 🔧 Controle da feature
-const EM_CONSTRUCAO = true;
+const EM_CONSTRUCAO = false;
 
 const FinanceiroDashboard: React.FC = () => {
-  const { summary, loading, contasPagar, contasReceber, movimentacoes } =
-    useFinanceiro();
-  const { user } = useAuth();
+  const {
+    dashboard,
+    loadingDashboard,
+    contasPagar,
+    contasReceber,
+    movimentacoes,
+    fetchDashboard
+  } = useFinanceiro();
 
-  if (loading) {
-    return <div>Carregando...</div>;
+    useEffect(() => {
+    fetchDashboard();
+  }, [fetchDashboard]);
+
+  if (loadingDashboard || !dashboard) {
+    return (
+      <div className="p-6 text-muted-foreground animate-pulse">
+        Carregando painel financeiro...
+      </div>
+    );
   }
+
+  
 
   return (
     <div className="relative min-h-[calc(100vh-80px)]">
 
-      {/* === CONTEÚDO REAL (com blur quando em construção) === */}
+      {/* ---- CONTEÚDO REAL ---- */}
       <div className={EM_CONSTRUCAO ? "blur-md pointer-events-none select-none" : ""}>
-        <div className="p-4 space-y-4">
+        <div className="p-4 space-y-6">
           <h1 className="text-2xl font-bold">Dashboard Financeiro</h1>
 
-          {/* Cards */}
+          {/* ---------------- Cards principais ---------------- */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
             <FinanceCard
-              title="Saldo Atual"
-              value={summary.saldoAtual}
+              title="Saldo Total"
+              value={dashboard.saldoTotalContas}
               icon={DollarSign}
-              tooltipText="Saldo total em todas as contas."
+              tooltipText="Soma do saldo atual de todas as contas."
             />
+
             <FinanceCard
               title="Entradas do Mês"
-              value={summary.totalEntradas}
+              value={dashboard.totalEntradasMes}
               icon={TrendingUp}
-              tooltipText="Total de receitas no mês corrente."
               trend="positive"
+              tooltipText="Total de receitas no mês atual."
             />
+
             <FinanceCard
               title="Saídas do Mês"
-              value={summary.totalSaidas}
+              value={dashboard.totalSaidasMes}
               icon={TrendingDown}
-              tooltipText="Total de despesas no mês corrente."
               trend="negative"
+              tooltipText="Total de despesas no mês atual."
             />
+
             <FinanceCard
               title="Lucro Líquido"
-              value={summary.lucroLiquido}
+              value={dashboard.lucroLiquidoMes}
               icon={Scale}
-              tooltipText="Entradas - Saídas no mês corrente."
+              tooltipText="Entradas - Saídas no mês."
             />
+
             <FinanceCard
-              title="Contas a Pagar (7d)"
-              value={summary.contasPagar}
+              title="Contas a Pagar (7 dias)"
+              value={dashboard.contasPagarProximos7Dias?.length ?? 0}
               icon={AlertTriangle}
-              tooltipText="Contas que vencem nos próximos 7 dias."
               trend="negative"
+              tooltipText="Contas com vencimento próximo."
             />
+
             <FinanceCard
-              title="Contas a Receber (7d)"
-              value={summary.contasReceber}
+              title="Contas a Receber (7 dias)"
+              value={dashboard.contasReceberProximos7Dias?.length ?? 0}
               icon={CheckCircle}
-              tooltipText="Valores a receber nos próximos 7 dias."
               trend="positive"
+              tooltipText="Recebimentos esperados nos próximos dias."
             />
           </div>
 
-          {/* Charts */}
-          <div className="mt-6">
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 mt-4">
-              <div className="lg:col-span-3">
-                <FluxoCaixaChart />
-              </div>
-              <div className="lg:col-span-2">
-                <DespesasChart />
-              </div>
+          {/* ---------------- Gráficos ---------------- */}
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+            <div className="lg:col-span-3">
+              <FluxoCaixaChart data={dashboard.fluxoCaixaMensal} />
             </div>
-            <div className="mt-4">
-              <ReceitasChart />
+
+            <div className="lg:col-span-2">
+              <DespesasChart data={dashboard.despesasPorCategoria} />
             </div>
           </div>
 
-          {/* Tabelas */}
+          <div className="mt-4">
+            <ReceitasChart data={dashboard.receitasPorCategoria} />
+          </div>
+
+          {/* ---------------- Tabelas ---------------- */}
           <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
             <Card className="xl:col-span-1">
               <CardHeader>
                 <CardTitle>Próximos Vencimentos</CardTitle>
               </CardHeader>
               <CardContent>
-                <DataTable columns={vencimentosColumns} data={contasPagar} />
+                <DataTable
+                  columns={vencimentosColumns}
+                  data={dashboard.contasPagarProximos7Dias ?? []}
+                />
               </CardContent>
             </Card>
 
@@ -113,7 +136,10 @@ const FinanceiroDashboard: React.FC = () => {
                 <CardTitle>Próximos Recebimentos</CardTitle>
               </CardHeader>
               <CardContent>
-                <DataTable columns={recebimentosColumns} data={contasReceber} />
+                <DataTable
+                  columns={recebimentosColumns}
+                  data={dashboard.contasReceberProximos7Dias ?? []}
+                />
               </CardContent>
             </Card>
 
@@ -124,7 +150,7 @@ const FinanceiroDashboard: React.FC = () => {
               <CardContent>
                 <DataTable
                   columns={movimentacoesColumns}
-                  data={movimentacoes}
+                  data={dashboard.ultimasMovimentacoes ?? []}
                 />
               </CardContent>
             </Card>
@@ -132,25 +158,14 @@ const FinanceiroDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* === OVERLAY EM CONSTRUÇÃO === */}
+      {/* ---- Overlay construção ---- */}
       {EM_CONSTRUCAO && (
-        <div
-          className="
-            absolute inset-0 z-40
-            flex flex-col items-center justify-center
-            backdrop-blur-md bg-white/60
-            animate-fadeIn
-          "
-        >
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-white/70 backdrop-blur-md">
           <AlertTriangle className="h-16 w-16 text-yellow-600 mb-4 animate-pulse" />
+          <h2 className="text-3xl font-bold">Em Construção</h2>
 
-          <h2 className="text-3xl font-bold text-gray-800">
-            Em Construção
-          </h2>
-
-          <p className="mt-2 text-gray-700 text-sm max-w-xs text-center">
-            Estamos finalizando o módulo financeiro para entregar a melhor
-            experiência de gestão para sua empresa.
+          <p className="text-gray-600 mt-2 text-sm text-center max-w-xs">
+            Estamos finalizando o módulo financeiro para entregar uma solução completa.
           </p>
         </div>
       )}

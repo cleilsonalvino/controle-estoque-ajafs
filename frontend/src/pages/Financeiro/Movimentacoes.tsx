@@ -18,7 +18,7 @@ import { MovimentacaoModal } from "@/components/financeiro/MovimentacaoModal";
 import { AlertTriangle } from "lucide-react";
 
 // 🔧 Controle da feature (quando quiser liberar, troque para false)
-const EM_CONSTRUCAO = true;
+const EM_CONSTRUCAO = false;
 
 const Movimentacoes: React.FC = () => {
   const { movimentacoes, loading } = useFinanceiro();

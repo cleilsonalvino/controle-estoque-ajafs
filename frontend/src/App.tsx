@@ -81,8 +81,14 @@ const App = () => (
                                 <FinanceiroProvider>
                                   <OrdemDeServicoProvider>
                                     <Routes>
-                                      <Route path="/login" element={<LoginPage />} />
-                                      <Route path="/feedback/:id" element={<FeedbackPage />} />
+                                      <Route
+                                        path="/login"
+                                        element={<LoginPage />}
+                                      />
+                                      <Route
+                                        path="/feedback/:id"
+                                        element={<FeedbackPage />}
+                                      />
 
                                       {/* Routes protected by authentication */}
                                       <Route element={<ProtectedRoute />}>
@@ -90,23 +96,16 @@ const App = () => (
                                         <Route path="/" element={<Layout />}>
                                           <Route index element={<HomePage />} />
                                           <Route
-                                            path="/estoque"
+                                            path="estoque"
                                             element={
                                               <PermissionGuard permissionKey="estoque">
                                                 <EstoqueDashboard />
                                               </PermissionGuard>
                                             }
                                           />
+                                         
                                           <Route
-                                            index
-                                            element={
-                                              <PermissionGuard permissionKey="admin">
-                                                <SuperAdminEmpresas />
-                                              </PermissionGuard>
-                                            }
-                                          />
-                                          <Route
-                                            path="/products"
+                                            path="products"
                                             element={
                                               <PermissionGuard permissionKey="products">
                                                 <Products />
@@ -114,7 +113,7 @@ const App = () => (
                                             }
                                           />
                                           <Route
-                                            path="/pos-venda"
+                                            path="pos-venda"
                                             element={
                                               <PermissionGuard permissionKey="pos-venda">
                                                 <PosVenda />
@@ -122,7 +121,7 @@ const App = () => (
                                             }
                                           />
                                           <Route
-                                            path="/pos-venda/:id"
+                                            path="pos-venda/:id"
                                             element={
                                               <PermissionGuard permissionKey="pos-venda.detalhes">
                                                 <PosVendaDetalhes />
@@ -130,7 +129,7 @@ const App = () => (
                                             }
                                           />
                                           <Route
-                                            path="/pos-venda/dashboard"
+                                            path="pos-venda/dashboard"
                                             element={
                                               <PermissionGuard permissionKey="pos-venda.dashboard">
                                                 <PosVendaDashboard />
@@ -138,7 +137,7 @@ const App = () => (
                                             }
                                           />
                                           <Route
-                                            path="/movements"
+                                            path="movements"
                                             element={
                                               <PermissionGuard permissionKey="movements">
                                                 <Movements />
@@ -146,7 +145,7 @@ const App = () => (
                                             }
                                           />
                                           <Route
-                                            path="/suppliers"
+                                            path="suppliers"
                                             element={
                                               <PermissionGuard permissionKey="suppliers">
                                                 <Suppliers />
@@ -154,7 +153,7 @@ const App = () => (
                                             }
                                           />
                                           <Route
-                                            path="/categories"
+                                            path="categories"
                                             element={
                                               <PermissionGuard permissionKey="categories">
                                                 <Categories />
@@ -162,7 +161,7 @@ const App = () => (
                                             }
                                           />
                                           <Route
-                                            path="/service-categories"
+                                            path="service-categories"
                                             element={
                                               <PermissionGuard permissionKey="service-categories">
                                                 <ServiceCategories />
@@ -170,7 +169,7 @@ const App = () => (
                                             }
                                           />
                                           <Route
-                                            path="/tipos-servicos"
+                                            path="tipos-servicos"
                                             element={
                                               <PermissionGuard permissionKey="tipos-servicos">
                                                 <TiposServicos />
@@ -178,7 +177,7 @@ const App = () => (
                                             }
                                           />
                                           <Route
-                                            path="/ordens-de-servico"
+                                            path="ordens-de-servico"
                                             element={
                                               <PermissionGuard permissionKey="ordens-de-servico">
                                                 <OrdemDeServicoPage />
@@ -186,7 +185,7 @@ const App = () => (
                                             }
                                           />
                                           <Route
-                                            path="/dashboard-sales"
+                                            path="dashboard-sales"
                                             element={
                                               <PermissionGuard permissionKey="dashboard-sales">
                                                 <SalesDashboard />
@@ -194,7 +193,7 @@ const App = () => (
                                             }
                                           />
                                           <Route
-                                            path="/clientes"
+                                            path="clientes"
                                             element={
                                               <PermissionGuard permissionKey="clientes">
                                                 <Clientes />
@@ -202,7 +201,7 @@ const App = () => (
                                             }
                                           />
                                           <Route
-                                            path="/vendedores"
+                                            path="vendedores"
                                             element={
                                               <PermissionGuard permissionKey="vendedores">
                                                 <Vendedores />
@@ -210,7 +209,7 @@ const App = () => (
                                             }
                                           />
                                           <Route
-                                            path="/settings"
+                                            path="settings"
                                             element={
                                               <PermissionGuard permissionKey="settings">
                                                 <Settings />
@@ -218,7 +217,7 @@ const App = () => (
                                             }
                                           />
                                           <Route
-                                            path="/super-admin"
+                                            path="super-admin"
                                             element={
                                               <PermissionGuard permissionKey="super-admin">
                                                 <SuperAdminEmpresas />
@@ -228,7 +227,7 @@ const App = () => (
 
                                           {/* Financeiro Routes */}
                                           <Route
-                                            path="/financeiro"
+                                            path="financeiro"
                                             element={
                                               <PermissionGuard permissionKey="financeiro-dashboard">
                                                 <FinanceiroDashboard />
@@ -236,7 +235,7 @@ const App = () => (
                                             }
                                           />
                                           <Route
-                                            path="/financeiro/movimentacoes"
+                                            path="financeiro/movimentacoes"
                                             element={
                                               <PermissionGuard permissionKey="financeiro-movimentacoes">
                                                 <Movimentacoes />
@@ -244,7 +243,7 @@ const App = () => (
                                             }
                                           />
                                           <Route
-                                            path="/financeiro/contas-a-pagar"
+                                            path="financeiro/contas-a-pagar"
                                             element={
                                               <PermissionGuard permissionKey="financeiro-contas-pagar">
                                                 <ContasPagar />
@@ -252,7 +251,7 @@ const App = () => (
                                             }
                                           />
                                           <Route
-                                            path="/financeiro/contas-a-receber"
+                                            path="financeiro/contas-a-receber"
                                             element={
                                               <PermissionGuard permissionKey="financeiro-contas-receber">
                                                 <ContasReceber />
@@ -260,7 +259,7 @@ const App = () => (
                                             }
                                           />
                                           <Route
-                                            path="/financeiro/contas-bancarias"
+                                            path="financeiro/contas-bancarias"
                                             element={
                                               <PermissionGuard permissionKey="financeiro-contas-bancarias">
                                                 <ContasBancarias />
@@ -268,7 +267,7 @@ const App = () => (
                                             }
                                           />
                                           <Route
-                                            path="/financeiro/categorias"
+                                            path="financeiro/categorias"
                                             element={
                                               <PermissionGuard permissionKey="financeiro-categorias">
                                                 <CategoriasFinanceiras />
@@ -276,7 +275,7 @@ const App = () => (
                                             }
                                           />
                                           <Route
-                                            path="/financeiro/relatorios"
+                                            path="financeiro/relatorios"
                                             element={
                                               <PermissionGuard permissionKey="financeiro-relatorios">
                                                 <RelatoriosFinanceiros />
@@ -284,18 +283,16 @@ const App = () => (
                                             }
                                           />
                                         </Route>
-                                        
 
                                         {/* === GROUP 2: Route WITHOUT Sidebar (PDV) === */}
                                         <Route
-                                          path="/sales"
+                                          path="sales"
                                           element={
                                             <PermissionGuard permissionKey="sales">
                                               <Sales />
                                             </PermissionGuard>
                                           }
                                         />
-                                        
                                       </Route>
 
                                       <Route path="*" element={<NotFound />} />
@@ -318,6 +315,5 @@ const App = () => (
     </TooltipProvider>
   </QueryClientProvider>
 );
-
 
 export default App;

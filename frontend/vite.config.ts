@@ -8,8 +8,13 @@ export default defineConfig(({ mode }) => ({
     host: true,
     port: 8080,
     allowedHosts: ["all"],
+
+    // 🔥 ESSENCIAL PARA NÃO VOLTAR PARA "/" AO ATUALIZAR
+    historyApiFallback: true,
   },
+
   plugins: [react()].filter(Boolean) as PluginOption[],
+
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

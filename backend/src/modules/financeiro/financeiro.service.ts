@@ -344,7 +344,7 @@ export const contaBancariaService = {
 
   create: (empresaId: string, data: typeCreateContaBancariaDTO) => // 💡 CORREÇÃO
     prisma.contaBancaria.create({
-      data: { ...data, saldoAtual: data.saldoInicial, empresaId },
+      data: { ...data, saldoAtual: data.saldoInicial, empresaId,  },
     }),
 
   update: async (

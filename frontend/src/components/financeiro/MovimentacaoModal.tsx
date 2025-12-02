@@ -27,11 +27,18 @@ import { Textarea } from "@/components/ui/textarea";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { CalendarIcon } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { useFinanceiro } from "@/contexts/FinanceiroContext";
+import { DialogDescription } from "@radix-ui/react-dialog";
 
 const formSchema = z.object({
   tipo: z.enum(["entrada", "saida"]),
@@ -49,7 +56,17 @@ interface MovimentacaoModalProps {
   onOpenChange?: (open: boolean) => void;
 }
 
-export const MovimentacaoModal = ({ children, open, onOpenChange }: MovimentacaoModalProps) => {
+export const MovimentacaoModal = ({
+  children,
+  open,
+  onOpenChange,
+}: MovimentacaoModalProps) => {
+  const {
+    categorias = [],
+    contasBancarias = [],
+    createMovimentacao, // ajuste o nome aqui se no contexto for diferente
+  } = useFinanceiro();
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -58,18 +75,54 @@ export const MovimentacaoModal = ({ children, open, onOpenChange }: Movimentacao
     },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    console.log(values);
-    // Here you would call the API to save the movimentacao
-    onOpenChange?.(false);
+  function parseCurrencyToNumber(valor: string): number {
+    const somenteDigitos = valor.replace(/[^\d,]/g, "");
+    const comPonto = somenteDigitos.replace(",", ".");
+    const numero = parseFloat(comPonto);
+    return Number.isNaN(numero) ? 0 : numero;
+  }
+
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    const payload = {
+      tipo: values.tipo, // entrada ou saida
+      categoriaId: values.categoria,
+      contaBancariaId: values.contaBancaria,
+      metodoPagamento: values.metodoPagamento,
+      valor: parseCurrencyToNumber(values.valor),
+      data: values.data,
+      observacoes: values.observacoes || "",
+    };
+
+    try {
+      if (createMovimentacao) {
+        await createMovimentacao(payload as any);
+      } else {
+        console.log("Payload movimentacao:", payload);
+      }
+
+      form.reset({
+        tipo: "saida",
+        categoria: "",
+        valor: "",
+        data: undefined,
+        contaBancaria: "",
+        metodoPagamento: "",
+        observacoes: "",
+      });
+
+      onOpenChange?.(false);
+    } catch (error) {
+      console.error("Erro ao criar movimentacao", error);
+    }
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Criar Movimentação</DialogTitle>
+          <DialogTitle>Criar Movimentacao</DialogTitle>
+          <DialogDescription />
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -79,7 +132,7 @@ export const MovimentacaoModal = ({ children, open, onOpenChange }: Movimentacao
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Tipo</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione o tipo" />
@@ -87,36 +140,45 @@ export const MovimentacaoModal = ({ children, open, onOpenChange }: Movimentacao
                     </FormControl>
                     <SelectContent>
                       <SelectItem value="entrada">Entrada</SelectItem>
-                      <SelectItem value="saida">Saída</SelectItem>
+                      <SelectItem value="saida">Saida</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
                 </FormItem>
               )}
             />
+
             <FormField
               control={form.control}
               name="categoria"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Categoria</FormLabel>
-                  {/* This should be populated from the context */}
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione a categoria" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="venda">Venda</SelectItem>
-                      <SelectItem value="servico">Serviço</SelectItem>
-                      <SelectItem value="aluguel">Aluguel</SelectItem>
+                      {categorias.length === 0 ? (
+                        <div className="px-3 py-2 text-sm text-muted-foreground">
+                          Nenhuma categoria cadastrada
+                        </div>
+                      ) : (
+                        categorias.map((cat) => (
+                          <SelectItem key={cat.id} value={cat.id}>
+                            {cat.nome}
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                   <FormMessage />
                 </FormItem>
               )}
             />
+
             <FormField
               control={form.control}
               name="valor"
@@ -124,13 +186,17 @@ export const MovimentacaoModal = ({ children, open, onOpenChange }: Movimentacao
                 <FormItem>
                   <FormLabel>Valor</FormLabel>
                   <FormControl>
-                    {/* TODO: Use a currency input mask */}
-                    <Input placeholder="R$ 0,00" {...field} />
+                    <Input
+                      placeholder="R$ 0,00"
+                      {...field}
+                      onChange={(e) => field.onChange(e.target.value)}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
+
             <FormField
               control={form.control}
               name="data"
@@ -141,14 +207,15 @@ export const MovimentacaoModal = ({ children, open, onOpenChange }: Movimentacao
                     <PopoverTrigger asChild>
                       <FormControl>
                         <Button
-                          variant={"outline"}
+                          type="button"
+                          variant="outline"
                           className={cn(
                             "w-full pl-3 text-left font-normal",
                             !field.value && "text-muted-foreground"
                           )}
                         >
                           {field.value ? (
-                            format(field.value, "PPP")
+                            format(field.value, "P", { locale: ptBR })
                           ) : (
                             <span>Escolha uma data</span>
                           )}
@@ -169,44 +236,54 @@ export const MovimentacaoModal = ({ children, open, onOpenChange }: Movimentacao
                 </FormItem>
               )}
             />
+
             <FormField
               control={form.control}
               name="contaBancaria"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Conta Bancária</FormLabel>
-                  {/* This should be populated from the context */}
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormLabel>Conta bancaria</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione a conta" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="conta1">Conta Principal</SelectItem>
-                      <SelectItem value="conta2">Investimentos</SelectItem>
+                      {contasBancarias.length === 0 ? (
+                        <div className="px-3 py-2 text-sm text-muted-foreground">
+                          Nenhuma conta cadastrada
+                        </div>
+                      ) : (
+                        contasBancarias.map((conta) => (
+                          <SelectItem key={conta.id} value={conta.id}>
+                            {conta.nome} {conta.banco ? `(${conta.banco})` : ""}
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                   <FormMessage />
                 </FormItem>
               )}
             />
+
             <FormField
               control={form.control}
               name="metodoPagamento"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Método de Pagamento</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormLabel>Metodo de pagamento</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Selecione o método" />
+                        <SelectValue placeholder="Selecione o metodo" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
                       <SelectItem value="pix">PIX</SelectItem>
                       <SelectItem value="boleto">Boleto</SelectItem>
-                      <SelectItem value="cartao">Cartão de Crédito</SelectItem>
+                      <SelectItem value="cartao">Cartao de credito</SelectItem>
                       <SelectItem value="dinheiro">Dinheiro</SelectItem>
                     </SelectContent>
                   </Select>
@@ -214,12 +291,13 @@ export const MovimentacaoModal = ({ children, open, onOpenChange }: Movimentacao
                 </FormItem>
               )}
             />
+
             <FormField
               control={form.control}
               name="observacoes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Observações</FormLabel>
+                  <FormLabel>Observacoes</FormLabel>
                   <FormControl>
                     <Textarea placeholder="Detalhes adicionais..." {...field} />
                   </FormControl>
@@ -227,7 +305,10 @@ export const MovimentacaoModal = ({ children, open, onOpenChange }: Movimentacao
                 </FormItem>
               )}
             />
-            <Button type="submit">Registrar</Button>
+
+            <Button type="submit" className="w-full">
+              Registrar
+            </Button>
           </form>
         </Form>
       </DialogContent>

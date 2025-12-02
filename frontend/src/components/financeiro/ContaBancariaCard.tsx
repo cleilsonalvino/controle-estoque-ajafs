@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { TransferenciaModal } from "./TransferenciaModal";
 
 interface ContaBancariaCardProps {
-  conta: ContaBancaria;
+  conta: ContaBancaria
 }
 
 export const ContaBancariaCard = ({ conta }: ContaBancariaCardProps) => {

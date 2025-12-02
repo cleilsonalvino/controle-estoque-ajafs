@@ -1000,8 +1000,7 @@ const PDV = ({ clientes, vendedores, onFinalizeSale, onExit }: PDVProps) => {
       {/* Modal de  Finalizar Venda*/}
 
       <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
-        {/* ... (Conteúdo do Dialog de Pagamento não modificado) ... */}
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
           {!selectedVendedor ? (
             <div className="text-sm text-red-500 text-center p-4">
               Selecione um Vendedor
@@ -1017,6 +1016,29 @@ const PDV = ({ clientes, vendedores, onFinalizeSale, onExit }: PDVProps) => {
                 R$ {total.toFixed(2)}
               </p>
             </div>
+
+            {/* FORMA DE PAGAMENTO */}
+<div className="space-y-2">
+  <Label>Forma de Pagamento</Label>
+
+  <select
+    value={paymentMethod || ""}
+    onChange={(e) => setPaymentMethod(e.target.value)}
+    className="w-full border rounded-md p-2 text-sm bg-white dark:bg-slate-900"
+  >
+    <option value="">Selecione uma forma...</option>
+    <option value="Dinheiro">Dinheiro</option>
+    <option value="Pix">Pix</option>
+    <option value="Débito">Cartão de Débito</option>
+    <option value="Crédito">Cartão de Crédito</option>
+    <option value="Outros">Outros</option>
+  </select>
+
+  {!paymentMethod && (
+    <p className="text-xs text-red-500">Selecione a forma de pagamento</p>
+  )}
+</div>
+
             {/* DESCONTO ANTES DO PAGAMENTO */}
             <div className="space-y-2 mt-4">
               <Label htmlFor="discount">Desconto (%)</Label>
