@@ -169,6 +169,7 @@ const Settings = () => {
     resolver: zodResolver(userSchema),
     defaultValues: { telasPermitidas: [], papel: "USUARIO" },
   });
+  
 
 // ✅ Lógica de Agrupamento para Permissões
 const groupedMenuPermissions = useMemo(() => {
@@ -301,6 +302,8 @@ const groupedMenuPermissions = useMemo(() => {
   const onEditUser = (user: UserAPI) => {
     getUserById(user.id).then((data) => {
       if (!data) return;
+
+      console.log("Dados do usuário:", data)
 
       setEditingUser(data); // guarda o usuário completo retornado do backend
 

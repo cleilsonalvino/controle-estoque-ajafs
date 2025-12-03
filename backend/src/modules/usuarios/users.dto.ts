@@ -5,6 +5,7 @@ export const createUserSchema = z.object({
   email: z.string().email("Email inválido"),
   senha: z.string().min(6),
   papel: z.enum(["ADMINISTRADOR", "USUARIO"]).optional(),
+  telasPermitidas: z.array(z.string()).optional(),
   urlImagem: z.string().optional(),
 });
 
@@ -12,6 +13,6 @@ export const updateUserSchema = z.object({
   nome: z.string().optional(),
   email: z.string().email().optional(),
   papel: z.enum(["ADMINISTRADOR", "GERENTE", "USUARIO", "VISUALIZADOR"]).optional(),
-  ativo: z.boolean().optional(),
+  telasPermitidas: z.array(z.string()).optional(),
   urlImagem: z.string().optional(),
 });

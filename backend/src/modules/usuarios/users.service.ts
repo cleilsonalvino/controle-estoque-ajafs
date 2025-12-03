@@ -23,7 +23,6 @@ export const getUsersService = async (empresaId: string) => {
   if (!users) {
     throw new CustomError("Usuários não encontrados", 404);
   }
-  console.log(users);
   return users;
 };
 
