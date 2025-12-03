@@ -58,8 +58,8 @@ import {
 // ==========================
 const empresaSchema = z.object({
   cnpj: z.string().min(1, "CNPJ/CPF é obrigatório"),
-  razaoSocial: z.string().min(1, "Razão Social é obrigatória"),
-  nomeFantasia: z.string().optional(),
+  razao_social: z.string().min(1, "Razão Social é obrigatória"),
+  nome_fantasia: z.string().optional(),
   telefone: z.string().optional(),
   email: z.string().email("E-mail inválido").optional().or(z.literal("")),
   cep: z.string().optional(),
@@ -170,47 +170,55 @@ const Settings = () => {
     defaultValues: { telasPermitidas: [], papel: "USUARIO" },
   });
 
-  // ✅ Lógica de Agrupamento para Permissões
-  const groupedMenuPermissions = useMemo(() => {
-    const grupos: Record<string, typeof allMenuItems> = {
-      Gestão: [],
-      Financeiro: [],
-      Cadastros: [],
-      Serviços: [],
-      Outros: [],
-    };
+// ✅ Lógica de Agrupamento para Permissões
+const groupedMenuPermissions = useMemo(() => {
+  const grupos: Record<string, typeof allMenuItems> = {
+    Gestão: [],
+    Financeiro: [],
+    Cadastros: [],
+    Serviços: [],
+    Outros: [],
+  };
 
-    const filteredItems = allMenuItems.filter((item) => item.url !== "/");
+  // ❗ REMOVER telas de super admin ANTES de tudo
+  const filteredItems = allMenuItems
+    .filter((item) => item.url !== "/") // remove a home da lista
+    .filter(
+      (item) =>
+        item.url !== "/super-admin" &&  
+        item.url !== "/super-admin/criarEmpresa"
+    );
 
-    filteredItems.forEach((item) => {
-      if (item.key.startsWith("financeiro-")) {
-        grupos["Financeiro"].push(item);
-      } else if (
-        ["estoque", "dashboard-sales", "sales", "pos-venda"].includes(item.key)
-      ) {
-        grupos["Gestão"].push(item);
-      } else if (
-        [
-          "products",
-          "movements",
-          "suppliers",
-          "categories",
-          "clientes",
-          "vendedores",
-        ].includes(item.key)
-      ) {
-        grupos["Cadastros"].push(item);
-      } else if (["tipos-servicos", "service-categories"].includes(item.key)) {
-        grupos["Serviços"].push(item);
-      } else if (["settings", "super_admin"].includes(item.key)) {
-        grupos["Outros"].push(item);
-      } else {
-        grupos["Outros"].push(item);
-      }
-    });
+  filteredItems.forEach((item) => {
+    if (item.key.startsWith("financeiro-")) {
+      grupos["Financeiro"].push(item);
+    } else if (
+      ["estoque", "dashboard-sales", "sales", "pos-venda"].includes(item.key)
+    ) {
+      grupos["Gestão"].push(item);
+    } else if (
+      [
+        "products",
+        "movements",
+        "suppliers",
+        "categories",
+        "clientes",
+        "vendedores",
+      ].includes(item.key)
+    ) {
+      grupos["Cadastros"].push(item);
+    } else if (["tipos-servicos", "service-categories"].includes(item.key)) {
+      grupos["Serviços"].push(item);
+    } else if (["settings"].includes(item.key)) {
+      grupos["Outros"].push(item);
+    } else {
+      grupos["Outros"].push(item);
+    }
+  });
 
-    return Object.entries(grupos).filter(([, itens]) => itens.length > 0);
-  }, []);
+  return Object.entries(grupos).filter(([, itens]) => itens.length > 0);
+}, []);
+
 
   // ✅ Carregar empresa no formulário
   useEffect(() => {
@@ -272,6 +280,16 @@ const Settings = () => {
     getUsers();
   }, []);
 
+  const getUserById = async (id: string) => {
+    try {
+      const { data } = await api.get(`/usuarios/${id}`);
+      return data;
+    } catch {
+      sonnerToast.error("Erro ao buscar usuário. Tente novamente.");
+      return null;
+    }
+  };
+
   // 👈 NOVO: Função para fechar o modal e limpar o estado de edição
   const handleCloseUserModal = () => {
     setIsUserModalOpen(false);
@@ -281,17 +299,21 @@ const Settings = () => {
 
   // 📝 Configura o formulário para EDIÇÃO e abre o modal
   const onEditUser = (user: UserAPI) => {
-    setEditingUser(user);
-    // Preenche o formulário com os dados do usuário
-    resetUserForm({
-      id: user.id,
-      nome: user.nome,
-      email: user.email,
-      papel: user.papel,
-      telasPermitidas: user.telasPermitidas || [], // Garante que é um array
+    getUserById(user.id).then((data) => {
+      if (!data) return;
+
+      setEditingUser(data); // guarda o usuário completo retornado do backend
+
+      resetUserForm({
+        id: data.id,
+        nome: data.nome,
+        email: data.email,
+        papel: data.papel,
+        telasPermitidas: data.telasPermitidas || [],
+      });
+
+      setIsUserModalOpen(true);
     });
-    // ABRIR MODAL
-    setIsUserModalOpen(true);
   };
 
   // 📝 Configura o formulário para CRIAÇÃO e abre o modal
@@ -467,7 +489,7 @@ const Settings = () => {
                   <Label htmlFor="razaoSocial">Razão Social / Nome*</Label>
                   <Input
                     id="razaoSocial"
-                    {...registerEmpresa("razaoSocial")}
+                    {...registerEmpresa("razao_social")}
                     disabled={!isEditing}
                   />
                 </div>
@@ -890,61 +912,71 @@ const Settings = () => {
                   control={controlUser}
                   render={({ field }) => (
                     <TooltipProvider>
-                      {groupedMenuPermissions.map(([categoria, itens]) => (
-                        <div key={categoria}>
-                          <h5 className="font-medium text-sm text-gray-700 dark:text-gray-300 mb-2 border-b pb-1">
-                            {categoria}
-                          </h5>
-                          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                            {itens.map((item) => (
-                              <Tooltip key={item.url}>
-                                <div className="flex items-center space-x-2">
-                                  {/* Checkbox */}
-                                  <Checkbox
-                                    id={`check-${item.url}`}
-                                    checked={field.value?.includes(item.url)}
-                                    // Desabilita alteração para o próprio ADMIN logado
-                                    disabled={
-                                      editingUser?.id === userLogado.id &&
-                                      editingUser?.papel === "ADMINISTRADOR"
-                                    }
-                                    onCheckedChange={(checked) => {
-                                      return checked
-                                        ? field.onChange([
-                                            ...field.value,
-                                            item.url,
-                                          ]) // Adiciona a URL
-                                        : field.onChange(
-                                            field.value?.filter(
-                                              (value) => value !== item.url // Remove a URL
-                                            )
-                                          );
-                                    }}
-                                  />
+                      {groupedMenuPermissions.map(([categoria, itens]) => {
+                        // filtra os itens proibidos
+                        const itensFiltrados = itens.filter(
+                          (item) =>
+                            item.url !== "/super-admin" &&
+                            item.url !== "/super-admin/criarEmpresa"
+                        );
 
-                                  {/* TooltipTrigger: Envolve o Label */}
-                                  <TooltipTrigger asChild>
-                                    <Label
-                                      htmlFor={`check-${item.url}`}
-                                      className="cursor-pointer font-normal text-sm"
-                                    >
-                                      {item.title}
-                                    </Label>
-                                  </TooltipTrigger>
+                        if (itensFiltrados.length === 0) return null;
+                        return (
+                          <div key={categoria}>
+                            <h5 className="font-medium text-sm text-gray-700 dark:text-gray-300 mb-2 border-b pb-1">
+                              {categoria}
+                            </h5>
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                              {itens.map((item) => (
+                                <Tooltip key={item.url}>
+                                  <div className="flex items-center space-x-2">
+                                    {/* Checkbox */}
+                                    <Checkbox
+                                      id={`check-${item.url}`}
+                                      checked={field.value?.includes(item.url)}
+                                      // Desabilita alteração para o próprio ADMIN logado
+                                      disabled={
+                                        editingUser?.id === userLogado.id &&
+                                        editingUser?.papel === "ADMINISTRADOR"
+                                      }
+                                      onCheckedChange={(checked) => {
+                                        return checked
+                                          ? field.onChange([
+                                              ...field.value,
+                                              item.url,
+                                            ]) // Adiciona a URL
+                                          : field.onChange(
+                                              field.value?.filter(
+                                                (value) => value !== item.url // Remove a URL
+                                              )
+                                            );
+                                      }}
+                                    />
 
-                                  {/* TooltipContent: Exibe a descrição */}
-                                  <TooltipContent className="mt-2 absolute w-40">
-                                    <p className="max-w-xs text-sm ">
-                                      {item.description ||
-                                        `Permissão para acessar a tela de ${item.title}.`}
-                                    </p>
-                                  </TooltipContent>
-                                </div>
-                              </Tooltip>
-                            ))}
+                                    {/* TooltipTrigger: Envolve o Label */}
+                                    <TooltipTrigger asChild>
+                                      <Label
+                                        htmlFor={`check-${item.url}`}
+                                        className="cursor-pointer font-normal text-sm"
+                                      >
+                                        {item.title}
+                                      </Label>
+                                    </TooltipTrigger>
+
+                                    {/* TooltipContent: Exibe a descrição */}
+                                    <TooltipContent className="mt-2 absolute w-40">
+                                      <p className="max-w-xs text-sm ">
+                                        {item.description ||
+                                          `Permissão para acessar a tela de ${item.title}.`}
+                                      </p>
+                                    </TooltipContent>
+                                  </div>
+                                </Tooltip>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </TooltipProvider>
                   )}
                 />

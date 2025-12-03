@@ -1,12 +1,11 @@
   import { z } from "zod";
 
   export const EmpresaSchema = z.object({
-    nome: z.string().min(3),
+    nome_fantasia: z.string().min(3),
     cnpj: z.string(),
     telefone: z.string(),
     email: z.string().email().optional().nullable(),
-    razaoSocial: z.string(),
-    nomeFantasia: z.string(),
+    razao_social: z.string(),
     inscEstadual: z.string(),
     inscMunicipal: z.string(),
     cnae: z.string(),

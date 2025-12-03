@@ -177,5 +177,21 @@ export const allMenuItems = [
     icon: Settings,
     description: "Ajustes gerais do sistema, empresa e dados de acesso.", // Adicionado
   },
+
+  {
+  key: "super-admin",
+  title: "Gerenciar Empresas",
+  url: "/super-admin",
+  icon: Landmark,
+  description: "Acesso ao painel de controle global do sistema.",
+},
+{
+  key: "super-admin-criar",
+  title: "Criar Nova Empresa",
+  url: "/super-admin/criarEmpresa",
+  icon: Settings,
+  description: "Cadastro de empresas com criação de usuário automático.",
+},
+
   
 ];

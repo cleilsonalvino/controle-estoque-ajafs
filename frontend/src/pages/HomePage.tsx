@@ -87,26 +87,15 @@ export function HomePage() {
 
   if (!user) return <div>Carregando informações do usuário...</div>;
 
-  const email = user.email?.toLowerCase();
   const isAdmin = user.papel?.toLowerCase() === "administrador";
-  const isMaster = email === "ajafs@admin.com";
 
-  const accessibleMenuItems = useMemo(() => {
-    if (isMaster) {
-      return allMenuItems.filter((item) => item.url !== "/");
-    }
-    if (isAdmin) {
-      return allMenuItems.filter(
-        (item) => item.url !== "/" && item.key !== "super_admin"
-      );
-    }
+  const accessibleMenuItems = useMemo(() => { 
     return allMenuItems.filter(
       (item) =>
         item.url !== "/" &&
-        item.key !== "super_admin" &&
         user.telasPermitidas?.includes(item.url)
     );
-  }, [isAdmin, isMaster, user]);
+  }, [isAdmin, user]);
 
     const getImageUrl = (value: string | File | null) => {
     if (!value) {
@@ -144,11 +133,6 @@ export function HomePage() {
             {user.papel?.toUpperCase()}(A)
           </p>
         </h1>
-        {isMaster && (
-          <span className="ml-2 text-xs px-2 py-1 rounded bg-primary text-primary-foreground uppercase">
-            Acesso Master
-          </span>
-        )}
         <img
           src={getImageUrl(user.empresa?.logoEmpresa)}
           alt="logo da empresa"

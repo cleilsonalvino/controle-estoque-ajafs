@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/useAuth";
 import { allMenuItems } from "@/config/menuItems";
@@ -18,26 +18,29 @@ import { Separator } from "./ui/separator";
 import { LogOut } from "lucide-react";
 
 export const AppSidebar = () => {
-  const { user, isLoading, logout } = useAuth(); // <= logout adicionado
-  const location = useLocation();
+  const { user, isLoading, logout } = useAuth();
   const email = user?.email?.toLowerCase();
 
+  // =====================================================
+  // ITENS VISIVEIS POR PERMISSAO
+  // =====================================================
   const visibleMenuItems = useMemo(() => {
     if (isLoading || !user) return [];
-    const isAdmin = user.papel?.toLowerCase() === "administrador";
-    const isMaster = email === "ajafs@admin.com";
 
-    if (isMaster) return allMenuItems;
-    if (isAdmin)
-      return allMenuItems.filter((item) => item.key !== "super_admin");
-    if (!user.telasPermitidas) return [];
+    // sem telasPermitidas, nao mostra nada
+    if (!user.telasPermitidas || !Array.isArray(user.telasPermitidas)) {
+      return [];
+    }
 
-    return allMenuItems.filter(
-      (item) =>
-        user.telasPermitidas.includes(item.url) && item.key !== "super_admin"
+    // somente urls presentes em telasPermitidas
+    return allMenuItems.filter((item) =>
+      user.telasPermitidas.includes(item.url)
     );
   }, [user, isLoading, email]);
 
+  // =====================================================
+  // AGRUPAMENTO DOS ITENS DO MENU
+  // =====================================================
   const groupedMenu = useMemo(() => {
     const grupos: Record<string, typeof allMenuItems> = {
       Gestão: [],
@@ -48,23 +51,30 @@ export const AppSidebar = () => {
       Outros: [],
     };
 
-    const userPapel = user?.papel?.toLowerCase();
-    const isFinanceiroAuthorized =
-      userPapel === "administrador" ||
-      user?.email?.toLowerCase() === "ajafs@admin.com";
-
     visibleMenuItems.forEach((item) => {
+      // financeiro
       if (item.key.startsWith("financeiro-")) {
-        if (isFinanceiroAuthorized) {
-          grupos["Financeiro"].push(item);
-        }
-      } else if (
-        ["home", "estoque", "dashboard-sales", "sales", "pos-venda", "ordens-de-servico"].includes(
-          item.key
-        )
+        grupos["Financeiro"].push(item);
+        return;
+      }
+
+      // gestão
+      if (
+        [
+          "home",
+          "estoque",
+          "dashboard-sales",
+          "sales",
+          "pos-venda",
+          "ordens-de-servico",
+        ].includes(item.key)
       ) {
         grupos["Gestão"].push(item);
-      } else if (
+        return;
+      }
+
+      // cadastros
+      if (
         [
           "products",
           "movements",
@@ -72,21 +82,34 @@ export const AppSidebar = () => {
           "categories",
           "clientes",
           "vendedores",
-          
-
         ].includes(item.key)
       ) {
         grupos["Cadastros"].push(item);
-      } else if (["tipos-servicos", "service-categories"].includes(item.key)) {
+        return;
+      }
+
+      // serviços
+      if (["tipos-servicos", "service-categories"].includes(item.key)) {
         grupos["Serviços"].push(item);
-      } else if (["settings", "super_admin"].includes(item.key)) {
-        grupos["Outros"].push(item);
-      } 
+        return;
+      }
+
+      // relatorios
+      if (item.url.includes("/relatorios")) {
+        grupos["Relatórios"].push(item);
+        return;
+      }
+
+      // outros (settings, super admin, etc)
+      grupos["Outros"].push(item);
     });
 
     return grupos;
-  }, [visibleMenuItems, user]);
+  }, [visibleMenuItems]);
 
+  // =====================================================
+  // COMPONENTE
+  // =====================================================
   return (
     <Sidebar className="bg-slate-400">
       <SidebarHeader>
@@ -128,10 +151,6 @@ export const AppSidebar = () => {
               </SidebarGroup>
             ) : null
           )}
-
-          {/* ==================== */}
-          {/* ⭐ BOTÃO DE SAIR ⭐ */}
-          {/* ==================== */}
 
           <Separator className="my-2" />
 

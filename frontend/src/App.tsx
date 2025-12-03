@@ -55,6 +55,7 @@ import RelatoriosFinanceiros from "./pages/Financeiro/Relatorios";
 import { OrdemDeServicoProvider } from "./contexts/OrdemDeServicoContext";
 
 import OrdemDeServicoPage from "./pages/OrdemDeServico";
+import CreateEmpresaPage from "./pages/admin/CreateEmpresa";
 
 // ... (rest of the imports)
 
@@ -221,6 +222,14 @@ const App = () => (
                                             element={
                                               <PermissionGuard permissionKey="super-admin">
                                                 <SuperAdminEmpresas />
+                                              </PermissionGuard>
+                                            }
+                                          />
+                                          <Route
+                                            path="super-admin/criarEmpresa"
+                                            element={
+                                              <PermissionGuard permissionKey="super-admin">
+                                                <CreateEmpresaPage />
                                               </PermissionGuard>
                                             }
                                           />

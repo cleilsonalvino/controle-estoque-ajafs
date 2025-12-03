@@ -49,8 +49,6 @@ import {
 
 import { useEmpresa } from "@/contexts/EmpresaContext";
 
-// Paleta simples para graficos
-const COLORS = ["#3b82f6", "#10b981", "#f97316", "#8b5cf6", "#ec4899"];
 
 export default function SuperAdminConsole() {
   const { empresas, dashboard, fetchEmpresas, fetchDashboard, loading, loadingList } =
@@ -72,7 +70,7 @@ export default function SuperAdminConsole() {
   const atividadesRecentes = dashboard?.atividadesRecentes ?? [];
 
   return (
-    <div className="container mx-auto bg-slate-50 dark:bg-slate-900">
+    <div className="container mx-auto dark:bg-slate-900">
       
       {/* TOPO */}
       <motion.div
@@ -305,7 +303,7 @@ export default function SuperAdminConsole() {
                     key={empresa.id}
                     className="border rounded-lg p-3 text-xs md:text-sm bg-white dark:bg-slate-900/60"
                   >
-                    <p className="font-semibold text-primary">{empresa.nome}</p>
+                    <p className="font-semibold text-primary">{empresa.nome_fantasia}</p>
                     <p className="text-muted-foreground truncate">{empresa.cnpj}</p>
                     <p className="mt-1 truncate">
                       {empresa.cidade} {empresa.estado && `(${empresa.estado})`}

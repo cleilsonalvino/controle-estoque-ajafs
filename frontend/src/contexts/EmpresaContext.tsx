@@ -12,13 +12,12 @@ import { useAuth } from "@/contexts/useAuth";
 
 export interface Empresa {
   id: string;
-  nome: string;
+  nome_fantasia: string;
   cnpj: string;
   telefone: string;
   email?: string | null;
   logoEmpresa?: string | null;
-  razaoSocial: string;
-  nomeFantasia: string;
+  razao_social: string;
   inscEstadual: string;
   inscMunicipal: string;
   cnae: string;
@@ -31,6 +30,10 @@ export interface Empresa {
   bairro: string;
   criadoEm: Date;
   atualizadoEm: Date;
+  usuario:{
+    email: string;
+    senha: string;
+  }
 }
 
 // 📊 Dados do dashboard
@@ -267,7 +270,7 @@ export const EmpresaProvider = ({ children }: { children: ReactNode }) => {
         }
       });
 
-      const { data } = await api.post<Empresa>("/empresa", formData, {
+      const { data } = await api.post<Empresa>("/empresa/create", formData, {
         headers: {
             "Content-Type": "multipart/form-data",
         },

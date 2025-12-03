@@ -8,15 +8,14 @@ const money = () => Number(faker.finance.amount({ min: 10, max: 1500, dec: 2 }))
 const qty = () => Number(faker.finance.amount({ min: 1, max: 200, dec: 3 }));
 const rand = (arr: any[]) => arr[Math.floor(Math.random() * arr.length)];
 
-async function criarEmpresa(nome: string, segmento: string) {
+async function criarEmpresa(nome_fantasia: string, segmento: string) {
   return prisma.empresa.create({
     data: {
-      nome,
+      nome_fantasia: nome_fantasia,
       cnpj: faker.string.numeric(14),
       telefone: faker.phone.number(),
       email: faker.internet.email(),
-      razaoSocial: nome,
-      nomeFantasia: nome,
+      razao_social: nome_fantasia + " LTDA",
       cep: faker.location.zipCode(),
       estado: "SE",
       cidade: "Aracaju",
@@ -53,7 +52,7 @@ async function main() {
       data: [
         {
           nome: "Administrador",
-          email: `admin@${empresa.nomeFantasia}.com`,
+          email: `admin@${empresa.nome_fantasia}.com`,
           senha: "123456",
           papel: "ADMINISTRADOR",
           empresaId: empresa.id,

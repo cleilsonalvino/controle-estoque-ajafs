@@ -10,14 +10,19 @@ export const empresaController = {
   async getAll(req: AuthenticatedRequest, res: Response) {
     try {
       if (req.user?.papel !== "SUPER_ADMIN") {
-        throw new CustomError("Acesso negado. Permissão restrita a Super Admin.", 403);
+        throw new CustomError(
+          "Acesso negado. Permissão restrita a Super Admin.",
+          403
+        );
       }
 
       const empresas = await empresaService.getAll();
       return res.status(200).json(empresas);
     } catch (error: any) {
       console.error("Erro ao listar empresas:", error);
-      return res.status(error.statusCode || 500).json({ message: error.message });
+      return res
+        .status(error.statusCode || 500)
+        .json({ message: error.message });
     }
   },
 
@@ -26,20 +31,35 @@ export const empresaController = {
   // =====================================================
   async create(req: AuthenticatedRequest, res: Response) {
     try {
+      console.log("Requisição de criação de empresa recebida.", req.body);
+
       if (req.user?.papel !== "SUPER_ADMIN") {
-        throw new CustomError("Acesso negado. Apenas Super Admin pode criar empresas.", 403);
+        throw new CustomError(
+          "Acesso negado. Apenas Super Admin pode criar empresas.",
+          403
+        );
       }
 
       const data = req.body;
+
+      // Se veio logo, salva
       if (req.file) {
         data.logoEmpresa = `uploads/empresa/${req.file.filename}`;
       }
 
-      const empresa = await empresaService.create(data);
-      return res.status(201).json({ message: "Empresa criada com sucesso", data: empresa });
+      // Chama service que cria empresa + usuário
+      const { empresa, usuario } = await empresaService.create(data);
+
+      return res.status(201).json({
+        message: "Empresa e usuário criados com sucesso",
+        empresa,
+        usuario,
+      });
     } catch (error: any) {
       console.error("Erro ao criar empresa:", error);
-      return res.status(error.statusCode || 500).json({ message: error.message });
+      return res
+        .status(error.statusCode || 500)
+        .json({ message: error.message });
     }
   },
 
@@ -51,11 +71,17 @@ export const empresaController = {
       const { id } = req.params;
       const { empresaId, papel } = req.user!;
 
-      const empresa = await empresaService.getById(id, empresaId, papel === "SUPER_ADMIN");
+      const empresa = await empresaService.getById(
+        id,
+        empresaId,
+        papel === "SUPER_ADMIN"
+      );
       return res.status(200).json(empresa);
-    } catch (error: any){
+    } catch (error: any) {
       console.error("Erro ao buscar empresa:", error);
-      return res.status(error.statusCode || 500).json({ message: error.message });
+      return res
+        .status(error.statusCode || 500)
+        .json({ message: error.message });
     }
   },
 
@@ -65,18 +91,24 @@ export const empresaController = {
   async update(req: AuthenticatedRequest, res: Response) {
     try {
       const { id } = req.params;
-      const { empresaId, papel } = req.user!;
       const data = req.body;
 
       if (req.file) {
         data.logoEmpresa = `uploads/empresa/${req.file.filename}`;
       }
 
-      const empresa = await empresaService.update(id, data, empresaId, papel === "SUPER_ADMIN");
-      return res.status(200).json({ message: "Empresa atualizada com sucesso", data: empresa });
+      const empresa = await empresaService.update(
+        id,
+        data,
+      );
+      return res
+        .status(200)
+        .json({ message: "Empresa atualizada com sucesso", data: empresa });
     } catch (error: any) {
       console.error("Erro ao atualizar empresa:", error);
-      return res.status(error.statusCode || 500).json({ message: error.message });
+      return res
+        .status(error.statusCode || 500)
+        .json({ message: error.message });
     }
   },
 
@@ -86,14 +118,19 @@ export const empresaController = {
   async remove(req: AuthenticatedRequest, res: Response) {
     try {
       if (req.user?.papel !== "SUPER_ADMIN") {
-        throw new CustomError("Acesso negado. Apenas Super Admin pode remover empresas.", 403);
+        throw new CustomError(
+          "Acesso negado. Apenas Super Admin pode remover empresas.",
+          403
+        );
       }
 
       await empresaService.remove(req.params.id as string, true);
       return res.status(204).send();
     } catch (error: any) {
       console.error("Erro ao remover empresa:", error);
-      return res.status(error.statusCode || 500).json({ message: error.message });
+      return res
+        .status(error.statusCode || 500)
+        .json({ message: error.message });
     }
   },
 
@@ -103,14 +140,19 @@ export const empresaController = {
   async getDashboard(req: AuthenticatedRequest, res: Response) {
     try {
       if (req.user?.papel !== "SUPER_ADMIN") {
-        throw new CustomError("Acesso negado. Apenas Super Admin pode visualizar o painel de gestão.", 403);
+        throw new CustomError(
+          "Acesso negado. Apenas Super Admin pode visualizar o painel de gestão.",
+          403
+        );
       }
 
       const stats = await empresaService.getDashboardStats();
-      return res.status(200).json( stats );
+      return res.status(200).json(stats);
     } catch (error: any) {
       console.error("Erro ao gerar dashboard:", error);
-      return res.status(error.statusCode || 500).json({ message: error.message });
+      return res
+        .status(error.statusCode || 500)
+        .json({ message: error.message });
     }
   },
 };

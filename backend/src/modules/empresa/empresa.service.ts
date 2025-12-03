@@ -1,7 +1,8 @@
 import { PrismaClient } from "@prisma/client";
 import { CustomError } from "../../shared/errors";
-import fs from 'fs';
-import path from 'path';
+import fs from "fs";
+import path from "path";
+import bcrypt from "bcrypt";
 
 const prisma = new PrismaClient();
 
@@ -20,10 +21,89 @@ export const empresaService = {
 
   // 🔹 Criar uma nova empresa
   create: async (data: any) => {
-    if (!data.nome || !data.cnpj) {
-      throw new CustomError("Nome e CNPJ são obrigatórios.", 400);
+    if (!data.nome_fantasia && !data.razao_social) {
+      throw new CustomError(
+        "Nome Fantasia ou Razão Social são obrigatórios.",
+        400
+      );
     }
-    return prisma.empresa.create({ data });
+
+    if (!data.cnpj) {
+      throw new CustomError("CNPJ é obrigatório.", 400);
+    }
+
+    // gerar senha provisória
+    const senhaProvisoria = "admin123";
+    const senhaHash = await bcrypt.hash(senhaProvisoria, 10);
+
+    // transação → cria empresa + usuário
+    const result = await prisma.$transaction(async (tx) => {
+      const empresa = await tx.empresa.create({
+        data: {
+          nome_fantasia: data.nome_fantasia,
+          cnpj: data.cnpj,
+          telefone: data.telefone,
+          email: data.email,
+          razao_social: data.razao_social,
+          inscEstadual: data.inscEstadual,
+          inscMunicipal: data.inscMunicipal,
+          cnae: data.cnae,
+          cep: data.cep,
+          estado: data.estado,
+          cidade: data.cidade,
+          endereco: data.endereco,
+          numero: data.numero,
+          complemento: data.complemento,
+          bairro: data.bairro,
+        },
+      });
+
+      const usuario = await tx.usuario.create({
+        data: {
+          nome: empresa.nome_fantasia,
+          email: empresa.email ?? `${empresa.cnpj}@empresa.com`,
+          senha: senhaHash,
+          papel: "ADMINISTRADOR",
+          empresaId: empresa.id,
+          telasPermitidas: [
+            "/",
+            "/estoque",
+            "/dashboard-sales",
+            "/pos-venda",
+            "/sales",
+            "/ordens-de-servico",
+            "/products",
+            "/categories",
+            "/movements",
+            "/suppliers",
+            "/tipos-servicos",
+            "/service-categories",
+            "/clientes",
+            "/vendedores",
+            "/financeiro",
+            "/financeiro/movimentacoes",
+            "/financeiro/contas-a-pagar",
+            "/financeiro/contas-a-receber",
+            "/financeiro/contas-bancarias",
+            "/financeiro/categorias",
+            "/financeiro/relatorios",
+            "/settings",
+          ],
+        },
+      });
+
+      return {
+        empresa,
+        usuario: {
+          nome: usuario.nome,
+          email: usuario.email,
+          papel: usuario.papel,
+        },
+        senhaProvisoria,
+      };
+    });
+
+    return result;
   },
 
   // 🔹 Buscar empresa por ID (com acesso restrito)
@@ -49,10 +129,10 @@ export const empresaService = {
   },
 
   // 🔹 Atualizar empresa (com controle opcional de acesso)
-  update: async (id: string, data: any, empresaId?: string, superAdmin = false) => {
-    if (!superAdmin && id !== empresaId) {
-      throw new CustomError("Acesso não autorizado.", 403);
-    }
+  update: async (
+    id: string,
+    data: any,
+  ) => {
 
     const oldEmpresa = await prisma.empresa.findUnique({ where: { id } });
     if (!oldEmpresa) {
@@ -61,7 +141,13 @@ export const empresaService = {
 
     // Se uma nova imagem foi enviada, deleta a antiga
     if (data.logoEmpresa && oldEmpresa.logoEmpresa) {
-      const oldImagePath = path.resolve(__dirname, '..', '..', '..', oldEmpresa.logoEmpresa);
+      const oldImagePath = path.resolve(
+        __dirname,
+        "..",
+        "..",
+        "..",
+        oldEmpresa.logoEmpresa
+      );
       fs.unlink(oldImagePath, (err) => {
         if (err) console.error("Erro ao deletar logo antigo:", err);
       });
@@ -76,7 +162,10 @@ export const empresaService = {
   // 🔹 Deletar empresa (somente super-admin)
   remove: async (id: string, superAdmin = false) => {
     if (!superAdmin) {
-      throw new CustomError("Acesso negado. Apenas o Super Admin pode remover empresas.", 403);
+      throw new CustomError(
+        "Acesso negado. Apenas o Super Admin pode remover empresas.",
+        403
+      );
     }
 
     const empresa = await prisma.empresa.findUnique({ where: { id } });
@@ -88,101 +177,109 @@ export const empresaService = {
 
     // Deleta a imagem associada
     if (empresa.logoEmpresa) {
-      const imagePath = path.resolve(__dirname, '..', '..', '..', empresa.logoEmpresa);
+      const imagePath = path.resolve(
+        __dirname,
+        "..",
+        "..",
+        "..",
+        empresa.logoEmpresa
+      );
       fs.unlink(imagePath, (err) => {
         if (err) console.error("Erro ao deletar logo da empresa:", err);
       });
     }
   },
 
-// =============================================================
-// 📊 SUPER DASHBOARD MULTIEMPRESA – COMPLETO (12 GRUPOS)
-// =============================================================
-getDashboardStats: async () => {
-  // -----------------------------------------
-  // 1) EMPRESAS E USUÁRIOS
-  // -----------------------------------------
-  const totalEmpresas = await prisma.empresa.count();
-  const totalUsuarios = await prisma.usuario.count();
+  // =============================================================
+  // 📊 SUPER DASHBOARD MULTIEMPRESA – COMPLETO (12 GRUPOS)
+  // =============================================================
+  getDashboardStats: async () => {
+    // -----------------------------------------
+    // 1) EMPRESAS E USUÁRIOS
+    // -----------------------------------------
+    const totalEmpresas = await prisma.empresa.count();
+    const totalUsuarios = await prisma.usuario.count();
 
-  const usuariosPorPapel = await prisma.usuario.groupBy({
-    by: ["papel"],
-    _count: { id: true },
-  });
+    const usuariosPorPapel = await prisma.usuario.groupBy({
+      by: ["papel"],
+      _count: { id: true },
+    });
 
-  // -----------------------------------------
-  // 2) PRODUTOS E ESTOQUE
-  // -----------------------------------------
-  const totalProdutos = await prisma.produto.count();
+    // -----------------------------------------
+    // 2) PRODUTOS E ESTOQUE
+    // -----------------------------------------
+    const totalProdutos = await prisma.produto.count();
 
-  const estoqueCritico = await prisma.produto.count({
-    where: {
-      estoqueMinimo: { not: null },
-      lote: {
-        some: {
-          quantidadeAtual: { lte: 0 }, // Ajusta conforme sua lógica
+    const estoqueCritico = await prisma.produto.count({
+      where: {
+        estoqueMinimo: { not: null },
+        lote: {
+          some: {
+            quantidadeAtual: { lte: 0 }, // Ajusta conforme sua lógica
+          },
         },
       },
-    },
-  });
+    });
 
-  const lotesProximosVencimento = await prisma.lote.count({
-    where: {
-      validade: {
-        lte: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 dias
+    const lotesProximosVencimento = await prisma.lote.count({
+      where: {
+        validade: {
+          lte: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 dias
+        },
       },
-    },
-  });
+    });
 
-  const movimentacoesEstoqueHoje = await prisma.movimentacao.count({
-    where: { criadoEm: { gte: new Date(new Date().setHours(0, 0, 0, 0)) } },
-  });
+    const movimentacoesEstoqueHoje = await prisma.movimentacao.count({
+      where: { criadoEm: { gte: new Date(new Date().setHours(0, 0, 0, 0)) } },
+    });
 
-  // -----------------------------------------
-  // 3) VENDAS
-  // -----------------------------------------
-  const totalVendas = await prisma.venda.count();
+    // -----------------------------------------
+    // 3) VENDAS
+    // -----------------------------------------
+    const totalVendas = await prisma.venda.count();
 
-  const vendasHoje = await prisma.venda.count({
-    where: {
-      criadoEm: { gte: new Date(new Date().setHours(0, 0, 0, 0)) },
-    },
-  });
+    const vendasHoje = await prisma.venda.count({
+      where: {
+        criadoEm: { gte: new Date(new Date().setHours(0, 0, 0, 0)) },
+      },
+    });
 
-  const vendasUltimos7Dias = await prisma.venda.count({
-    where: {
-      criadoEm: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
-    },
-  });
+    const vendasUltimos7Dias = await prisma.venda.count({
+      where: {
+        criadoEm: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
+      },
+    });
 
-  const ticketMedioGeralQuery = await prisma.venda.aggregate({
-    _avg: { total: true },
-  });
+    const ticketMedioGeralQuery = await prisma.venda.aggregate({
+      _avg: { total: true },
+    });
 
-  const ticketMedioGeral = ticketMedioGeralQuery._avg.total ?? 0;
+    const ticketMedioGeral = ticketMedioGeralQuery._avg.total ?? 0;
 
-  // Ranking
-  const topEmpresasRaw = await prisma.venda.groupBy({
-    by: ["empresaId"],
-    _sum: { total: true },
-    orderBy: { _sum: { total: "desc" } },
-    take: 5,
-  });
+    // Ranking
+    const topEmpresasRaw = await prisma.venda.groupBy({
+      by: ["empresaId"],
+      _sum: { total: true },
+      orderBy: { _sum: { total: "desc" } },
+      take: 5,
+    });
 
-  const topEmpresas = await Promise.all(
-    topEmpresasRaw.map(async (r) => {
-      const emp = await prisma.empresa.findUnique({ where: { id: r.empresaId } });
-      return {
-        id: r.empresaId,
-        nome: emp?.nome ?? "",
-        cidade: emp?.cidade ?? "",
-        totalVendas: Number(r._sum.total ?? 0),
-      };
-    })
-  );
+    const topEmpresas = await Promise.all(
+      topEmpresasRaw.map(async (r) => {
+        const emp = await prisma.empresa.findUnique({
+          where: { id: r.empresaId },
+        });
+        return {
+          id: r.empresaId,
+          nome_fantasia: emp?.nome_fantasia ?? "",
+          cidade: emp?.cidade ?? "",
+          totalVendas: Number(r._sum.total ?? 0),
+        };
+      })
+    );
 
-  // Vendas mensais (últimos 6 meses)
-  const vendasMensais = await prisma.$queryRawUnsafe(`
+    // Vendas mensais (últimos 6 meses)
+    const vendasMensais = await prisma.$queryRawUnsafe(`
     SELECT 
       TO_CHAR(DATE_TRUNC('month', v."criadoEm"), 'YYYY-MM') as mes,
       SUM(v.total)::numeric AS total
@@ -192,14 +289,14 @@ getDashboardStats: async () => {
     ORDER BY mes ASC;
   `);
 
-  // Vendas por forma de pagamento
-  const vendasPorFormaPagamento = await prisma.venda.groupBy({
-    by: ["formaPagamento"],
-    _sum: { total: true },
-  });
+    // Vendas por forma de pagamento
+    const vendasPorFormaPagamento = await prisma.venda.groupBy({
+      by: ["formaPagamento"],
+      _sum: { total: true },
+    });
 
-  // Vendas por empresa no mês atual
-  const vendasPorEmpresaMesAtual = await prisma.$queryRawUnsafe(`
+    // Vendas por empresa no mês atual
+    const vendasPorEmpresaMesAtual = await prisma.$queryRawUnsafe(`
     SELECT
       e.id AS "empresaId",
       e.nome AS "empresaNome",
@@ -211,8 +308,8 @@ getDashboardStats: async () => {
     ORDER BY total DESC;
   `);
 
-  // Produtos mais vendidos
-  const topProdutos = await prisma.$queryRawUnsafe(`
+    // Produtos mais vendidos
+    const topProdutos = await prisma.$queryRawUnsafe(`
     SELECT 
       p.id,
       p.nome,
@@ -224,8 +321,8 @@ getDashboardStats: async () => {
     LIMIT 5;
   `);
 
-  // Vendedores mais fortes
-  const topVendedores = await prisma.$queryRawUnsafe(`
+    // Vendedores mais fortes
+    const topVendedores = await prisma.$queryRawUnsafe(`
     SELECT 
       vdr.id,
       vdr.nome,
@@ -237,36 +334,42 @@ getDashboardStats: async () => {
     LIMIT 5;
   `);
 
-  // -----------------------------------------
-  // 4) FINANCEIRO
-  // -----------------------------------------
+    // -----------------------------------------
+    // 4) FINANCEIRO
+    // -----------------------------------------
 
-const saldoFinanceiroGlobal = await prisma.$queryRawUnsafe<{ saldo: number }[]>(`
+    const saldoFinanceiroGlobal = await prisma.$queryRawUnsafe<
+      { saldo: number }[]
+    >(`
   SELECT COALESCE(SUM("saldoAtual"), 0) AS saldo 
   FROM "ContaBancaria";
 `);
 
-  const totalContasPagarAbertas = await prisma.contaPagar.count({
-    where: { status: "PENDENTE" },
-  });
+    const totalContasPagarAbertas = await prisma.contaPagar.count({
+      where: { status: "PENDENTE" },
+    });
 
-  const totalContasReceberAbertas = await prisma.contaReceber.count({
-    where: { status: "PENDENTE" },
-  });
+    const totalContasReceberAbertas = await prisma.contaReceber.count({
+      where: { status: "PENDENTE" },
+    });
 
-const valorContasPagarAtrasadasQuery = await prisma.$queryRawUnsafe<{ total: number }[]>(`
+    const valorContasPagarAtrasadasQuery = await prisma.$queryRawUnsafe<
+      { total: number }[]
+    >(`
   SELECT COALESCE(SUM("valorTotal" - "valorPago"), 0) AS total
   FROM "ContaPagar"
   WHERE "dataVencimento" < NOW() AND status != 'PAGO';
 `);
 
-const valorContasReceberVencendoQuery = await prisma.$queryRawUnsafe<{ total: number }[]>(`
+    const valorContasReceberVencendoQuery = await prisma.$queryRawUnsafe<
+      { total: number }[]
+    >(`
   SELECT COALESCE(SUM("valorTotal" - "valorRecebido"), 0) AS total
   FROM "ContaReceber"
   WHERE "dataVencimento" BETWEEN NOW() AND NOW() + INTERVAL '5 days';
 `);
 
-  const fluxoCaixaMensal = await prisma.$queryRawUnsafe(`
+    const fluxoCaixaMensal = await prisma.$queryRawUnsafe(`
     SELECT 
       TO_CHAR(DATE_TRUNC('month', data), 'YYYY-MM') AS competencia,
       SUM(CASE WHEN tipo = 'ENTRADA' THEN valor ELSE 0 END) AS entradas,
@@ -276,20 +379,18 @@ const valorContasReceberVencendoQuery = await prisma.$queryRawUnsafe<{ total: nu
     ORDER BY competencia ASC;
   `);
 
-  
+    // -----------------------------------------
+    // 6) CLIENTES
+    // -----------------------------------------
+    const totalClientes = await prisma.cliente.count();
 
-  // -----------------------------------------
-  // 6) CLIENTES
-  // -----------------------------------------
-  const totalClientes = await prisma.cliente.count();
+    const clientesNovosUltimos30Dias = await prisma.cliente.count({
+      where: {
+        criadoEm: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
+      },
+    });
 
-  const clientesNovosUltimos30Dias = await prisma.cliente.count({
-    where: {
-      criadoEm: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
-    },
-  });
-
-  const topClientes = await prisma.$queryRawUnsafe(`
+    const topClientes = await prisma.$queryRawUnsafe(`
     SELECT 
       c.id,
       c.nome,
@@ -301,50 +402,50 @@ const valorContasReceberVencendoQuery = await prisma.$queryRawUnsafe<{ total: nu
     LIMIT 5;
   `);
 
-  // -----------------------------------------
-  // 7) ORDENS DE SERVIÇO
-  // -----------------------------------------
-  const totalOrdensServico = await prisma.ordemDeServico.count();
+    // -----------------------------------------
+    // 7) ORDENS DE SERVIÇO
+    // -----------------------------------------
+    const totalOrdensServico = await prisma.ordemDeServico.count();
 
-  const ordensServicoPorStatus = await prisma.ordemDeServico.groupBy({
-    by: ["status"],
-    _count: { id: true },
-  });
+    const ordensServicoPorStatus = await prisma.ordemDeServico.groupBy({
+      by: ["status"],
+      _count: { id: true },
+    });
 
-  // -----------------------------------------
-  // 8) PÓS-VENDA
-  // -----------------------------------------
-  const totalPosVendas = await prisma.posVenda.count();
+    // -----------------------------------------
+    // 8) PÓS-VENDA
+    // -----------------------------------------
+    const totalPosVendas = await prisma.posVenda.count();
 
-  const posVendaPorStatus = await prisma.posVenda.groupBy({
-    by: ["status"],
-    _count: { id: true },
-  });
+    const posVendaPorStatus = await prisma.posVenda.groupBy({
+      by: ["status"],
+      _count: { id: true },
+    });
 
-  const satisfacaoMediaQuery = await prisma.feedbackCliente.aggregate({
-    _avg: { avaliacao: true },
-  });
+    const satisfacaoMediaQuery = await prisma.feedbackCliente.aggregate({
+      _avg: { avaliacao: true },
+    });
 
-  const satisfacaoMedia = satisfacaoMediaQuery._avg.avaliacao ?? 0;
+    const satisfacaoMedia = satisfacaoMediaQuery._avg.avaliacao ?? 0;
 
-  // -----------------------------------------
-  // 10) FORNECEDORES & LOTES
-  // -----------------------------------------
-  const totalFornecedores = await prisma.fornecedor.count();
-  const totalLotes = await prisma.lote.count();
+    // -----------------------------------------
+    // 10) FORNECEDORES & LOTES
+    // -----------------------------------------
+    const totalFornecedores = await prisma.fornecedor.count();
+    const totalLotes = await prisma.lote.count();
 
-  // -----------------------------------------
-  // 11) INFRAESTRUTURA (mock / futuro)
-  // -----------------------------------------
-  const apiStatus = "OK";
-  const apiLatenciaMediaMs = 42;
-  const apiRequests24h = 12487;
-  const apiErros24h = 4;
+    // -----------------------------------------
+    // 11) INFRAESTRUTURA (mock / futuro)
+    // -----------------------------------------
+    const apiStatus = "OK";
+    const apiLatenciaMediaMs = 42;
+    const apiRequests24h = 12487;
+    const apiErros24h = 4;
 
-  // -----------------------------------------
-  // 12) ATIVIDADES RECENTES
-  // -----------------------------------------
-const atividadesRecentes = await prisma.$queryRawUnsafe(`
+    // -----------------------------------------
+    // 12) ATIVIDADES RECENTES
+    // -----------------------------------------
+    const atividadesRecentes = await prisma.$queryRawUnsafe(`
   SELECT 
     v.id,
     'VENDA' as tipo,
@@ -358,75 +459,73 @@ const atividadesRecentes = await prisma.$queryRawUnsafe(`
   LIMIT 10;
 `);
 
+    // ==========================================================
+    // RETORNO FINAL (tudo no formato DashboardStats)
+    // ==========================================================
+    return {
+      totalEmpresas,
+      totalUsuarios,
+      usuariosPorPapel: usuariosPorPapel.map((u) => ({
+        papel: u.papel,
+        total: u._count.id,
+      })),
 
-  
+      totalProdutos,
+      estoqueCritico,
+      lotesProximosVencimento,
+      movimentacoesEstoqueHoje,
 
-  // ==========================================================
-  // RETORNO FINAL (tudo no formato DashboardStats)
-  // ==========================================================
-  return {
-    totalEmpresas,
-    totalUsuarios,
-    usuariosPorPapel: usuariosPorPapel.map((u) => ({
-      papel: u.papel,
-      total: u._count.id,
-    })),
+      totalVendas,
+      vendasHoje,
+      vendasUltimos7Dias,
+      ticketMedioGeral,
+      topEmpresas,
+      vendasMensais,
+      vendasPorFormaPagamento: vendasPorFormaPagamento.map((v) => ({
+        forma: v.formaPagamento ?? "Indefinido",
+        total: Number(v._sum.total ?? 0),
+      })),
+      vendasPorEmpresaMesAtual,
+      topProdutos,
+      topVendedores,
 
-    totalProdutos,
-    estoqueCritico,
-    lotesProximosVencimento,
-    movimentacoesEstoqueHoje,
+      saldoFinanceiroGlobal: Number(saldoFinanceiroGlobal[0]?.saldo ?? 0),
+      totalContasPagarAbertas,
+      totalContasReceberAbertas,
+      valorContasPagarAtrasadas: Number(
+        valorContasPagarAtrasadasQuery[0]?.total ?? 0
+      ),
+      valorContasReceberVencendo: Number(
+        valorContasReceberVencendoQuery[0]?.total ?? 0
+      ),
+      fluxoCaixaMensal,
 
-    totalVendas,
-    vendasHoje,
-    vendasUltimos7Dias,
-    ticketMedioGeral,
-    topEmpresas,
-    vendasMensais,
-    vendasPorFormaPagamento: vendasPorFormaPagamento.map((v) => ({
-      forma: v.formaPagamento ?? "Indefinido",
-      total: Number(v._sum.total ?? 0),
-    })),
-    vendasPorEmpresaMesAtual,
-    topProdutos,
-    topVendedores,
+      totalClientes,
+      clientesNovosUltimos30Dias,
+      topClientes,
 
-    saldoFinanceiroGlobal: Number(saldoFinanceiroGlobal[0]?.saldo ?? 0),
-    totalContasPagarAbertas,
-    totalContasReceberAbertas,
-    valorContasPagarAtrasadas:
-      Number(valorContasPagarAtrasadasQuery[0]?.total ?? 0),
-    valorContasReceberVencendo:
-      Number(valorContasReceberVencendoQuery[0]?.total ?? 0),
-    fluxoCaixaMensal,
+      totalOrdensServico,
+      ordensServicoPorStatus: ordensServicoPorStatus.map((o) => ({
+        status: o.status,
+        quantidade: o._count.id,
+      })),
 
-    totalClientes,
-    clientesNovosUltimos30Dias,
-    topClientes,
+      totalPosVendas,
+      posVendaPorStatus: posVendaPorStatus.map((p) => ({
+        status: p.status,
+        quantidade: p._count.id,
+      })),
+      satisfacaoMedia,
 
-    totalOrdensServico,
-    ordensServicoPorStatus: ordensServicoPorStatus.map((o) => ({
-      status: o.status,
-      quantidade: o._count.id,
-    })),
+      totalFornecedores,
+      totalLotes,
 
-    totalPosVendas,
-    posVendaPorStatus: posVendaPorStatus.map((p) => ({
-      status: p.status,
-      quantidade: p._count.id,
-    })),
-    satisfacaoMedia,
+      apiStatus,
+      apiLatenciaMediaMs,
+      apiRequests24h,
+      apiErros24h,
 
-    totalFornecedores,
-    totalLotes,
-
-    apiStatus,
-    apiLatenciaMediaMs,
-    apiRequests24h,
-    apiErros24h,
-
-    atividadesRecentes,
-  };
-},
-
+      atividadesRecentes,
+    };
+  },
 };

@@ -409,12 +409,11 @@ model Lote {
 // ================================
 model Empresa {
   id            String  @id @default(uuid())
-  nome          String
+  nome_fantasia String
   cnpj          String  @unique
   telefone      String
   email         String? @unique
-  razaoSocial   String
-  nomeFantasia  String
+  razao_social  String
   inscEstadual  String?
   inscMunicipal String?
   cnae          String?
