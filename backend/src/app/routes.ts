@@ -19,6 +19,7 @@ import financeiroRoutes from "../modules/financeiro/financeiro.routes";
 import { ordemDeServicoRoutes } from "../modules/ordem-de-servico/ordem-de-servico.routes";
 import express from "express";
 import path from "path";
+import { infraRouter } from "@modules/infra/infra.routes";
 
 const router = Router();
 
@@ -43,7 +44,7 @@ router.use("/ordem-de-servico", ordemDeServicoRoutes);
 // Servir arquivos estáticos da pasta uploads
 router.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
-
+router.use("/health", infraRouter)
 
 // Rota base
 router.use("/inter/cobranca", cobrancaRoutes);

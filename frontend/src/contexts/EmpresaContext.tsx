@@ -73,7 +73,7 @@ export interface DashboardStats {
   }[];
   topEmpresas: {
     id: string;
-    nome: string;
+    nome_social: string;
     cidade: string;
     totalVendas: number;
   }[];

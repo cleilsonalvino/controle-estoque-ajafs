@@ -3,6 +3,7 @@ import { CustomError } from "../../shared/errors";
 import fs from "fs";
 import path from "path";
 import bcrypt from "bcrypt";
+import os from "os";
 
 const prisma = new PrismaClient();
 
@@ -299,12 +300,12 @@ export const empresaService = {
     const vendasPorEmpresaMesAtual = await prisma.$queryRawUnsafe(`
     SELECT
       e.id AS "empresaId",
-      e.nome AS "empresaNome",
+      e.nome_fantasia AS "empresaNome",
       SUM(v.total) AS total
     FROM "Venda" v
     JOIN "Empresa" e ON e.id = v."empresaId"
     WHERE DATE_TRUNC('month', v."criadoEm") = DATE_TRUNC('month', NOW())
-    GROUP BY e.id, e.nome
+    GROUP BY e.id, e.nome_fantasia
     ORDER BY total DESC;
   `);
 
@@ -451,7 +452,7 @@ export const empresaService = {
     'VENDA' as tipo,
     'Nova venda registrada' as descricao,
     v."criadoEm" as data,
-    e.nome AS "empresaNome",
+    e.nome_fantasia AS "empresaNome",
     e.id   AS "empresaId"
   FROM "Venda" v
   JOIN "Empresa" e ON e.id = v."empresaId"

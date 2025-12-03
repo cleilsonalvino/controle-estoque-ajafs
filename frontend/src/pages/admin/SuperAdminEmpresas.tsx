@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
   Building2,
@@ -24,12 +24,7 @@ import {
 } from "lucide-react";
 
 import { AppSidebar } from "@/components/AppSidebar";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent,
-} from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
 import {
@@ -48,15 +43,63 @@ import {
 } from "recharts";
 
 import { useEmpresa } from "@/contexts/EmpresaContext";
-
+import { api } from "@/lib/api";
+import { DashboardInfraSection } from "./DashboardInfraSection";
 
 export default function SuperAdminConsole() {
-  const { empresas, dashboard, fetchEmpresas, fetchDashboard, loading, loadingList } =
-    useEmpresa();
+  const {
+    empresas,
+    dashboard,
+    fetchEmpresas,
+    fetchDashboard,
+    loading,
+    loadingList,
+  } = useEmpresa();
+
+  type InfraMetrics = {
+    apiStatus: string;
+    apiLatenciaMs: number;
+    apiUptimeSegundos: number;
+    totalRequests: number;
+    totalErrors: number;
+    requestsUltimosMinutos: number;
+    cpuLoad1m: number;
+    cpuLoad5m: number;
+    cpuLoad15m: number;
+    cpuUsagePercent: number;
+    nucleosCPU: number;
+    memoriaUsadaMB: number;
+    memoriaTotalMB: number;
+    memoriaLivreMB: number;
+    sistemaOperacional: string;
+    arquitetura: string;
+    hostname: string;
+    versaoNode: string;
+    ambienteExecucao: string;
+  };
+
+  const [apiInfo, setApiInfo] = useState<InfraMetrics | null>(null);
+  const [apiLoading, setApiLoading] = useState(true);
+  const [apiError, setApiError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchEmpresas();
     fetchDashboard();
+  }, []);
+
+  useEffect(() => {
+    const fetchApiHealth = async () => {
+      try {
+        const { data } = await api.get("/health/infra");
+        setApiInfo(data);
+      } catch (error: any) {
+        setApiInfo({ ...apiInfo, apiStatus: "OFFLINE" }); // Define apenas o status para "OFFLINE"
+      } finally {
+        setApiLoading(false);
+      }
+    };
+
+    fetchApiHealth();
   }, []);
 
   const statusApi = dashboard?.apiStatus ?? "OK";
@@ -71,7 +114,6 @@ export default function SuperAdminConsole() {
 
   return (
     <div className="container mx-auto dark:bg-slate-900">
-      
       {/* TOPO */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
@@ -84,7 +126,8 @@ export default function SuperAdminConsole() {
             Console global do sistema
           </h1>
           <p className="text-sm text-muted-foreground">
-            Visao consolidada de todas as empresas, vendas, financeiro, clientes, servicos e infraestrutura.
+            Visao consolidada de todas as empresas, vendas, financeiro,
+            clientes, servicos e infraestrutura.
           </p>
         </div>
 
@@ -238,7 +281,7 @@ export default function SuperAdminConsole() {
                       className="border-b hover:bg-slate-50 transition"
                     >
                       <td className="p-2 font-semibold">{i + 1}</td>
-                      <td className="p-2">{e.nome}</td>
+                      <td className="p-2">{e.nome_social}</td>
                       <td className="p-2">{e.cidade}</td>
                       <td className="p-2 text-right">
                         R{"$ "}
@@ -247,9 +290,13 @@ export default function SuperAdminConsole() {
                     </tr>
                   ))}
 
-                  {(!dashboard?.topEmpresas || dashboard.topEmpresas.length === 0) && (
+                  {(!dashboard?.topEmpresas ||
+                    dashboard.topEmpresas.length === 0) && (
                     <tr>
-                      <td colSpan={4} className="p-3 text-center text-muted-foreground">
+                      <td
+                        colSpan={4}
+                        className="p-3 text-center text-muted-foreground"
+                      >
                         Sem dados de ranking disponiveis
                       </td>
                     </tr>
@@ -268,7 +315,10 @@ export default function SuperAdminConsole() {
               {(dashboard?.usuariosPorPapel?.length ?? 0) > 0 ? (
                 <ul className="space-y-2 text-sm">
                   {dashboard!.usuariosPorPapel!.map((u) => (
-                    <li key={u.papel} className="flex items-center justify-between">
+                    <li
+                      key={u.papel}
+                      className="flex items-center justify-between"
+                    >
                       <span className="flex items-center gap-2">
                         <UserCircle2 className="w-4 h-4 text-slate-600" />
                         {u.papel}
@@ -293,9 +343,13 @@ export default function SuperAdminConsole() {
           </CardHeader>
           <CardContent>
             {loadingList ? (
-              <p className="text-sm text-muted-foreground">Carregando empresas...</p>
+              <p className="text-sm text-muted-foreground">
+                Carregando empresas...
+              </p>
             ) : empresas.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nenhuma empresa cadastrada.</p>
+              <p className="text-sm text-muted-foreground">
+                Nenhuma empresa cadastrada.
+              </p>
             ) : (
               <div className="grid md:grid-cols-3 sm:grid-cols-2 gap-4">
                 {empresas.map((empresa) => (
@@ -303,8 +357,12 @@ export default function SuperAdminConsole() {
                     key={empresa.id}
                     className="border rounded-lg p-3 text-xs md:text-sm bg-white dark:bg-slate-900/60"
                   >
-                    <p className="font-semibold text-primary">{empresa.nome_fantasia}</p>
-                    <p className="text-muted-foreground truncate">{empresa.cnpj}</p>
+                    <p className="font-semibold text-primary">
+                      {empresa.nome_fantasia}
+                    </p>
+                    <p className="text-muted-foreground truncate">
+                      {empresa.cnpj}
+                    </p>
                     <p className="mt-1 truncate">
                       {empresa.cidade} {empresa.estado && `(${empresa.estado})`}
                     </p>
@@ -319,8 +377,6 @@ export default function SuperAdminConsole() {
           </CardContent>
         </Card>
       </section>
-
-      
 
       {/* ======================================================
          3) PRODUTOS E ESTOQUE
@@ -348,7 +404,9 @@ export default function SuperAdminConsole() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm">Produtos em estoque critico</CardTitle>
+              <CardTitle className="text-sm">
+                Produtos em estoque critico
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-2xl font-bold">
@@ -362,7 +420,9 @@ export default function SuperAdminConsole() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm">Lotes proximos da validade</CardTitle>
+              <CardTitle className="text-sm">
+                Lotes proximos da validade
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-2xl font-bold">
@@ -405,9 +465,7 @@ export default function SuperAdminConsole() {
               <CardTitle className="text-sm">Vendas hoje</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold">
-                {dashboard?.vendasHoje ?? 0}
-              </p>
+              <p className="text-2xl font-bold">{dashboard?.vendasHoje ?? 0}</p>
               <p className="text-xs text-muted-foreground">
                 Considerando todas as empresas
               </p>
@@ -433,9 +491,7 @@ export default function SuperAdminConsole() {
             <CardContent>
               <p className="text-2xl font-bold">
                 R{"$ "}
-                {(dashboard?.ticketMedioGeral ?? 0).toLocaleString("pt-BR", {
-                  minimumFractionDigits: 2,
-                })}
+                {dashboard?.ticketMedioGeral ?? 0}
               </p>
               <p className="text-xs text-muted-foreground">
                 Todas as empresas consolidadas
@@ -458,9 +514,7 @@ export default function SuperAdminConsole() {
                       <span>{f.forma}</span>
                       <span className="font-semibold">
                         R{"$ "}
-                        {f.total.toLocaleString("pt-BR", {
-                          minimumFractionDigits: 2,
-                        })}
+                        {f.total}
                       </span>
                     </div>
                   ))}
@@ -482,7 +536,11 @@ export default function SuperAdminConsole() {
                   <defs>
                     <linearGradient id="vendasArea" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.4} />
-                      <stop offset="100%" stopColor="#3b82f6" stopOpacity={0.05} />
+                      <stop
+                        offset="100%"
+                        stopColor="#3b82f6"
+                        stopOpacity={0.05}
+                      />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" />
@@ -543,15 +601,12 @@ export default function SuperAdminConsole() {
             <CardContent>
               <p className="text-2xl font-bold flex items-center gap-1">
                 R{"$ "}
-                {(dashboard?.saldoFinanceiroGlobal ?? 0).toLocaleString("pt-BR", {
-                  minimumFractionDigits: 2,
-                })}
-                {dashboard &&
-                  (dashboard.saldoFinanceiroGlobal ?? 0) >= 0 ? (
-                    <ArrowUpRight className="w-4 h-4 text-emerald-500" />
-                  ) : (
-                    <ArrowDownRight className="w-4 h-4 text-red-500" />
-                  )}
+                {dashboard?.saldoFinanceiroGlobal ?? 0}
+                {dashboard && (dashboard.saldoFinanceiroGlobal ?? 0) >= 0 ? (
+                  <ArrowUpRight className="w-4 h-4 text-emerald-500" />
+                ) : (
+                  <ArrowDownRight className="w-4 h-4 text-red-500" />
+                )}
               </p>
               <p className="text-xs text-muted-foreground">
                 Soma de contas bancarias de todas as empresas
@@ -574,7 +629,9 @@ export default function SuperAdminConsole() {
           </Card>
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm">Contas a receber abertas</CardTitle>
+              <CardTitle className="text-sm">
+                Contas a receber abertas
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-2xl font-bold">
@@ -590,25 +647,17 @@ export default function SuperAdminConsole() {
               <CardTitle className="text-sm">Contas atrasadas</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-xs text-muted-foreground mb-1">
-                Pagar
-              </p>
+              <p className="text-xs text-muted-foreground mb-1">Pagar</p>
               <p className="text-lg font-semibold mb-3">
                 R{"$ "}
-                {(dashboard?.valorContasPagarAtrasadas ?? 0).toLocaleString(
-                  "pt-BR",
-                  { minimumFractionDigits: 2 }
-                )}
+                {dashboard?.valorContasPagarAtrasadas ?? 0}
               </p>
               <p className="text-xs text-muted-foreground mb-1">
                 Receber com vencimento proximo
               </p>
               <p className="text-lg font-semibold">
                 R{"$ "}
-                {(dashboard?.valorContasReceberVencendo ?? 0).toLocaleString(
-                  "pt-BR",
-                  { minimumFractionDigits: 2 }
-                )}
+                {dashboard?.valorContasReceberVencendo ?? 0}
               </p>
             </CardContent>
           </Card>
@@ -698,9 +747,7 @@ export default function SuperAdminConsole() {
                       <td className="p-2">{c.nome}</td>
                       <td className="p-2 text-right">
                         R{"$ "}
-                        {c.totalComprado.toLocaleString("pt-BR", {
-                          minimumFractionDigits: 2,
-                        })}
+                        {c.totalComprado}
                       </td>
                     </tr>
                   ))}
@@ -797,7 +844,7 @@ export default function SuperAdminConsole() {
             </CardHeader>
             <CardContent>
               <p className="text-2xl font-bold">
-                {(dashboard?.satisfacaoMedia ?? 0).toFixed(1)}
+                {dashboard?.satisfacaoMedia ?? 0}
                 <span className="text-sm text-muted-foreground"> / 10</span>
               </p>
               <p className="text-xs text-muted-foreground">
@@ -848,89 +895,20 @@ export default function SuperAdminConsole() {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">
-              Este painel pode ser expandido para incluir logs detalhados de movimentacao de estoque,
-              movimentacoes financeiras e trilha de auditoria por usuario. No backend basta consolidar
-              estes dados e incluir na resposta do dashboard.
+              Este painel pode ser expandido para incluir logs detalhados de
+              movimentacao de estoque, movimentacoes financeiras e trilha de
+              auditoria por usuario. No backend basta consolidar estes dados e
+              incluir na resposta do dashboard.
             </p>
           </CardContent>
         </Card>
       </section>
 
       {/* ======================================================
-         11) INFRAESTRUTURA
-      ====================================================== */}
-      <section id="infra" className="mt-10 space-y-4">
-        <h2 className="text-lg font-semibold flex items-center gap-2">
-          <Cpu className="w-5 h-5 text-emerald-600" />
-          Infraestrutura e saude do sistema
-        </h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm">Status da API</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-2">
-                <span
-                  className={`w-2 h-2 rounded-full ${
-                    statusApi === "OK"
-                      ? "bg-emerald-500"
-                      : statusApi === "INSTAVEL"
-                      ? "bg-amber-500"
-                      : "bg-red-500"
-                  }`}
-                />
-                <span className="font-semibold text-sm">{statusApi}</span>
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Status geral reportado pelo backend
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm">Latencia media</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold flex items-center gap-1">
-                {dashboard?.apiLatenciaMediaMs ?? 0}
-                <span className="text-xs text-muted-foreground">ms</span>
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Media das principais rotas do sistema
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm">Requisicoes nas ultimas 24 horas</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold">
-                {dashboard?.apiRequests24h ?? 0}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Todas as empresas considerando trafego do dia
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm">Erros nas ultimas 24 horas</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold text-red-500">
-                {dashboard?.apiErros24h ?? 0}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Ideal acompanhar para evoluir estabilidade
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      </section>
+          INFRAESTRUTURA E SAUDE DO SISTEMA
+          ====================================================== 
+      */}
+      <DashboardInfraSection />
 
       {/* ======================================================
          12) ATIVIDADES RECENTES
@@ -948,8 +926,9 @@ export default function SuperAdminConsole() {
           <CardContent>
             {atividadesRecentes.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                Ainda nao ha feed consolidado de atividades. No backend basta registrar eventos relevantes
-                (criar empresa, vender, criar ordem de servico, etc) e retornar aqui.
+                Ainda nao ha feed consolidado de atividades. No backend basta
+                registrar eventos relevantes (criar empresa, vender, criar ordem
+                de servico, etc) e retornar aqui.
               </p>
             ) : (
               <ul className="space-y-2 text-xs md:text-sm">
@@ -962,7 +941,9 @@ export default function SuperAdminConsole() {
                       <p className="font-semibold">{a.tipo}</p>
                       <p className="text-muted-foreground">
                         {a.descricao}
-                        {a.empresaNome ? ` | Empresa: ${a.empresaNome}` : " - sem nome"}
+                        {a.empresaNome
+                          ? ` | Empresa: ${a.empresaNome}`
+                          : " - sem nome"}
                       </p>
                     </div>
                     <span className="text-[11px] text-muted-foreground whitespace-nowrap">

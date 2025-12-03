@@ -8,7 +8,6 @@ import { errorHandler } from "./app/middlewares/error";
 import swaggerUi from "swagger-ui-express";
 import YAML from "yamljs";
 import path from "path";
-import pkg from "../package.json";
 
 const app = express();
 
@@ -33,16 +32,7 @@ app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 app.use("/api", router);
 
 
-app.get("/api", (req, res) => {
-  res.json({
-    status: "ok",
-    message: "API is running",
-    version: pkg.version,
-    environment: process.env.NODE_ENV || "development",
-    uptime: process.uptime(), // tempo em segundos que o processo está rodando
-    timestamp: new Date().toISOString()
-  });
-});
+
 
 app.use(errorHandler);
 

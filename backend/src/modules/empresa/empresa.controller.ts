@@ -9,13 +9,6 @@ export const empresaController = {
   // =====================================================
   async getAll(req: AuthenticatedRequest, res: Response) {
     try {
-      if (req.user?.papel !== "SUPER_ADMIN") {
-        throw new CustomError(
-          "Acesso negado. Permissão restrita a Super Admin.",
-          403
-        );
-      }
-
       const empresas = await empresaService.getAll();
       return res.status(200).json(empresas);
     } catch (error: any) {
@@ -139,13 +132,6 @@ export const empresaController = {
   // =====================================================
   async getDashboard(req: AuthenticatedRequest, res: Response) {
     try {
-      if (req.user?.papel !== "SUPER_ADMIN") {
-        throw new CustomError(
-          "Acesso negado. Apenas Super Admin pode visualizar o painel de gestão.",
-          403
-        );
-      }
-
       const stats = await empresaService.getDashboardStats();
       return res.status(200).json(stats);
     } catch (error: any) {
